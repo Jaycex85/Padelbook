@@ -24,9 +24,17 @@ export default function RegisterPage() {
   }
 
   return (
-    '<div>' +
-    '<h1>Inscription</h1>' +
-    '<p>Page register — à styler</p>' +
-    '</div>'
+    <div style={{ padding: '40px', color: '#E6EDF3', background: '#0D1117', minHeight: '100vh' }}>
+      <h1 style={{ color: '#4ADE80', marginBottom: '24px' }}>Inscription</h1>
+      <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)}
+        style={{ display: 'block', marginBottom: '12px', padding: '10px', width: '300px', background: '#161B22', border: '1px solid #30363D', color: '#E6EDF3', borderRadius: '8px' }} />
+      <input type="password" placeholder="Mot de passe" value={password} onChange={e => setPassword(e.target.value)}
+        style={{ display: 'block', marginBottom: '12px', padding: '10px', width: '300px', background: '#161B22', border: '1px solid #30363D', color: '#E6EDF3', borderRadius: '8px' }} />
+      {error && <p style={{ color: '#F87171', marginBottom: '12px' }}>{error}</p>}
+      <button onClick={handleRegister} disabled={loading}
+        style={{ padding: '10px 24px', background: '#4ADE80', color: '#0D1117', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>
+        {loading ? 'Inscription...' : 'Créer mon compte'}
+      </button>
+    </div>
   )
 }
