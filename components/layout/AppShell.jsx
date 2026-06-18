@@ -3,12 +3,12 @@ import { usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
+import BottomNav from './BottomNav'
 
 export default function AppShell({ children, user, profile }) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  // Fermer sidebar au changement de page
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 
   const isAuth = pathname.startsWith('/login') || pathname.startsWith('/register')
@@ -17,7 +17,7 @@ export default function AppShell({ children, user, profile }) {
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
 
-      {/* Sidebar desktop — toujours visible */}
+      {/* Sidebar desktop */}
       <div className="sidebar-desktop-wrapper">
         <Sidebar profile={profile} />
       </div>
@@ -30,7 +30,7 @@ export default function AppShell({ children, user, profile }) {
         />
       )}
 
-      {/* Sidebar mobile — slide depuis gauche */}
+      {/* Sidebar mobile slide */}
       <div className={'sidebar-mobile-wrapper' + (sidebarOpen ? ' open' : '')}>
         <Sidebar profile={profile} onClose={() => setSidebarOpen(false)} />
       </div>
@@ -42,6 +42,9 @@ export default function AppShell({ children, user, profile }) {
           {children}
         </main>
       </div>
+
+      {/* Bottom nav mobile */}
+      <BottomNav profile={profile} />
 
       <style jsx global>{`
         .sidebar-desktop-wrapper { display: flex; }
