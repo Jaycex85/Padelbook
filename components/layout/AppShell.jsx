@@ -1,49 +1,43 @@
 'use client'
+import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import BottomNav from './BottomNav'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 
+const AUTH_PATHS = ['/login', '/register']
+
 export default function AppShell({ children, user, profile }) {
   const pathname = usePathname()
-  const isAuth = pathname.startsWith('/login') || pathname.startsWith('/register')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  const isAuth = AUTH_PATHS.includes(pathname)
   if (isAuth) return <>{children}</>
 
   return (
-    <div className="app-shell">
-      {/* Sidebar desktop */}
-      <Sidebar profile={profile} />
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
-      {/* Main */}
-      <div className="app-main">
-        <TopBar user={user} profile={profile} />
-        <main className="app-content">
+      {/* Sidebar (overlay sur toutes tailles) */}
+      <Sidebar
+        profile={profile}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      {/* Layout principal */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+        <TopBar
+          user={user}
+          profile={profile}
+          onMenuOpen={() => setSidebarOpen(true)}
+        />
+        <main className="page-content" style={{ flex: 1, padding: '24px', maxWidth: '900px', width: '100%', margin: '0 auto' }}>
           {children}
         </main>
       </div>
 
-      {/* Bottom nav mobile */}
+      {/* Bottom nav — toujours visible */}
       <BottomNav profile={profile} />
-
-      <style jsx>{`
-        .app-shell {
-          display: flex;
-          min-height: 100vh;
-        }
-        .app-main {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          min-width: 0;
-        }
-        .app-content {
-          flex: 1;
-          padding: 24px;
-        }
-        @media (max-width: 767px) {
-          .app-content { padding: 16px; }
-        }
-      `}</style>
     </div>
   )
 }
