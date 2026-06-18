@@ -9,27 +9,41 @@ export async function middleware(request) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
-        getAll() { return request.cookies.getAll() },
+        getAll() {
+          return request.cookies.getAll()
+        },
         setAll(toSet) {
+          // Propager les cookies sur la request ET sur la response
           toSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           toSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
-        }
-      }
+        },
+      },
     }
   )
 
+  // IMPORTANT : toujours appeler getUser() pour rafraîchir la session
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  // Protéger les routes admin
-  if (pathname.startsWith('/admin')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-    // Vérifier le rôle admin
+  // Rediriger vers login si non connecté sur routes protégées
+  if (
+    !user &&
+    !pathname.startsWith('/login') &&
+    !pathname.startsWith('/register') &&
+    (pathname.startsWith('/admin') ||
+     pathname.startsWith('/my-bookings') ||
+     pathname.startsWith('/dashboard'))
+  ) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  // Vérifier le rôle admin
+  if (user && pathname.startsWith('/admin')) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -37,20 +51,18 @@ export async function middleware(request) {
       .single()
 
     if (!profile || profile.role !== 'admin') {
-      return NextResponse.redirect(new URL('/', request.url))
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
     }
   }
 
-  // Protéger les routes authentifiées
-  if (pathname.startsWith('/dashboard') || pathname.startsWith('/my-bookings')) {
-    if (!user) {
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-  }
-
+  // IMPORTANT : retourner supabaseResponse pour propager les cookies de session
   return supabaseResponse
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/dashboard/:path*', '/my-bookings/:path*']
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }
