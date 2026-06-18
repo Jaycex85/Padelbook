@@ -1,11 +1,11 @@
 {
-  "name": "PadelBook",
-  "short_name": "PadelBook",
-  "description": "Réservation de terrains de padel",
+  "name": "Mayfair Padel Club",
+  "short_name": "Mayfair",
+  "description": "Réservation de terrains de padel — Mayfair Padel Club",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0D1117",
-  "theme_color": "#0D1117",
+  "background_color": "#0F0520",
+  "theme_color": "#0F0520",
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -15,7 +15,8 @@
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
