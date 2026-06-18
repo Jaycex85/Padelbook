@@ -5,117 +5,166 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function RegisterPage() {
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    phone: '',
+    gender: '',
+    ranking: '',
+  })
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
+  function set(key, value) {
+    setForm(f => ({ ...f, [key]: value }))
+  }
+
   async function handleRegister() {
-    if (!email || !password) { setError('Email et mot de passe requis.'); return }
-    if (password.length < 6) { setError('Le mot de passe doit faire au moins 6 caractères.'); return }
+    if (!form.email || !form.password) { setError('Email et mot de passe requis.'); return }
+    if (form.password.length < 6) { setError('Le mot de passe doit faire au moins 6 caractères.'); return }
     setLoading(true)
     setError(null)
 
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) { setError(error.message); setLoading(false); return }
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+    })
 
-    if (data.user && (firstName || lastName)) {
-      await supabase
-        .from('profiles')
-        .update({ first_name: firstName, last_name: lastName })
-        .eq('id', data.user.id)
+    if (signUpError) { setError(signUpError.message); setLoading(false); return }
+
+    if (data.user) {
+      const updates = {}
+      if (form.firstName) updates.first_name = form.firstName
+      if (form.lastName) updates.last_name = form.lastName
+      if (form.phone) updates.phone = form.phone
+      if (form.gender) updates.gender = form.gender
+      if (form.ranking) updates.ranking = form.ranking
+
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('profiles').update(updates).eq('id', data.user.id)
+      }
     }
 
     setSuccess(true)
     setLoading(false)
   }
 
+  const inputStyle = {
+    width: '100%',
+    background: 'var(--surface2)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '11px 14px',
+    color: 'var(--text)',
+    fontSize: '15px',
+    fontFamily: "'Inter', sans-serif",
+  }
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '11px',
+    fontWeight: 500,
+    color: 'var(--muted)',
+    marginBottom: '6px',
+    letterSpacing: '0.3px',
+    textTransform: 'uppercase',
+  }
+
   if (success) {
     return (
-      <div className="auth-page">
-        <div className="auth-card">
-          <div className="success-icon">✓</div>
-          <h2 className="auth-title">Compte créé !</h2>
-          <p style={{color: 'var(--muted)', textAlign: 'center', marginBottom: '24px', fontSize: '14px'}}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div style={{ width: '100%', maxWidth: '420px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px', textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', color: 'var(--green)', marginBottom: '16px' }}>✓</div>
+          <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700, marginBottom: '8px' }}>Compte créé !</h2>
+          <p style={{ color: 'var(--muted)', fontSize: '14px', marginBottom: '24px' }}>
             Vérifiez votre email pour confirmer votre compte.
           </p>
-          <Link href="/login" className="btn-submit" style={{display:'block', textAlign:'center', textDecoration:'none'}}>
+          <Link href="/login" style={{ display: 'block', background: 'var(--green)', color: '#0D1117', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, textDecoration: 'none', fontFamily: "'Syne',sans-serif" }}>
             Aller à la connexion
           </Link>
         </div>
-        <style jsx>{`
-          .auth-page { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
-          .auth-card { width:100%; max-width:400px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:32px; }
-          .success-icon { font-size:48px; text-align:center; color:var(--green); margin-bottom:16px; }
-          .auth-title { font-family:'Syne',sans-serif; font-size:22px; font-weight:700; margin-bottom:8px; text-align:center; }
-          .btn-submit { background:var(--green); color:#0D1117; border:none; border-radius:8px; padding:13px; font-size:15px; font-weight:600; cursor:pointer; font-family:'Syne',sans-serif; }
-        `}</style>
       </div>
     )
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">🎾 PadelBook</div>
-        <h1 className="auth-title">Créer un compte</h1>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)' }}>
+      <div style={{ width: '100%', maxWidth: '460px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px' }}>
 
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Prénom</label>
-            <input type="text" className="form-input" placeholder="Johan" value={firstName} onChange={e => setFirstName(e.target.value)} />
+        <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--green)', marginBottom: '24px', textAlign: 'center' }}>
+          🎾 PadelBook
+        </div>
+        <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700, marginBottom: '24px', textAlign: 'center' }}>
+          Créer un compte
+        </h1>
+
+        {/* Prénom + Nom */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+          <div>
+            <label style={labelStyle}>Prénom</label>
+            <input style={inputStyle} type="text" placeholder="Johan" value={form.firstName} onChange={e => set('firstName', e.target.value)} />
           </div>
-          <div className="form-group">
-            <label className="form-label">Nom</label>
-            <input type="text" className="form-input" placeholder="Dupont" value={lastName} onChange={e => setLastName(e.target.value)} />
+          <div>
+            <label style={labelStyle}>Nom</label>
+            <input style={inputStyle} type="text" placeholder="Dupont" value={form.lastName} onChange={e => set('lastName', e.target.value)} />
           </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Email</label>
-          <input type="email" className="form-input" placeholder="vous@exemple.com" value={email} onChange={e => setEmail(e.target.value)} />
+        {/* Email */}
+        <div style={{ marginBottom: '14px' }}>
+          <label style={labelStyle}>Email *</label>
+          <input style={inputStyle} type="email" placeholder="vous@exemple.com" value={form.email} onChange={e => set('email', e.target.value)} />
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Mot de passe</label>
-          <input type="password" className="form-input" placeholder="Min. 6 caractères" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleRegister()} />
+        {/* Mot de passe */}
+        <div style={{ marginBottom: '14px' }}>
+          <label style={labelStyle}>Mot de passe *</label>
+          <input style={inputStyle} type="password" placeholder="Min. 6 caractères" value={form.password} onChange={e => set('password', e.target.value)} onKeyDown={e => e.key === 'Enter' && handleRegister()} />
         </div>
 
-        {error && <div className="form-error">{error}</div>}
+        {/* Téléphone */}
+        <div style={{ marginBottom: '14px' }}>
+          <label style={labelStyle}>Téléphone</label>
+          <input style={inputStyle} type="tel" placeholder="+32 470 00 00 00" value={form.phone} onChange={e => set('phone', e.target.value)} />
+        </div>
 
-        <button onClick={handleRegister} disabled={loading} className="btn-submit">
+        {/* Genre + Classement */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+          <div>
+            <label style={labelStyle}>Genre</label>
+            <select style={inputStyle} value={form.gender} onChange={e => set('gender', e.target.value)}>
+              <option value="">— Sélectionner —</option>
+              <option value="M">Homme</option>
+              <option value="F">Femme</option>
+              <option value="other">Autre</option>
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Classement</label>
+            <input style={inputStyle} type="text" placeholder="Ex: P500, 4e série..." value={form.ranking} onChange={e => set('ranking', e.target.value)} />
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--red)', marginBottom: '16px' }}>
+            {error}
+          </div>
+        )}
+
+        <button onClick={handleRegister} disabled={loading} style={{ width: '100%', background: 'var(--green)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'Syne',sans-serif", opacity: loading ? 0.6 : 1, marginBottom: '16px' }}>
           {loading ? 'Création...' : 'Créer mon compte'}
         </button>
 
-        <p className="auth-footer">
+        <p style={{ fontSize: '13px', color: 'var(--muted)', textAlign: 'center' }}>
           Déjà un compte ?{' '}
-          <Link href="/login" className="auth-link">Se connecter</Link>
+          <Link href="/login" style={{ color: 'var(--green)', textDecoration: 'none', fontWeight: 500 }}>Se connecter</Link>
         </p>
       </div>
-
-      <style jsx>{`
-        .auth-page { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; background:var(--bg); }
-        .auth-card { width:100%; max-width:400px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:32px; }
-        .auth-logo { font-family:'Syne',sans-serif; font-size:20px; font-weight:700; color:var(--green); margin-bottom:24px; text-align:center; }
-        .auth-title { font-family:'Syne',sans-serif; font-size:22px; font-weight:700; margin-bottom:24px; text-align:center; }
-        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-        .form-group { margin-bottom:16px; }
-        .form-label { display:block; font-size:12px; font-weight:500; color:var(--muted); margin-bottom:6px; letter-spacing:0.3px; text-transform:uppercase; }
-        .form-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:11px 14px; color:var(--text); font-size:15px; transition:border-color .15s; font-family:'Inter',sans-serif; }
-        .form-input:focus { outline:none; border-color:var(--green); }
-        .form-input::placeholder { color:var(--muted); }
-        .form-error { background:rgba(248,113,113,0.08); border:1px solid rgba(248,113,113,0.3); border-radius:8px; padding:10px 14px; font-size:13px; color:var(--red); margin-bottom:16px; }
-        .btn-submit { width:100%; background:var(--green); color:#0D1117; border:none; border-radius:8px; padding:13px; font-size:15px; font-weight:600; cursor:pointer; transition:background .15s; font-family:'Syne',sans-serif; margin-bottom:16px; }
-        .btn-submit:hover { background:#86efac; }
-        .btn-submit:disabled { opacity:0.6; cursor:not-allowed; }
-        .auth-footer { font-size:13px; color:var(--muted); text-align:center; }
-        .auth-link { color:var(--green); text-decoration:none; font-weight:500; }
-      `}</style>
     </div>
   )
 }
