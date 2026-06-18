@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { createClient } from '../../../lib/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function LoginPage() {
@@ -9,30 +8,53 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
   const supabase = createClient()
 
   async function handleLogin() {
     if (!email || !password) { setError('Remplissez tous les champs.'); return }
     setLoading(true)
     setError(null)
+
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) { setError(error.message); setLoading(false); return }
-    router.push('/')
-    router.refresh()
+
+    if (error) {
+      setError(error.message)
+      setLoading(false)
+      return
+    }
+
+    // Hard redirect pour forcer le middleware à relire les cookies de session
+    window.location.href = '/'
+  }
+
+  const inputStyle = {
+    width: '100%',
+    background: 'var(--surface2)',
+    border: '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '11px 14px',
+    color: 'var(--text)',
+    fontSize: '15px',
+    fontFamily: "'Inter', sans-serif",
+    transition: 'border-color .15s',
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">🎾 PadelBook</div>
-        <h1 className="auth-title">Connexion</h1>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)' }}>
+      <div style={{ width: '100%', maxWidth: '400px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px' }}>
 
-        <div className="form-group">
-          <label className="form-label">Email</label>
+        <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--green)', marginBottom: '24px', textAlign: 'center' }}>
+          🎾 PadelBook
+        </div>
+        <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700, marginBottom: '24px', textAlign: 'center' }}>
+          Connexion
+        </h1>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Email</label>
           <input
             type="email"
-            className="form-input"
+            style={inputStyle}
             placeholder="vous@exemple.com"
             value={email}
             onChange={e => setEmail(e.target.value)}
@@ -40,11 +62,11 @@ export default function LoginPage() {
           />
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Mot de passe</label>
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Mot de passe</label>
           <input
             type="password"
-            className="form-input"
+            style={inputStyle}
             placeholder="••••••••"
             value={password}
             onChange={e => setPassword(e.target.value)}
@@ -52,102 +74,27 @@ export default function LoginPage() {
           />
         </div>
 
-        {error && <div className="form-error">{error}</div>}
+        {error && (
+          <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--red)', marginBottom: '16px' }}>
+            {error}
+          </div>
+        )}
 
-        <button onClick={handleLogin} disabled={loading} className="btn-submit">
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          style={{ width: '100%', background: 'var(--green)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'Syne',sans-serif", opacity: loading ? 0.6 : 1, marginBottom: '16px' }}
+        >
           {loading ? 'Connexion...' : 'Se connecter'}
         </button>
 
-        <p className="auth-footer">
+        <p style={{ fontSize: '13px', color: 'var(--muted)', textAlign: 'center' }}>
           Pas encore de compte ?{' '}
-          <Link href="/register" className="auth-link">Créer un compte</Link>
+          <Link href="/register" style={{ color: 'var(--green)', textDecoration: 'none', fontWeight: 500 }}>
+            Créer un compte
+          </Link>
         </p>
       </div>
-
-      <style jsx>{`
-        .auth-page {
-          min-height: 100vh;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 24px;
-          background: var(--bg);
-        }
-        .auth-card {
-          width: 100%;
-          max-width: 400px;
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: var(--radius-lg);
-          padding: 32px;
-        }
-        .auth-logo {
-          font-family: 'Syne', sans-serif;
-          font-size: 20px;
-          font-weight: 700;
-          color: var(--green);
-          margin-bottom: 24px;
-          text-align: center;
-        }
-        .auth-title {
-          font-family: 'Syne', sans-serif;
-          font-size: 22px;
-          font-weight: 700;
-          margin-bottom: 24px;
-          text-align: center;
-        }
-        .form-group { margin-bottom: 16px; }
-        .form-label {
-          display: block;
-          font-size: 12px;
-          font-weight: 500;
-          color: var(--muted);
-          margin-bottom: 6px;
-          letter-spacing: 0.3px;
-          text-transform: uppercase;
-        }
-        .form-input {
-          width: 100%;
-          background: var(--surface2);
-          border: 1px solid var(--border);
-          border-radius: 8px;
-          padding: 11px 14px;
-          color: var(--text);
-          font-size: 15px;
-          transition: border-color .15s;
-          font-family: 'Inter', sans-serif;
-        }
-        .form-input:focus { outline: none; border-color: var(--green); }
-        .form-input::placeholder { color: var(--muted); }
-        .form-error {
-          background: rgba(248,113,113,0.08);
-          border: 1px solid rgba(248,113,113,0.3);
-          border-radius: 8px;
-          padding: 10px 14px;
-          font-size: 13px;
-          color: var(--red);
-          margin-bottom: 16px;
-        }
-        .btn-submit {
-          width: 100%;
-          background: var(--green);
-          color: #0D1117;
-          border: none;
-          border-radius: 8px;
-          padding: 13px;
-          font-size: 15px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background .15s;
-          font-family: 'Syne', sans-serif;
-          margin-bottom: 16px;
-        }
-        .btn-submit:hover { background: #86efac; }
-        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-        .auth-footer { font-size: 13px; color: var(--muted); text-align: center; }
-        .auth-link { color: var(--green); text-decoration: none; font-weight: 500; }
-        .auth-link:hover { text-decoration: underline; }
-      `}</style>
     </div>
   )
 }
