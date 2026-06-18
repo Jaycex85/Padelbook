@@ -19,23 +19,28 @@ const PAGE_TITLES = {
 
 export default function TopBar({ user, profile }) {
   const pathname = usePathname()
-  const title = PAGE_TITLES[pathname] || 'PadelBook'
+  const title = PAGE_TITLES[pathname] || 'Mayfair Padel Club'
 
   return (
-    <header style={{ height: '56px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 20px', gap: '16px', position: 'sticky', top: 0, zIndex: 50 }}>
-      {/* Logo mobile uniquement */}
-      <div className="topbar-logo-mobile" style={{ display: 'none', alignItems: 'center', gap: '8px', fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: '16px', color: 'var(--green)' }}>
-        🎾 PadelBook
-      </div>
+    <header style={{ height: '56px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '12px', position: 'sticky', top: 0, zIndex: 50 }}>
 
-      <div style={{ flex: 1, fontFamily: "'Syne', sans-serif", fontSize: '16px', fontWeight: 700 }}
-        className="topbar-title-desktop">
+      {/* Logo mobile */}
+      <Link href="/" className="topbar-logo-mobile" style={{ display: 'none', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
+        <img src="/logo.png" alt="Mayfair Padel Club" style={{ width: '30px', height: '30px', borderRadius: '6px', objectFit: 'cover' }} />
+        <div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 800, color: 'var(--green)', lineHeight: 1 }}>MAYFAIR</div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '9px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '1px' }}>PADEL CLUB</div>
+        </div>
+      </Link>
+
+      {/* Titre page desktop */}
+      <div className="topbar-title-desktop" style={{ flex: 1, fontFamily: "'Syne', sans-serif", fontSize: '16px', fontWeight: 700 }}>
         {title}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
         {user ? (
-          <Link href="/profile" style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '5px 12px', textDecoration: 'none', color: 'var(--muted)', fontSize: '13px', transition: 'all .15s' }}>
+          <Link href="/profile" style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '5px 12px', textDecoration: 'none', color: 'var(--muted)', fontSize: '13px' }}>
             <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(74,222,128,0.1)', border: '1px solid var(--green)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--green)' }}>
               {(profile?.first_name || user.email || '?')[0].toUpperCase()}
             </span>
@@ -44,7 +49,7 @@ export default function TopBar({ user, profile }) {
             </span>
           </Link>
         ) : (
-          <Link href="/login" style={{ background: 'var(--green)', color: '#0D1117', border: 'none', fontSize: '13px', padding: '7px 16px', borderRadius: '8px', fontWeight: 500, textDecoration: 'none' }}>
+          <Link href="/login" style={{ background: 'var(--green)', color: '#0D1117', fontSize: '13px', padding: '7px 16px', borderRadius: '8px', fontWeight: 500, textDecoration: 'none' }}>
             Connexion
           </Link>
         )}
