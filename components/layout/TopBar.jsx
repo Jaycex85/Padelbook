@@ -10,7 +10,7 @@ const PAGE_TITLES = {
   '/admin': 'Dashboard',
   '/admin/courts': 'Terrains',
   '/admin/schedule': 'Calendrier',
-  '/admin/rules': 'Règles d'accès',
+  '/admin/rules': "Règles d'accès",
   '/admin/members': 'Membres',
   '/admin/bookings': 'Réservations',
   '/admin/integrations': 'Intégrations',
@@ -29,78 +29,39 @@ export default function TopBar({ user, profile }) {
   }
 
   return (
-    <header className="topbar">
-      <div className="topbar-logo">
-        <span>🎾</span>
-        <span className="topbar-logo-text">PadelBook</span>
+    <header style={{
+      height: '56px',
+      background: 'var(--surface)',
+      borderBottom: '1px solid var(--border)',
+      display: 'flex',
+      alignItems: 'center',
+      padding: '0 20px',
+      gap: '16px',
+      position: 'sticky',
+      top: 0,
+      zIndex: 50,
+    }}>
+      <div style={{ flex: 1, fontFamily: "'Syne', sans-serif", fontSize: '16px', fontWeight: 700 }}>
+        {title}
       </div>
-      <div className="topbar-title">{title}</div>
-      <div className="topbar-actions">
+      <div>
         {user ? (
-          <button onClick={handleLogout} className="topbar-btn">
+          <button onClick={handleLogout} style={{
+            background: 'none', border: '1px solid var(--border)', color: 'var(--muted)',
+            fontSize: '13px', padding: '6px 14px', borderRadius: '8px', cursor: 'pointer'
+          }}>
             Déconnexion
           </button>
         ) : (
-          <a href="/login" className="topbar-btn topbar-btn-primary">Connexion</a>
+          <a href="/login" style={{
+            background: 'var(--green)', color: '#0D1117', border: 'none',
+            fontSize: '13px', padding: '7px 16px', borderRadius: '8px',
+            fontWeight: 500, textDecoration: 'none'
+          }}>
+            Connexion
+          </a>
         )}
       </div>
-
-      <style jsx>{`
-        .topbar {
-          height: 56px;
-          background: var(--surface);
-          border-bottom: 1px solid var(--border);
-          display: flex;
-          align-items: center;
-          padding: 0 20px;
-          gap: 16px;
-          position: sticky;
-          top: 0;
-          z-index: 50;
-        }
-        .topbar-logo {
-          display: none;
-          align-items: center;
-          gap: 8px;
-          font-family: 'Syne', sans-serif;
-          font-weight: 700;
-          font-size: 16px;
-          color: var(--green);
-        }
-        @media (max-width: 767px) {
-          .topbar-logo { display: flex; }
-        }
-        .topbar-logo-text { font-size: 16px; }
-        .topbar-title {
-          flex: 1;
-          font-family: 'Syne', sans-serif;
-          font-size: 16px;
-          font-weight: 700;
-        }
-        @media (max-width: 767px) {
-          .topbar-title { display: none; }
-        }
-        .topbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-        .topbar-btn {
-          background: none;
-          border: 1px solid var(--border);
-          color: var(--muted);
-          font-size: 13px;
-          padding: 6px 14px;
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all .15s;
-          text-decoration: none;
-        }
-        .topbar-btn:hover { color: var(--text); border-color: var(--muted); }
-        .topbar-btn-primary {
-          background: var(--green);
-          color: #0D1117;
-          border-color: var(--green);
-          font-weight: 500;
-        }
-        .topbar-btn-primary:hover { background: #86efac; }
-      `}</style>
     </header>
   )
 }
