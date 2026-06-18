@@ -1,6 +1,6 @@
 'use client'
-import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '../../lib/supabase'
+import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 
 const PAGE_TITLES = {
   '/': 'Accueil',
@@ -17,91 +17,46 @@ const PAGE_TITLES = {
   '/admin/integrations': 'Intégrations',
 }
 
-export default function TopBar({ user, profile, onMenuOpen }) {
+export default function TopBar({ user, profile }) {
   const pathname = usePathname()
-  const router = useRouter()
-  const supabase = createClient()
-
-  const segments = pathname.split('/').filter(Boolean)
-  const title = PAGE_TITLES[pathname] || (segments[segments.length - 1] || 'PadelBook')
-
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    window.location.href = '/login'
-  }
+  const title = PAGE_TITLES[pathname] || 'PadelBook'
 
   return (
-    <header style={{
-      height: 'var(--topbar-h)',
-      background: 'var(--surface)',
-      borderBottom: '1px solid var(--border)',
-      display: 'flex', alignItems: 'center',
-      padding: '0 16px', gap: '12px',
-      position: 'sticky', top: 0, zIndex: 50,
-      flexShrink: 0,
-    }}>
+    <header style={{ height: '56px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', padding: '0 20px', gap: '16px', position: 'sticky', top: 0, zIndex: 50 }}>
+      {/* Logo mobile uniquement */}
+      <div className="topbar-logo-mobile" style={{ display: 'none', alignItems: 'center', gap: '8px', fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: '16px', color: 'var(--green)' }}>
+        🎾 PadelBook
+      </div>
 
-      {/* Hamburger */}
-      <button
-        onClick={onMenuOpen}
-        aria-label="Ouvrir le menu"
-        style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', flexDirection: 'column', gap: '5px',
-          padding: '6px', borderRadius: '8px',
-          transition: 'background .15s',
-        }}
-      >
-        <span style={{ display: 'block', width: '20px', height: '2px', background: 'var(--text)', borderRadius: '99px' }} />
-        <span style={{ display: 'block', width: '20px', height: '2px', background: 'var(--text)', borderRadius: '99px' }} />
-        <span style={{ display: 'block', width: '14px', height: '2px', background: 'var(--muted)', borderRadius: '99px' }} />
-      </button>
-
-      {/* Titre page */}
-      <span style={{
-        fontFamily: "'Syne',sans-serif",
-        fontWeight: 700, fontSize: '16px',
-        flex: 1,
-        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-      }}>
+      <div style={{ flex: 1, fontFamily: "'Syne', sans-serif", fontSize: '16px', fontWeight: 700 }}
+        className="topbar-title-desktop">
         {title}
-      </span>
+      </div>
 
-      {/* Actions droite */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto' }}>
         {user ? (
-          <>
-            {/* Avatar */}
-            <div style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--purple), var(--purple-l))',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '13px', fontWeight: 700, color: '#fff',
-              flexShrink: 0, cursor: 'pointer',
-            }} onClick={() => router.push('/profile')}>
-              {(profile?.first_name || profile?.email || '?')[0].toUpperCase()}
-            </div>
-            <button onClick={handleLogout} style={{
-              background: 'none',
-              border: '1px solid var(--border)',
-              color: 'var(--muted)', fontSize: '12px',
-              padding: '5px 12px', borderRadius: '8px', cursor: 'pointer',
-              transition: 'all .15s',
-            }}>
-              Déconnexion
-            </button>
-          </>
+          <Link href="/profile" style={{ display: 'flex', alignItems: 'center', gap: '7px', background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '5px 12px', textDecoration: 'none', color: 'var(--muted)', fontSize: '13px', transition: 'all .15s' }}>
+            <span style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(74,222,128,0.1)', border: '1px solid var(--green)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--green)' }}>
+              {(profile?.first_name || user.email || '?')[0].toUpperCase()}
+            </span>
+            <span className="topbar-name-desktop">
+              {profile?.first_name || user.email?.split('@')[0]}
+            </span>
+          </Link>
         ) : (
-          <a href="/login" style={{
-            background: 'linear-gradient(135deg, var(--purple), var(--purple-l))',
-            color: '#fff', fontSize: '13px', fontWeight: 500,
-            padding: '7px 16px', borderRadius: '8px',
-            textDecoration: 'none',
-          }}>
+          <Link href="/login" style={{ background: 'var(--green)', color: '#0D1117', border: 'none', fontSize: '13px', padding: '7px 16px', borderRadius: '8px', fontWeight: 500, textDecoration: 'none' }}>
             Connexion
-          </a>
+          </Link>
         )}
       </div>
+
+      <style jsx global>{`
+        @media (max-width: 767px) {
+          .topbar-logo-mobile { display: flex !important; }
+          .topbar-title-desktop { display: none !important; }
+          .topbar-name-desktop { display: none; }
+        }
+      `}</style>
     </header>
   )
 }
