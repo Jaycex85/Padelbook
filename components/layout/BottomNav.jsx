@@ -20,18 +20,42 @@ export default function BottomNav({ profile }) {
 
   return (
     <>
-      <nav style={{ display: 'none', position: 'fixed', bottom: 0, left: 0, right: 0, height: 'var(--bottom-nav-h)', background: 'var(--surface)', borderTop: '1px solid var(--border)', zIndex: 100, backdropFilter: 'blur(8px)' }} className="bottom-nav-mobile">
-        {links.map(link => (
-          <Link key={link.href} href={link.href}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '3px', textDecoration: 'none', color: isActive(link.href) ? 'var(--green)' : 'var(--muted)', padding: '6px 4px', transition: 'all .15s' }}>
-            <span style={{ fontSize: '20px', lineHeight: 1 }}>{link.icon}</span>
-            <span style={{ fontSize: '10px', fontWeight: 500 }}>{link.label}</span>
-          </Link>
-        ))}
+      <nav className="bottom-nav-mobile" style={{
+        display: 'none',
+        position: 'fixed',
+        bottom: 0, left: 0, right: 0,
+        height: 'var(--bottom-nav-h)',
+        background: 'var(--surface)',
+        borderTop: '1px solid var(--border)',
+        zIndex: 100,
+        backdropFilter: 'blur(8px)',
+      }}>
+        {links.map(link => {
+          const active = isActive(link.href)
+          return (
+            <Link key={link.href} href={link.href} style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '3px',
+              textDecoration: 'none',
+              color: active ? 'var(--brand-light)' : 'var(--muted)',
+              padding: '6px 4px',
+              transition: 'all .15s',
+              borderTop: active ? '2px solid var(--brand)' : '2px solid transparent',
+            }}>
+              <span style={{ fontSize: '20px', lineHeight: 1 }}>{link.icon}</span>
+              <span style={{ fontSize: '10px', fontWeight: active ? 600 : 400 }}>{link.label}</span>
+            </Link>
+          )
+        })}
       </nav>
       <style jsx global>{`
         @media (max-width: 767px) {
           .bottom-nav-mobile { display: flex !important; }
+          main { padding-bottom: calc(var(--bottom-nav-h) + 16px); }
         }
       `}</style>
     </>
