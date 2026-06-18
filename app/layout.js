@@ -3,9 +3,13 @@ import { createServerSupabase } from '../lib/supabaseServer'
 import AppShell from '../components/layout/AppShell'
 
 export const metadata = {
-  title: 'PadelBook',
-  description: 'Réservation de terrains de padel',
+  title: 'Mayfair Padel Club',
+  description: 'Réservez votre terrain de padel — Mayfair Padel Club',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.png',
+    apple: '/icons/icon-192.png',
+  },
 }
 
 export default async function RootLayout({ children }) {
