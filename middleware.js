@@ -13,7 +13,6 @@ export async function middleware(request) {
           return request.cookies.getAll()
         },
         setAll(toSet) {
-          // Propager les cookies sur la request ET sur la response
           toSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
           toSet.forEach(({ name, value, options }) =>
@@ -24,25 +23,22 @@ export async function middleware(request) {
     }
   )
 
-  // IMPORTANT : toujours appeler getUser() pour rafraîchir la session
+  // Rafraîchit la session — NE PAS supprimer cet appel
   const { data: { user } } = await supabase.auth.getUser()
   const { pathname } = request.nextUrl
 
-  // Rediriger vers login si non connecté sur routes protégées
-  if (
-    !user &&
-    !pathname.startsWith('/login') &&
-    !pathname.startsWith('/register') &&
-    (pathname.startsWith('/admin') ||
-     pathname.startsWith('/my-bookings') ||
-     pathname.startsWith('/dashboard'))
-  ) {
+  // Routes protégées sans connexion
+  if (!user && (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/my-bookings') ||
+    pathname.startsWith('/dashboard')
+  )) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Vérifier le rôle admin
+  // Routes admin : vérifier le rôle
   if (user && pathname.startsWith('/admin')) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -57,12 +53,11 @@ export async function middleware(request) {
     }
   }
 
-  // IMPORTANT : retourner supabaseResponse pour propager les cookies de session
   return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon\.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
