@@ -22,7 +22,7 @@ export default function AppShell({ children, user, profile }) {
         <Sidebar profile={profile} />
       </div>
 
-      {/* Overlay mobile */}
+      {/* Overlay mobile (hamburger menu) */}
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
@@ -30,7 +30,7 @@ export default function AppShell({ children, user, profile }) {
         />
       )}
 
-      {/* Sidebar mobile slide */}
+      {/* Sidebar mobile — slide menu complet */}
       <div className={'sidebar-mobile-wrapper' + (sidebarOpen ? ' open' : '')}>
         <Sidebar profile={profile} onClose={() => setSidebarOpen(false)} />
       </div>
@@ -43,7 +43,7 @@ export default function AppShell({ children, user, profile }) {
         </main>
       </div>
 
-      {/* Bottom nav mobile */}
+      {/* Bottom nav — accès rapide mobile */}
       <BottomNav profile={profile} />
 
       <style jsx global>{`
