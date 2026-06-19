@@ -50,13 +50,13 @@ export default function ProfilePage() {
 
       {/* Infos lecture seule */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(74,222,128,0.08)', border: '1px solid var(--green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 700, color: 'var(--green)', flexShrink: 0 }}>
+        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(74,222,128,0.08)', border: '1px solid var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 700, color: 'var(--brand)', flexShrink: 0 }}>
           {(profile?.first_name || profile?.email || '?')[0].toUpperCase()}
         </div>
         <div>
           <div style={{ fontSize: '15px', fontWeight: 500 }}>{profile?.email}</div>
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(74,222,128,0.1)', color: 'var(--green)', fontWeight: 500 }}>
+            <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(74,222,128,0.1)', color: 'var(--brand)', fontWeight: 500 }}>
               {profile?.role}
             </span>
             {profile?.discount_percent > 0 && (
@@ -72,7 +72,7 @@ export default function ProfilePage() {
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Solde wallet</div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '24px', fontWeight: 700, color: 'var(--green)' }}>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '24px', fontWeight: 700, color: 'var(--brand)' }}>
             {(profile?.wallet_balance || 0).toFixed(2)} €
           </div>
         </div>
@@ -97,12 +97,12 @@ export default function ProfilePage() {
           <input style={fieldStyle} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+32 4xx xxx xxx" />
         </div>
         {saved && (
-          <div style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--green)', marginBottom: '14px' }}>
+          <div style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--brand)', marginBottom: '14px' }}>
             ✓ Profil enregistré
           </div>
         )}
         <button onClick={handleSave} disabled={saving}
-          style={{ background: 'var(--green)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '11px 24px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif", opacity: saving ? 0.6 : 1 }}>
+          style={{ background: 'var(--brand)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '11px 24px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif", opacity: saving ? 0.6 : 1 }}>
           {saving ? 'Enregistrement...' : 'Sauvegarder'}
         </button>
       </div>
