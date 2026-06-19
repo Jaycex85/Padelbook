@@ -205,7 +205,7 @@ export default function AdminRulesPage() {
         .rule-row { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 16px; display:flex; align-items:flex-start; gap:12px; }
         .rule-inactive { opacity:0.45; }
         .effect-badge { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; flex-shrink:0; margin-top:2px; }
-        .effect-allow { background:rgba(74,222,128,0.12); color:var(--green); }
+        .effect-allow { background:rgba(74,222,128,0.12); color:var(--brand); }
         .effect-deny { background:rgba(248,113,113,0.12); color:var(--red); }
         .rule-info { flex:1; min-width:0; }
         .rule-label { font-size:14px; font-weight:500; margin-bottom:6px; }
@@ -216,15 +216,15 @@ export default function AdminRulesPage() {
         .priority-label { font-size:11px; color:var(--muted); }
         .rule-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
         .toggle-btn { font-size:11px; padding:4px 10px; border-radius:99px; cursor:pointer; border:1px solid var(--border); background:none; color:var(--muted); transition:all .15s; }
-        .toggle-btn.on { border-color:var(--green); color:var(--green); background:rgba(74,222,128,0.08); }
+        .toggle-btn.on { border-color:var(--brand); color:var(--brand); background:rgba(74,222,128,0.08); }
         .btn-icon { background:none; border:1px solid var(--border); border-radius:8px; padding:5px 9px; cursor:pointer; font-size:13px; }
         .btn-icon:hover { border-color:var(--red); }
-        .btn-primary { background:var(--green); color:#0D1117; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer; font-family:'Syne',sans-serif; }
+        .btn-primary { background:var(--brand); color:#0D1117; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer; font-family:'Syne',sans-serif; }
         .btn-primary:hover { background:#86efac; }
         .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
         .btn-outline { background:none; border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:10px 20px; font-size:14px; cursor:pointer; }
         .tag-btn { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; color:var(--muted); transition:all .15s; }
-        .tag-btn.active { border-color:var(--green); color:var(--green); background:rgba(74,222,128,0.08); }
+        .tag-btn.active { border-color:var(--brand); color:var(--brand); background:rgba(74,222,128,0.08); }
         .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:200; padding:16px; }
         .modal { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; width:100%; max-width:500px; max-height:90vh; overflow-y:auto; }
         .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
@@ -235,7 +235,7 @@ export default function AdminRulesPage() {
         .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
         .form-label { display:block; font-size:11px; font-weight:500; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.3px; }
         .form-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:14px; font-family:'Inter',sans-serif; }
-        .form-input:focus { outline:none; border-color:var(--green); }
+        .form-input:focus { outline:none; border-color:var(--brand); }
       
         @media (max-width: 480px) {
           .modal { max-width: calc(100vw - 32px) !important; }
