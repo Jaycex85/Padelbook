@@ -79,12 +79,12 @@ export default function RegisterPage() {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
         <div style={{ width: '100%', maxWidth: '420px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px', textAlign: 'center' }}>
-          <div style={{ fontSize: '48px', color: 'var(--green)', marginBottom: '16px' }}>✓</div>
+          <div style={{ fontSize: '48px', color: 'var(--brand)', marginBottom: '16px' }}>✓</div>
           <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700, marginBottom: '8px' }}>Compte créé !</h2>
           <p style={{ color: 'var(--muted)', fontSize: '14px', marginBottom: '24px' }}>
             Vérifiez votre email pour confirmer votre compte.
           </p>
-          <Link href="/login" style={{ display: 'block', background: 'var(--green)', color: '#0D1117', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, textDecoration: 'none', fontFamily: "'Syne',sans-serif" }}>
+          <Link href="/login" style={{ display: 'block', background: 'var(--brand)', color: '#0D1117', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, textDecoration: 'none', fontFamily: "'Syne',sans-serif" }}>
             Aller à la connexion
           </Link>
         </div>
@@ -96,7 +96,7 @@ export default function RegisterPage() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'var(--bg)' }}>
       <div style={{ width: '100%', maxWidth: '460px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '32px' }}>
 
-        <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--green)', marginBottom: '24px', textAlign: 'center' }}>
+        <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand)', marginBottom: '24px', textAlign: 'center' }}>
           🎾 PadelBook
         </div>
         <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700, marginBottom: '24px', textAlign: 'center' }}>
@@ -156,13 +156,13 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <button onClick={handleRegister} disabled={loading} style={{ width: '100%', background: 'var(--green)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'Syne',sans-serif", opacity: loading ? 0.6 : 1, marginBottom: '16px' }}>
+        <button onClick={handleRegister} disabled={loading} style={{ width: '100%', background: 'var(--brand)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: "'Syne',sans-serif", opacity: loading ? 0.6 : 1, marginBottom: '16px' }}>
           {loading ? 'Création...' : 'Créer mon compte'}
         </button>
 
         <p style={{ fontSize: '13px', color: 'var(--muted)', textAlign: 'center' }}>
           Déjà un compte ?{' '}
-          <Link href="/login" style={{ color: 'var(--green)', textDecoration: 'none', fontWeight: 500 }}>Se connecter</Link>
+          <Link href="/login" style={{ color: 'var(--brand)', textDecoration: 'none', fontWeight: 500 }}>Se connecter</Link>
         </p>
       </div>
     </div>
