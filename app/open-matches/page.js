@@ -74,7 +74,7 @@ export default function OpenMatchesPage() {
         <div style={{ textAlign: 'center', padding: '64px', color: 'var(--muted)' }}>
           <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎾</div>
           <p style={{ marginBottom: '16px' }}>Aucun match public disponible pour le moment.</p>
-          <a href="/booking" style={{ background: 'var(--green)', color: '#0D1117', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
+          <a href="/booking" style={{ background: 'var(--brand)', color: '#0D1117', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
             Créer un match
           </a>
         </div>
@@ -94,7 +94,7 @@ export default function OpenMatchesPage() {
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
                       <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '16px', fontWeight: 700 }}>{m.court?.name}</span>
-                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: m.court?.is_indoor ? 'rgba(96,165,250,0.1)' : 'rgba(74,222,128,0.1)', color: m.court?.is_indoor ? '#93C5FD' : 'var(--green)' }}>
+                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: m.court?.is_indoor ? 'rgba(96,165,250,0.1)' : 'rgba(74,222,128,0.1)', color: m.court?.is_indoor ? '#93C5FD' : 'var(--brand)' }}>
                         {m.court?.is_indoor ? 'Indoor' : 'Outdoor'}
                       </span>
                     </div>
@@ -105,27 +105,27 @@ export default function OpenMatchesPage() {
                       {/* Joueurs spots */}
                       <div style={{ display: 'flex', gap: '4px' }}>
                         {Array.from({ length: spotsTotal }).map((_, i) => (
-                          <div key={i} style={{ width: '28px', height: '28px', borderRadius: '50%', background: i < spotsTaken ? 'rgba(74,222,128,0.15)' : 'var(--surface2)', border: '1.5px solid ' + (i < spotsTaken ? 'var(--green)' : 'var(--border)'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
+                          <div key={i} style={{ width: '28px', height: '28px', borderRadius: '50%', background: i < spotsTaken ? 'rgba(74,222,128,0.15)' : 'var(--surface2)', border: '1.5px solid ' + (i < spotsTaken ? 'var(--brand)' : 'var(--border)'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px' }}>
                             {i < spotsTaken ? '👤' : ''}
                           </div>
                         ))}
                       </div>
-                      <span style={{ fontSize: '12px', color: isFull ? 'var(--red)' : 'var(--green)' }}>
+                      <span style={{ fontSize: '12px', color: isFull ? 'var(--red)' : 'var(--brand)' }}>
                         {isFull ? 'Complet' : spotsLeft + ' place' + (spotsLeft > 1 ? 's' : '') + ' libre' + (spotsLeft > 1 ? 's' : '')}
                       </span>
                       <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Organisé par {ownerName(m)}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                    <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--green)' }}>
+                    <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand)' }}>
                       {myPrice} €
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--muted)' }}>votre part</div>
                     {isAlreadyIn ? (
-                      <span style={{ fontSize: '12px', color: 'var(--green)', padding: '6px 14px', border: '1px solid var(--green)', borderRadius: '8px' }}>Inscrit ✓</span>
+                      <span style={{ fontSize: '12px', color: 'var(--brand)', padding: '6px 14px', border: '1px solid var(--brand)', borderRadius: '8px' }}>Inscrit ✓</span>
                     ) : (
                       <button onClick={() => handleJoin(m)} disabled={isFull || joining === m.id}
-                        style={{ background: isFull ? 'var(--surface2)' : 'var(--green)', color: isFull ? 'var(--muted)' : '#0D1117', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: 600, cursor: isFull ? 'not-allowed' : 'pointer', fontFamily: "'Syne',sans-serif", opacity: joining === m.id ? 0.6 : 1 }}>
+                        style={{ background: isFull ? 'var(--surface2)' : 'var(--brand)', color: isFull ? 'var(--muted)' : '#0D1117', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: 600, cursor: isFull ? 'not-allowed' : 'pointer', fontFamily: "'Syne',sans-serif", opacity: joining === m.id ? 0.6 : 1 }}>
                         {joining === m.id ? '...' : isFull ? 'Complet' : 'Rejoindre'}
                       </button>
                     )}
