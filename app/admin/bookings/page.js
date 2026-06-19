@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 
 const STATUS_STYLES = {
-  confirmed: { bg: 'rgba(74,222,128,0.1)', color: 'var(--green)', label: 'Confirmé' },
+  confirmed: { bg: 'var(--brand-dim)', color: 'var(--brand-light)', label: 'Confirmé' },
   pending: { bg: 'rgba(252,211,77,0.1)', color: 'var(--amber)', label: 'En attente' },
   cancelled: { bg: 'rgba(248,113,113,0.1)', color: 'var(--red)', label: 'Annulé' },
   completed: { bg: 'rgba(139,148,158,0.1)', color: 'var(--muted)', label: 'Terminé' },
@@ -38,75 +38,107 @@ export default function AdminBookingsPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', gap: '16px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Réservations</h1>
           <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>{bookings.length} résultat{bookings.length !== 1 ? 's' : ''}</p>
         </div>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          {['all', 'pending', 'confirmed', 'cancelled', 'completed'].map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              style={{ background: filter === f ? 'rgba(74,222,128,0.08)' : 'var(--surface)', border: '1px solid ' + (filter === f ? 'var(--green)' : 'var(--border)'), color: filter === f ? 'var(--green)' : 'var(--muted)', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', cursor: 'pointer' }}>
-              {f === 'all' ? 'Tout' : STATUS_STYLES[f]?.label || f}
-            </button>
-          ))}
-        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px', overflowX: 'auto' }}>
+        {['all', 'pending', 'confirmed', 'cancelled', 'completed'].map(f => (
+          <button key={f} onClick={() => setFilter(f)}
+            style={{ background: filter === f ? 'var(--brand-dim)' : 'var(--surface)', border: '1px solid ' + (filter === f ? 'var(--brand)' : 'var(--border)'), color: filter === f ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}>
+            {f === 'all' ? 'Tout' : STATUS_STYLES[f]?.label || f}
+          </button>
+        ))}
       </div>
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
+      ) : bookings.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '32px', color: 'var(--muted)', fontSize: '14px' }}>Aucune réservation.</div>
       ) : (
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
-                  {['Terrain', 'Joueur', 'Date', 'Créneau', 'Montant', 'Joueurs', 'Statut', ''].map(h => (
-                    <th key={h} style={{ padding: '10px 16px', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {bookings.map(b => {
-                  const s = STATUS_STYLES[b.status] || STATUS_STYLES.pending
-                  const paidCount = (b.players || []).filter(p => p.payment_status === 'paid').length
-                  return (
-                    <tr key={b.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap' }}>{b.court?.name || '—'}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{ownerName(b)}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmt(b.starts_at)}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', whiteSpace: 'nowrap' }}>{fmtTime(b.starts_at)} – {fmtTime(b.ends_at)}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--green)', fontFamily: "'Syne',sans-serif", whiteSpace: 'nowrap' }}>{b.total_price} €</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{paidCount}/{b.players?.length || 0}</td>
-                      <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
-                        <span style={{ background: s.bg, color: s.color, fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: 500 }}>{s.label}</span>
-                      </td>
-                      <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          {b.status === 'pending' && (
-                            <button onClick={() => updateStatus(b.id, 'confirmed')}
-                              style={{ background: 'rgba(74,222,128,0.1)', border: '1px solid var(--green)', color: 'var(--green)', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>
-                              Confirmer
-                            </button>
-                          )}
-                          {['pending', 'confirmed'].includes(b.status) && (
-                            <button onClick={() => updateStatus(b.id, 'cancelled')}
-                              style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>
-                              Annuler
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-                {bookings.length === 0 && (
-                  <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Aucune réservation.</td></tr>
-                )}
-              </tbody>
-            </table>
+        <>
+          {/* ─── DESKTOP : tableau ─── */}
+          <div className="table-desktop-only" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    {['Terrain', 'Joueur', 'Date', 'Créneau', 'Montant', 'Joueurs', 'Statut', ''].map(h => (
+                      <th key={h} style={{ padding: '10px 16px', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.map(b => {
+                    const s = STATUS_STYLES[b.status] || STATUS_STYLES.pending
+                    const paidCount = (b.players || []).filter(p => p.payment_status === 'paid').length
+                    return (
+                      <tr key={b.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap' }}>{b.court?.name || '—'}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{ownerName(b)}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{fmt(b.starts_at)}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', whiteSpace: 'nowrap' }}>{fmtTime(b.starts_at)} – {fmtTime(b.ends_at)}</td>
+                        <td style={{ padding: '12px 16px', fontSize: '14px', color: 'var(--brand-light)', fontFamily: "'Syne',sans-serif", whiteSpace: 'nowrap' }}>{b.total_price} €</td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--muted)', whiteSpace: 'nowrap' }}>{paidCount}/{b.players?.length || 0}</td>
+                        <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                          <span style={{ background: s.bg, color: s.color, fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: 500 }}>{s.label}</span>
+                        </td>
+                        <td style={{ padding: '12px 16px', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            {b.status === 'pending' && (
+                              <button onClick={() => updateStatus(b.id, 'confirmed')} style={{ background: 'var(--brand-dim)', border: '1px solid var(--brand)', color: 'var(--brand-light)', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>Confirmer</button>
+                            )}
+                            {['pending', 'confirmed'].includes(b.status) && (
+                              <button onClick={() => updateStatus(b.id, 'cancelled')} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>Annuler</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {/* ─── MOBILE : cards ─── */}
+          <div className="cards-mobile-only">
+            {bookings.map(b => {
+              const s = STATUS_STYLES[b.status] || STATUS_STYLES.pending
+              const paidCount = (b.players || []).filter(p => p.payment_status === 'paid').length
+              return (
+                <div key={b.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '8px' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: '15px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.court?.name || '—'}</div>
+                      <div style={{ fontSize: '12px', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ownerName(b)}</div>
+                    </div>
+                    <span style={{ background: s.bg, color: s.color, fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: 500, flexShrink: 0 }}>{s.label}</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', fontSize: '12px', color: 'var(--muted)', marginBottom: '10px' }}>
+                    <span>{fmt(b.starts_at)}</span>
+                    <span>{fmtTime(b.starts_at)} – {fmtTime(b.ends_at)}</span>
+                    <span>{paidCount}/{b.players?.length || 0} payé{paidCount !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700, color: 'var(--brand-light)' }}>{b.total_price} €</span>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {b.status === 'pending' && (
+                        <button onClick={() => updateStatus(b.id, 'confirmed')} style={{ background: 'var(--brand-dim)', border: '1px solid var(--brand)', color: 'var(--brand-light)', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }}>Confirmer</button>
+                      )}
+                      {['pending', 'confirmed'].includes(b.status) && (
+                        <button onClick={() => updateStatus(b.id, 'cancelled')} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }}>Annuler</button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
       )}
     </div>
   )
