@@ -133,8 +133,8 @@ function BookingForm() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '8px' }}>
           {courts.map(c => (
             <button key={c.id} onClick={() => { setSelectedCourt(c); setSelectedSlot(null) }}
-              style={{ background: selectedCourt?.id === c.id ? 'rgba(74,222,128,0.08)' : 'var(--surface)', border: '1.5px solid ' + (selectedCourt?.id === c.id ? 'var(--green)' : 'var(--border)'), borderRadius: '12px', padding: '14px', textAlign: 'left', cursor: 'pointer', transition: 'all .15s' }}>
-              <div style={{ fontSize: '11px', color: 'var(--green)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+              style={{ background: selectedCourt?.id === c.id ? 'rgba(74,222,128,0.08)' : 'var(--surface)', border: '1.5px solid ' + (selectedCourt?.id === c.id ? 'var(--brand)' : 'var(--border)'), borderRadius: '12px', padding: '14px', textAlign: 'left', cursor: 'pointer', transition: 'all .15s' }}>
+              <div style={{ fontSize: '11px', color: 'var(--brand)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
                 {c.is_indoor ? 'Indoor' : 'Outdoor'}
               </div>
               <div style={{ fontSize: '14px', fontWeight: 500 }}>{c.name}</div>
@@ -150,11 +150,11 @@ function BookingForm() {
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
           {dates.map(d => (
             <button key={d} onClick={() => { setSelectedDate(d); setSelectedSlot(null) }}
-              style={{ flexShrink: 0, background: selectedDate === d ? 'rgba(74,222,128,0.08)' : 'var(--surface)', border: '1.5px solid ' + (selectedDate === d ? 'var(--green)' : 'var(--border)'), borderRadius: '10px', padding: '10px 14px', textAlign: 'center', cursor: 'pointer', minWidth: '64px' }}>
+              style={{ flexShrink: 0, background: selectedDate === d ? 'rgba(74,222,128,0.08)' : 'var(--surface)', border: '1.5px solid ' + (selectedDate === d ? 'var(--brand)' : 'var(--border)'), borderRadius: '10px', padding: '10px 14px', textAlign: 'center', cursor: 'pointer', minWidth: '64px' }}>
               <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
                 {new Date(d + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'short' })}
               </div>
-              <div style={{ fontSize: '20px', fontFamily: "'Syne',sans-serif", fontWeight: 700, color: selectedDate === d ? 'var(--green)' : 'var(--text)' }}>
+              <div style={{ fontSize: '20px', fontFamily: "'Syne',sans-serif", fontWeight: 700, color: selectedDate === d ? 'var(--brand)' : 'var(--text)' }}>
                 {new Date(d + 'T12:00:00').getDate()}
               </div>
             </button>
@@ -177,11 +177,11 @@ function BookingForm() {
                 onClick={() => slot.available && setSelectedSlot(slot)}
                 style={{
                   background: !slot.available ? 'transparent' : selectedSlot === slot ? 'rgba(74,222,128,0.12)' : 'var(--surface)',
-                  border: '1px solid ' + (!slot.available ? 'var(--border)' : selectedSlot === slot ? 'var(--green)' : 'var(--border)'),
+                  border: '1px solid ' + (!slot.available ? 'var(--border)' : selectedSlot === slot ? 'var(--brand)' : 'var(--border)'),
                   borderRadius: '8px', padding: '10px', textAlign: 'center', cursor: slot.available ? 'pointer' : 'not-allowed',
                   opacity: slot.available ? 1 : 0.35, transition: 'all .15s',
                 }}>
-                <div style={{ fontSize: '14px', fontWeight: 500, color: selectedSlot === slot ? 'var(--green)' : 'var(--text)' }}>
+                <div style={{ fontSize: '14px', fontWeight: 500, color: selectedSlot === slot ? 'var(--brand)' : 'var(--text)' }}>
                   {formatTime(slot.start)}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
@@ -204,7 +204,7 @@ function BookingForm() {
               </div>
             </div>
             <button onClick={() => setIsPublic(!isPublic)}
-              style={{ width: '44px', height: '24px', background: isPublic ? 'var(--green)' : 'var(--border)', borderRadius: '99px', border: 'none', cursor: 'pointer', position: 'relative', transition: 'all .2s', flexShrink: 0 }}>
+              style={{ width: '44px', height: '24px', background: isPublic ? 'var(--brand)' : 'var(--border)', borderRadius: '99px', border: 'none', cursor: 'pointer', position: 'relative', transition: 'all .2s', flexShrink: 0 }}>
               <div style={{ position: 'absolute', top: '3px', left: isPublic ? '23px' : '3px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', transition: 'left .2s' }} />
             </button>
           </div>
@@ -236,13 +236,13 @@ function BookingForm() {
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 500, paddingTop: '12px' }}>
               <span>Votre part</span>
-              <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--green)' }}>
+              <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand)' }}>
                 {calcEffectivePrice(selectedCourt.price_per_slot / 4, profile?.discount_percent || 0)} €
               </span>
             </div>
             {error && <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--red)', marginTop: '12px' }}>{error}</div>}
             <button onClick={handleBook} disabled={booking}
-              style={{ width: '100%', background: 'var(--green)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: '16px', fontFamily: "'Syne',sans-serif", opacity: booking ? 0.6 : 1 }}>
+              style={{ width: '100%', background: 'var(--brand)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: '16px', fontFamily: "'Syne',sans-serif", opacity: booking ? 0.6 : 1 }}>
               {booking ? 'Réservation...' : profile ? 'Confirmer la réservation' : 'Se connecter pour réserver'}
             </button>
           </div>
