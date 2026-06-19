@@ -179,16 +179,16 @@ export default function AdminCourtsPage() {
         .court-row-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
         .badge { font-size:11px; padding:2px 8px; border-radius:99px; font-weight:500; }
         .badge-blue { background:rgba(96,165,250,0.12); color:#93C5FD; }
-        .badge-green { background:rgba(74,222,128,0.1); color:var(--green); }
+        .badge-green { background:rgba(74,222,128,0.1); color:var(--brand); }
         .status-badge { font-size:11px; padding:3px 10px; border-radius:99px; }
-        .status-active { background:rgba(74,222,128,0.1); color:var(--green); }
+        .status-active { background:rgba(74,222,128,0.1); color:var(--brand); }
         .status-inactive { background:rgba(139,148,158,0.12); color:var(--muted); }
         .status-maintenance { background:rgba(252,211,77,0.1); color:var(--amber); }
         .btn-icon { background:none; border:1px solid var(--border); border-radius:8px; padding:6px 10px; cursor:pointer; font-size:14px; transition:all .15s; }
         .btn-icon:hover { border-color:var(--muted); }
         .btn-toggle { font-size:12px; padding:6px 12px; border-radius:8px; cursor:pointer; border:1px solid var(--border); background:none; color:var(--muted); transition:all .15s; }
-        .btn-toggle:hover { border-color:var(--green); color:var(--green); }
-        .btn-primary { background:var(--green); color:#0D1117; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer; transition:background .15s; font-family:'Syne',sans-serif; }
+        .btn-toggle:hover { border-color:var(--brand); color:var(--brand); }
+        .btn-primary { background:var(--brand); color:#0D1117; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer; transition:background .15s; font-family:'Syne',sans-serif; }
         .btn-primary:hover { background:#86efac; }
         .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
         .btn-outline { background:none; border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:10px 20px; font-size:14px; cursor:pointer; }
@@ -203,7 +203,7 @@ export default function AdminCourtsPage() {
         .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
         .form-label { display:block; font-size:11px; font-weight:500; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.3px; }
         .form-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:14px; font-family:'Inter',sans-serif; transition:border-color .15s; }
-        .form-input:focus { outline:none; border-color:var(--green); }
+        .form-input:focus { outline:none; border-color:var(--brand); }
       
         @media (max-width: 480px) {
           .modal { max-width: calc(100vw - 32px) !important; }
