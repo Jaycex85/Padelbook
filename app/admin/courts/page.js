@@ -81,7 +81,7 @@ export default function AdminCourtsPage() {
                   <span className="meta-sep">·</span>
                   <span>{PAYMENT_MODES[court.payment_mode]}</span>
                   <span className="meta-sep">·</span>
-                  <span className="text-green">{court.price_per_slot} €</span>
+                  <span style={{color:'var(--brand-light)'}}>{court.price_per_slot} € <span style={{color:'var(--muted)', fontWeight:400}}>({(court.price_per_slot/4).toFixed(2)} €/joueur)</span></span>
                 </div>
                 {court.description && <p className="court-row-desc">{court.description}</p>}
               </div>
@@ -118,8 +118,9 @@ export default function AdminCourtsPage() {
 
             <div className="form-row">
               <div className="form-group">
-                <label className="form-label">Prix / slot (€)</label>
+                <label className="form-label">Prix total du créneau (€)</label>
                 <input className="form-input" type="number" value={form.price_per_slot} onChange={e => setForm({...form, price_per_slot: parseFloat(e.target.value)})} />
+                <p style={{fontSize:'11px', color:'var(--muted)', marginTop:'4px'}}>Soit {(form.price_per_slot / 4).toFixed(2)} € par joueur (4 joueurs)</p>
               </div>
               <div className="form-group">
                 <label className="form-label">Ordre d'affichage</label>
