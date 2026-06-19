@@ -224,7 +224,7 @@ export default function AdminSchedulePage() {
         .page-sub { font-size:13px; color:var(--muted); margin-top:2px; }
         .court-tabs { display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap; }
         .court-tab { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 16px; font-size:13px; cursor:pointer; color:var(--muted); transition:all .15s; }
-        .court-tab.active { border-color:var(--green); color:var(--green); background:rgba(74,222,128,0.08); }
+        .court-tab.active { border-color:var(--brand); color:var(--brand); background:rgba(74,222,128,0.08); }
         .section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
         .section-title { font-family:'Syne',sans-serif; font-size:16px; font-weight:700; }
         .week-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; overflow-x:auto; }
@@ -232,7 +232,7 @@ export default function AdminSchedulePage() {
         .day-col { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:10px; }
         .day-header { font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
         .day-empty { font-size:12px; color:var(--border); text-align:center; padding:8px 0; }
-        .slot-chip { background:rgba(74,222,128,0.08); border:1px solid rgba(74,222,128,0.2); border-radius:6px; padding:5px 8px; margin-bottom:4px; font-size:12px; color:var(--green); display:flex; align-items:center; gap:4px; }
+        .slot-chip { background:rgba(74,222,128,0.08); border:1px solid rgba(74,222,128,0.2); border-radius:6px; padding:5px 8px; margin-bottom:4px; font-size:12px; color:var(--brand); display:flex; align-items:center; gap:4px; }
         .slot-chip.inactive { opacity:0.4; }
         .slot-dur { color:var(--muted); font-size:10px; flex:1; }
         .slot-remove { background:none; border:none; color:var(--muted); cursor:pointer; font-size:10px; padding:0; }
@@ -244,7 +244,7 @@ export default function AdminSchedulePage() {
         .block-dates { font-size:12px; color:var(--muted); }
         .badge { font-size:11px; padding:2px 8px; border-radius:99px; font-weight:500; }
         .badge-amber { background:rgba(252,211,77,0.1); color:var(--amber); }
-        .btn-primary { background:var(--green); color:#0D1117; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer; transition:background .15s; font-family:'Syne',sans-serif; }
+        .btn-primary { background:var(--brand); color:#0D1117; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer; transition:background .15s; font-family:'Syne',sans-serif; }
         .btn-primary:hover { background:#86efac; }
         .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
         .btn-sm { padding:7px 14px; font-size:13px; }
@@ -261,7 +261,7 @@ export default function AdminSchedulePage() {
         .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
         .form-label { display:block; font-size:11px; font-weight:500; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.3px; }
         .form-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:14px; font-family:'Inter',sans-serif; }
-        .form-input:focus { outline:none; border-color:var(--green); }
+        .form-input:focus { outline:none; border-color:var(--brand); }
         .text-muted { color:var(--muted); }
       
         @media (max-width: 480px) {
