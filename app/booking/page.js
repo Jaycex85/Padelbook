@@ -22,7 +22,6 @@ function BookingForm() {
   const [booking, setBooking] = useState(false)
   const [error, setError] = useState(null)
 
-  // Dates : aujourd'hui + 13 jours
   const dates = Array.from({ length: 14 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() + i)
@@ -82,10 +81,10 @@ function BookingForm() {
     setBooking(true)
     setError(null)
 
-    const discount = profile?.discount_percent || 0
-    const basePrice = selectedCourt.price_per_slot / 4
-    const effectivePrice = calcEffectivePrice(basePrice, discount)
     const totalPrice = selectedCourt.price_per_slot
+    const pricePerPlayer = totalPrice / 4
+    const discount = profile?.discount_percent || 0
+    const effectivePrice = calcEffectivePrice(pricePerPlayer, discount)
 
     const { data: newBooking, error: bookErr } = await supabase.from('bookings').insert({
       court_id: selectedCourt.id,
@@ -95,7 +94,7 @@ function BookingForm() {
       ends_at: selectedSlot.end.toISOString(),
       payment_mode: selectedCourt.payment_mode,
       total_price: totalPrice,
-      price_per_player: basePrice,
+      price_per_player: pricePerPlayer,
       is_public: isPublic,
       max_players: 4,
       cancellation_deadline: new Date(selectedSlot.start.getTime() - 24 * 3600 * 1000).toISOString(),
@@ -103,13 +102,12 @@ function BookingForm() {
 
     if (bookErr) { setError(bookErr.message); setBooking(false); return }
 
-    // Ajouter le owner comme premier joueur
     await supabase.from('booking_players').insert({
       booking_id: newBooking.id,
       player_id: profile.id,
       is_owner: true,
       payment_status: 'pending',
-      base_price: basePrice,
+      base_price: pricePerPlayer,
       discount_percent: discount,
       effective_price: effectivePrice,
     })
@@ -123,6 +121,9 @@ function BookingForm() {
   const formatDate = str => new Date(str).toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
   const formatTime = d => d.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
 
+  const pricePerPlayerDisplay = selectedCourt ? (selectedCourt.price_per_slot / 4) : 0
+  const myPrice = selectedCourt ? calcEffectivePrice(pricePerPlayerDisplay, profile?.discount_percent || 0) : 0
+
   return (
     <div>
       <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700, marginBottom: '24px' }}>Réserver un terrain</h1>
@@ -133,12 +134,12 @@ function BookingForm() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '8px' }}>
           {courts.map(c => (
             <button key={c.id} onClick={() => { setSelectedCourt(c); setSelectedSlot(null) }}
-              style={{ background: selectedCourt?.id === c.id ? 'rgba(74,222,128,0.08)' : 'var(--surface)', border: '1.5px solid ' + (selectedCourt?.id === c.id ? 'var(--brand)' : 'var(--border)'), borderRadius: '12px', padding: '14px', textAlign: 'left', cursor: 'pointer', transition: 'all .15s' }}>
-              <div style={{ fontSize: '11px', color: 'var(--brand)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+              style={{ background: selectedCourt?.id === c.id ? 'var(--brand-dim)' : 'var(--surface)', border: '1.5px solid ' + (selectedCourt?.id === c.id ? 'var(--brand)' : 'var(--border)'), borderRadius: '12px', padding: '14px', textAlign: 'left', cursor: 'pointer', transition: 'all .15s' }}>
+              <div style={{ fontSize: '11px', color: 'var(--brand-light)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
                 {c.is_indoor ? 'Indoor' : 'Outdoor'}
               </div>
               <div style={{ fontSize: '14px', fontWeight: 500 }}>{c.name}</div>
-              <div style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>{c.price_per_slot} € / slot</div>
+              <div style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>{(c.price_per_slot / 4).toFixed(2)} € / joueur</div>
             </button>
           ))}
         </div>
@@ -150,11 +151,11 @@ function BookingForm() {
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
           {dates.map(d => (
             <button key={d} onClick={() => { setSelectedDate(d); setSelectedSlot(null) }}
-              style={{ flexShrink: 0, background: selectedDate === d ? 'rgba(74,222,128,0.08)' : 'var(--surface)', border: '1.5px solid ' + (selectedDate === d ? 'var(--brand)' : 'var(--border)'), borderRadius: '10px', padding: '10px 14px', textAlign: 'center', cursor: 'pointer', minWidth: '64px' }}>
+              style={{ flexShrink: 0, background: selectedDate === d ? 'var(--brand-dim)' : 'var(--surface)', border: '1.5px solid ' + (selectedDate === d ? 'var(--brand)' : 'var(--border)'), borderRadius: '10px', padding: '10px 14px', textAlign: 'center', cursor: 'pointer', minWidth: '64px' }}>
               <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
                 {new Date(d + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'short' })}
               </div>
-              <div style={{ fontSize: '20px', fontFamily: "'Syne',sans-serif", fontWeight: 700, color: selectedDate === d ? 'var(--brand)' : 'var(--text)' }}>
+              <div style={{ fontSize: '20px', fontFamily: "'Syne',sans-serif", fontWeight: 700, color: selectedDate === d ? 'var(--brand-light)' : 'var(--text)' }}>
                 {new Date(d + 'T12:00:00').getDate()}
               </div>
             </button>
@@ -162,13 +163,13 @@ function BookingForm() {
         </div>
       </section>
 
-      {/* Créneaux */}
+      {/* Créneaux horaires */}
       <section style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)', marginBottom: '10px', fontWeight: 500 }}>
-          Créneaux — {formatDate(selectedDate)}
+          Horaires disponibles — {formatDate(selectedDate)}
         </h2>
         {slots.length === 0 ? (
-          <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Aucun créneau disponible ce jour.</p>
+          <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Aucun horaire disponible ce jour.</p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px' }}>
             {slots.map((slot, i) => (
@@ -176,12 +177,12 @@ function BookingForm() {
                 disabled={!slot.available}
                 onClick={() => slot.available && setSelectedSlot(slot)}
                 style={{
-                  background: !slot.available ? 'transparent' : selectedSlot === slot ? 'rgba(74,222,128,0.12)' : 'var(--surface)',
+                  background: !slot.available ? 'transparent' : selectedSlot === slot ? 'var(--brand-dim)' : 'var(--surface)',
                   border: '1px solid ' + (!slot.available ? 'var(--border)' : selectedSlot === slot ? 'var(--brand)' : 'var(--border)'),
                   borderRadius: '8px', padding: '10px', textAlign: 'center', cursor: slot.available ? 'pointer' : 'not-allowed',
                   opacity: slot.available ? 1 : 0.35, transition: 'all .15s',
                 }}>
-                <div style={{ fontSize: '14px', fontWeight: 500, color: selectedSlot === slot ? 'var(--brand)' : 'var(--text)' }}>
+                <div style={{ fontSize: '14px', fontWeight: 500, color: selectedSlot === slot ? 'var(--brand-light)' : 'var(--text)' }}>
                   {formatTime(slot.start)}
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
@@ -193,21 +194,37 @@ function BookingForm() {
         )}
       </section>
 
-      {/* Options match */}
+      {/* Toggle match public — coloré et clair */}
       {selectedSlot && (
         <section style={{ marginBottom: '24px' }}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <button
+            onClick={() => setIsPublic(!isPublic)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+              background: isPublic ? 'var(--brand-dim)' : 'var(--surface)',
+              border: '1.5px solid ' + (isPublic ? 'var(--brand)' : 'var(--border)'),
+              borderRadius: '12px', padding: '16px', cursor: 'pointer', textAlign: 'left',
+              transition: 'all .15s',
+            }}>
             <div>
-              <div style={{ fontSize: '14px', fontWeight: 500 }}>Match public</div>
+              <div style={{ fontSize: '14px', fontWeight: 600, color: isPublic ? 'var(--brand-light)' : 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isPublic ? '🌍 Match public' : '🔒 Match privé'}
+              </div>
               <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
-                Les autres joueurs peuvent rejoindre et payer leur part
+                {isPublic ? 'Visible par tous, les joueurs peuvent rejoindre et payer leur part' : 'Seuls les joueurs que vous invitez peuvent participer'}
               </div>
             </div>
-            <button onClick={() => setIsPublic(!isPublic)}
-              style={{ width: '44px', height: '24px', background: isPublic ? 'var(--brand)' : 'var(--border)', borderRadius: '99px', border: 'none', cursor: 'pointer', position: 'relative', transition: 'all .2s', flexShrink: 0 }}>
-              <div style={{ position: 'absolute', top: '3px', left: isPublic ? '23px' : '3px', width: '18px', height: '18px', background: '#fff', borderRadius: '50%', transition: 'left .2s' }} />
-            </button>
-          </div>
+            <div style={{
+              width: '46px', height: '26px', borderRadius: '99px', flexShrink: 0, position: 'relative',
+              background: isPublic ? 'var(--brand)' : 'var(--border)', transition: 'all .2s',
+            }}>
+              <div style={{
+                position: 'absolute', top: '3px', left: isPublic ? '23px' : '3px',
+                width: '20px', height: '20px', background: '#fff', borderRadius: '50%', transition: 'left .2s',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              }} />
+            </div>
+          </button>
         </section>
       )}
 
@@ -219,30 +236,34 @@ function BookingForm() {
             {[
               ['Terrain', selectedCourt.name],
               ['Date', formatDate(selectedDate)],
-              ['Créneau', formatTime(selectedSlot.start) + ' → ' + formatTime(selectedSlot.end)],
+              ['Horaire', formatTime(selectedSlot.start) + ' → ' + formatTime(selectedSlot.end)],
               ['Durée', selectedSlot.duration + ' min'],
-              ['Mode paiement', selectedCourt.payment_mode],
+              ['Visibilité', isPublic ? 'Public' : 'Privé'],
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--muted)' }}>{k}</span>
                 <span>{v}</span>
               </div>
             ))}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ color: 'var(--muted)' }}>Prix total du terrain</span>
+              <span>{selectedCourt.price_per_slot} €</span>
+            </div>
             {profile?.discount_percent > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--muted)' }}>Remise membre</span>
+                <span style={{ color: 'var(--muted)' }}>Votre remise membre</span>
                 <span style={{ color: 'var(--amber)' }}>- {profile.discount_percent} %</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 500, paddingTop: '12px' }}>
-              <span>Votre part</span>
-              <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand)' }}>
-                {calcEffectivePrice(selectedCourt.price_per_slot / 4, profile?.discount_percent || 0)} €
+              <span>Votre part (par joueur)</span>
+              <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand-light)' }}>
+                {myPrice.toFixed(2)} €
               </span>
             </div>
             {error && <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--red)', marginTop: '12px' }}>{error}</div>}
             <button onClick={handleBook} disabled={booking}
-              style={{ width: '100%', background: 'var(--brand)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: '16px', fontFamily: "'Syne',sans-serif", opacity: booking ? 0.6 : 1 }}>
+              style={{ width: '100%', background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: '16px', fontFamily: "'Syne',sans-serif", opacity: booking ? 0.6 : 1 }}>
               {booking ? 'Réservation...' : profile ? 'Confirmer la réservation' : 'Se connecter pour réserver'}
             </button>
           </div>
