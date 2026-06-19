@@ -263,7 +263,12 @@ export default function AdminSchedulePage() {
         .form-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:14px; font-family:'Inter',sans-serif; }
         .form-input:focus { outline:none; border-color:var(--green); }
         .text-muted { color:var(--muted); }
-      `}</style>
+      
+        @media (max-width: 480px) {
+          .modal { max-width: calc(100vw - 32px) !important; }
+          .form-row { grid-template-columns: 1fr !important; }
+        }
+`}</style>
     </div>
   )
 }
