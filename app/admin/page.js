@@ -21,19 +21,25 @@ export default async function AdminDashboardPage() {
   ])
 
   const kpis = [
-    { label: "Réservations aujourd'hui", value: todayBookings || 0, color: 'var(--brand)' },
+    { label: "Réservations aujourd'hui", value: todayBookings || 0, color: 'var(--brand-light)' },
     { label: 'Total confirmées', value: totalBookings || 0, color: 'var(--text)' },
     { label: 'Membres actifs', value: totalMembers || 0, color: 'var(--text)' },
     { label: 'Terrains actifs', value: activeCourts || 0, color: 'var(--text)' },
   ]
 
   const statusColors = {
-    confirmed: { bg: 'rgba(74,222,128,0.1)', color: 'var(--brand)', label: 'Confirmé' },
+    confirmed: { bg: 'var(--brand-dim)', color: 'var(--brand-light)', label: 'Confirmé' },
     pending: { bg: 'rgba(252,211,77,0.1)', color: 'var(--amber)', label: 'En attente' },
     cancelled: { bg: 'rgba(248,113,113,0.1)', color: 'var(--red)', label: 'Annulé' },
     completed: { bg: 'rgba(139,148,158,0.1)', color: 'var(--muted)', label: 'Terminé' },
     expired: { bg: 'rgba(139,148,158,0.1)', color: 'var(--muted)', label: 'Expiré' },
   }
+
+  const fmtSlot = b => {
+    const start = new Date(b.starts_at)
+    return start.toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit' }) + ' ' + start.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+  }
+  const ownerName = b => b.owner ? (b.owner.first_name || b.owner.email) : '—'
 
   return (
     <div>
@@ -45,7 +51,7 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', marginBottom: '28px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px', marginBottom: '28px' }}>
         {kpis.map((k, i) => (
           <div key={i} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '18px' }}>
             <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '8px' }}>{k.label}</div>
@@ -58,9 +64,11 @@ export default async function AdminDashboardPage() {
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700 }}>Réservations récentes</h2>
-          <a href="/admin/bookings" style={{ fontSize: '13px', color: 'var(--brand)', textDecoration: 'none' }}>Voir tout →</a>
+          <a href="/admin/bookings" style={{ fontSize: '13px', color: 'var(--brand-light)', textDecoration: 'none' }}>Voir tout →</a>
         </div>
-        <div style={{ overflowX: 'auto' }}>
+
+        {/* Desktop : tableau */}
+        <div className="table-desktop-only" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
@@ -72,19 +80,14 @@ export default async function AdminDashboardPage() {
             <tbody>
               {(recentBookings || []).map(b => {
                 const s = statusColors[b.status] || statusColors.pending
-                const owner = b.owner ? (b.owner.first_name || b.owner.email) : '—'
-                const start = new Date(b.starts_at)
-                const slot = start.toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit' }) + ' ' + start.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
                 return (
                   <tr key={b.id} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '13px 20px', fontSize: '14px' }}>{b.court?.name || '—'}</td>
-                    <td style={{ padding: '13px 20px', fontSize: '14px' }}>{owner}</td>
-                    <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--muted)' }}>{slot}</td>
-                    <td style={{ padding: '13px 20px', fontSize: '14px', color: 'var(--brand)', fontFamily: "'Syne',sans-serif" }}>{b.total_price} €</td>
+                    <td style={{ padding: '13px 20px', fontSize: '14px' }}>{ownerName(b)}</td>
+                    <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--muted)' }}>{fmtSlot(b)}</td>
+                    <td style={{ padding: '13px 20px', fontSize: '14px', color: 'var(--brand-light)', fontFamily: "'Syne',sans-serif" }}>{b.total_price} €</td>
                     <td style={{ padding: '13px 20px' }}>
-                      <span style={{ background: s.bg, color: s.color, fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: 500 }}>
-                        {s.label}
-                      </span>
+                      <span style={{ background: s.bg, color: s.color, fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: 500 }}>{s.label}</span>
                     </td>
                   </tr>
                 )
@@ -94,6 +97,31 @@ export default async function AdminDashboardPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile : cards */}
+        <div className="cards-mobile-only" style={{ padding: '12px', gap: '8px' }}>
+          {(recentBookings || []).map(b => {
+            const s = statusColors[b.status] || statusColors.pending
+            return (
+              <div key={b.id} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '6px' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.court?.name || '—'}</div>
+                    <div style={{ fontSize: '12px', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ownerName(b)}</div>
+                  </div>
+                  <span style={{ background: s.bg, color: s.color, fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: 500, flexShrink: 0 }}>{s.label}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{fmtSlot(b)}</span>
+                  <span style={{ fontSize: '14px', color: 'var(--brand-light)', fontFamily: "'Syne',sans-serif", fontWeight: 600 }}>{b.total_price} €</span>
+                </div>
+              </div>
+            )
+          })}
+          {(!recentBookings || recentBookings.length === 0) && (
+            <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Aucune réservation.</div>
+          )}
         </div>
       </div>
     </div>
