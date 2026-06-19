@@ -5,6 +5,8 @@ import { generateSlots, evaluateAccessRules, calcEffectivePrice } from '../../li
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
+const PAYMENT_MODE_LABELS = { full: 'Paiement complet', split: 'Split par joueur', wallet: 'Wallet' }
+
 function BookingForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -18,6 +20,7 @@ function BookingForm() {
   const [profile, setProfile] = useState(null)
   const [accessRules, setAccessRules] = useState([])
   const [isPublic, setIsPublic] = useState(false)
+  const [paymentMode, setPaymentMode] = useState('full')
   const [loading, setLoading] = useState(true)
   const [booking, setBooking] = useState(false)
   const [error, setError] = useState(null)
@@ -92,7 +95,7 @@ function BookingForm() {
       status: 'pending',
       starts_at: selectedSlot.start.toISOString(),
       ends_at: selectedSlot.end.toISOString(),
-      payment_mode: selectedCourt.payment_mode,
+      payment_mode: paymentMode,
       total_price: totalPrice,
       price_per_player: pricePerPlayer,
       is_public: isPublic,
@@ -120,6 +123,16 @@ function BookingForm() {
 
   const formatDate = str => new Date(str).toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
   const formatTime = d => d.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+
+  const availableModes = selectedCourt
+    ? ((selectedCourt.payment_modes && selectedCourt.payment_modes.length > 0) ? selectedCourt.payment_modes : [selectedCourt.payment_mode || 'full'])
+    : ['full']
+
+  useEffect(() => {
+    if (selectedCourt && !availableModes.includes(paymentMode)) {
+      setPaymentMode(availableModes[0])
+    }
+  }, [selectedCourt])
 
   const pricePerPlayerDisplay = selectedCourt ? (selectedCourt.price_per_slot / 4) : 0
   const myPrice = selectedCourt ? calcEffectivePrice(pricePerPlayerDisplay, profile?.discount_percent || 0) : 0
@@ -255,12 +268,43 @@ function BookingForm() {
                 <span style={{ color: 'var(--amber)' }}>- {profile.discount_percent} %</span>
               </div>
             )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 500, paddingTop: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 500, paddingTop: '12px', marginBottom: '14px' }}>
               <span>Votre part (par joueur)</span>
               <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand-light)' }}>
                 {myPrice.toFixed(2)} €
               </span>
             </div>
+
+            {/* Choix du mode de paiement */}
+            {availableModes.length > 1 && (
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                  Mode de paiement
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {availableModes.map(mode => (
+                    <button key={mode} onClick={() => setPaymentMode(mode)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left',
+                        background: paymentMode === mode ? 'var(--brand-dim)' : 'var(--surface2)',
+                        border: '1.5px solid ' + (paymentMode === mode ? 'var(--brand)' : 'var(--border)'),
+                        borderRadius: '8px', padding: '10px 12px', cursor: 'pointer', transition: 'all .15s',
+                      }}>
+                      <div style={{
+                        width: '16px', height: '16px', borderRadius: '50%', flexShrink: 0,
+                        border: '1.5px solid ' + (paymentMode === mode ? 'var(--brand)' : 'var(--muted)'),
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {paymentMode === mode && <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--brand)' }} />}
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: 500, color: paymentMode === mode ? 'var(--brand-light)' : 'var(--text)' }}>
+                        {PAYMENT_MODE_LABELS[mode]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {error && <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--red)', marginTop: '12px' }}>{error}</div>}
             <button onClick={handleBook} disabled={booking}
               style={{ width: '100%', background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: '16px', fontFamily: "'Syne',sans-serif", opacity: booking ? 0.6 : 1 }}>
