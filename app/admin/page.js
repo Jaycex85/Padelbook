@@ -21,14 +21,14 @@ export default async function AdminDashboardPage() {
   ])
 
   const kpis = [
-    { label: "Réservations aujourd'hui", value: todayBookings || 0, color: 'var(--green)' },
+    { label: "Réservations aujourd'hui", value: todayBookings || 0, color: 'var(--brand)' },
     { label: 'Total confirmées', value: totalBookings || 0, color: 'var(--text)' },
     { label: 'Membres actifs', value: totalMembers || 0, color: 'var(--text)' },
     { label: 'Terrains actifs', value: activeCourts || 0, color: 'var(--text)' },
   ]
 
   const statusColors = {
-    confirmed: { bg: 'rgba(74,222,128,0.1)', color: 'var(--green)', label: 'Confirmé' },
+    confirmed: { bg: 'rgba(74,222,128,0.1)', color: 'var(--brand)', label: 'Confirmé' },
     pending: { bg: 'rgba(252,211,77,0.1)', color: 'var(--amber)', label: 'En attente' },
     cancelled: { bg: 'rgba(248,113,113,0.1)', color: 'var(--red)', label: 'Annulé' },
     completed: { bg: 'rgba(139,148,158,0.1)', color: 'var(--muted)', label: 'Terminé' },
@@ -58,7 +58,7 @@ export default async function AdminDashboardPage() {
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700 }}>Réservations récentes</h2>
-          <a href="/admin/bookings" style={{ fontSize: '13px', color: 'var(--green)', textDecoration: 'none' }}>Voir tout →</a>
+          <a href="/admin/bookings" style={{ fontSize: '13px', color: 'var(--brand)', textDecoration: 'none' }}>Voir tout →</a>
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -80,7 +80,7 @@ export default async function AdminDashboardPage() {
                     <td style={{ padding: '13px 20px', fontSize: '14px' }}>{b.court?.name || '—'}</td>
                     <td style={{ padding: '13px 20px', fontSize: '14px' }}>{owner}</td>
                     <td style={{ padding: '13px 20px', fontSize: '13px', color: 'var(--muted)' }}>{slot}</td>
-                    <td style={{ padding: '13px 20px', fontSize: '14px', color: 'var(--green)', fontFamily: "'Syne',sans-serif" }}>{b.total_price} €</td>
+                    <td style={{ padding: '13px 20px', fontSize: '14px', color: 'var(--brand)', fontFamily: "'Syne',sans-serif" }}>{b.total_price} €</td>
                     <td style={{ padding: '13px 20px' }}>
                       <span style={{ background: s.bg, color: s.color, fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: 500 }}>
                         {s.label}
