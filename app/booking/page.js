@@ -185,24 +185,36 @@ function BookingForm() {
           <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Aucun horaire disponible ce jour.</p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px' }}>
-            {slots.map((slot, i) => (
-              <button key={i}
-                disabled={!slot.available}
-                onClick={() => slot.available && setSelectedSlot(slot)}
-                style={{
-                  background: !slot.available ? 'transparent' : selectedSlot === slot ? 'var(--brand-dim)' : 'var(--surface)',
-                  border: '1px solid ' + (!slot.available ? 'var(--border)' : selectedSlot === slot ? 'var(--brand)' : 'var(--border)'),
-                  borderRadius: '8px', padding: '10px', textAlign: 'center', cursor: slot.available ? 'pointer' : 'not-allowed',
-                  opacity: slot.available ? 1 : 0.35, transition: 'all .15s',
-                }}>
-                <div style={{ fontSize: '14px', fontWeight: 500, color: selectedSlot === slot ? 'var(--brand-light)' : 'var(--text)' }}>
-                  {formatTime(slot.start)}
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>
-                  {slot.available ? (slot.duration + ' min') : 'Occupé'}
-                </div>
-              </button>
-            ))}
+            {slots.map((slot, i) => {
+              const unavailable = !slot.available
+              const isPastSlot = slot.past
+              return (
+                <button key={i}
+                  disabled={unavailable}
+                  onClick={() => slot.available && setSelectedSlot(slot)}
+                  style={{
+                    background: unavailable ? 'var(--surface2)' : selectedSlot === slot ? 'var(--brand-dim)' : 'var(--surface)',
+                    border: '1px solid ' + (unavailable ? 'var(--border)' : selectedSlot === slot ? 'var(--brand)' : 'var(--border)'),
+                    borderRadius: '8px', padding: '10px', textAlign: 'center',
+                    cursor: unavailable ? 'not-allowed' : 'pointer',
+                    opacity: unavailable ? 0.55 : 1, transition: 'all .15s',
+                    position: 'relative',
+                  }}>
+                  <div style={{
+                    fontSize: '14px', fontWeight: 500,
+                    color: unavailable ? 'var(--muted)' : selectedSlot === slot ? 'var(--brand-light)' : 'var(--text)',
+                    textDecoration: unavailable ? 'line-through' : 'none',
+                    textDecorationColor: 'var(--red)',
+                    textDecorationThickness: '1.5px',
+                  }}>
+                    {formatTime(slot.start)}
+                  </div>
+                  <div style={{ fontSize: '10px', color: unavailable ? 'var(--red)' : 'var(--muted)', marginTop: '3px', fontWeight: unavailable ? 500 : 400, letterSpacing: unavailable ? '0.3px' : 0 }}>
+                    {unavailable ? (isPastSlot ? 'Passé' : 'Complet') : (slot.duration + ' min')}
+                  </div>
+                </button>
+              )
+            })}
           </div>
         )}
       </section>
