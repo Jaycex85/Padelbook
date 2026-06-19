@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
 const STATUS_STYLES = {
-  confirmed: { bg: 'rgba(74,222,128,0.1)', color: 'var(--green)', label: 'Confirmé' },
+  confirmed: { bg: 'rgba(74,222,128,0.1)', color: 'var(--brand)', label: 'Confirmé' },
   pending: { bg: 'rgba(252,211,77,0.1)', color: 'var(--amber)', label: 'En attente de paiement' },
   cancelled: { bg: 'rgba(248,113,113,0.1)', color: 'var(--red)', label: 'Annulé' },
   completed: { bg: 'rgba(139,148,158,0.1)', color: 'var(--muted)', label: 'Terminé' },
@@ -62,7 +62,7 @@ function MyBookingsList() {
       <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700, marginBottom: '24px' }}>Mes réservations</h1>
 
       {newId && (
-        <div style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', fontSize: '14px', color: 'var(--green)' }}>
+        <div style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.3)', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', fontSize: '14px', color: 'var(--brand)' }}>
           ✓ Réservation créée avec succès. En attente de paiement.
         </div>
       )}
@@ -71,7 +71,7 @@ function MyBookingsList() {
         <div style={{ textAlign: 'center', padding: '64px', color: 'var(--muted)' }}>
           <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎾</div>
           <p style={{ marginBottom: '16px' }}>Aucune réservation.</p>
-          <a href="/booking" style={{ background: 'var(--green)', color: '#0D1117', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
+          <a href="/booking" style={{ background: 'var(--brand)', color: '#0D1117', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
             Réserver un terrain
           </a>
         </div>
@@ -82,12 +82,12 @@ function MyBookingsList() {
             const paidCount = (b.players || []).filter(p => p.payment_status === 'paid').length
             const canCancel = ['pending', 'confirmed'].includes(b.status)
             return (
-              <div key={b.id} style={{ background: 'var(--surface)', border: '1px solid ' + (b.id === newId ? 'var(--green)' : 'var(--border)'), borderRadius: '16px', padding: '18px' }}>
+              <div key={b.id} style={{ background: 'var(--surface)', border: '1px solid ' + (b.id === newId ? 'var(--brand)' : 'var(--border)'), borderRadius: '16px', padding: '18px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
                       <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '16px', fontWeight: 700 }}>{b.court?.name}</span>
-                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: b.court?.is_indoor ? 'rgba(96,165,250,0.1)' : 'rgba(74,222,128,0.1)', color: b.court?.is_indoor ? '#93C5FD' : 'var(--green)' }}>
+                      <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: b.court?.is_indoor ? 'rgba(96,165,250,0.1)' : 'rgba(74,222,128,0.1)', color: b.court?.is_indoor ? '#93C5FD' : 'var(--brand)' }}>
                         {b.court?.is_indoor ? 'Indoor' : 'Outdoor'}
                       </span>
                       {b.is_public && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(252,211,77,0.1)', color: 'var(--amber)' }}>Public</span>}
@@ -98,7 +98,7 @@ function MyBookingsList() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                       <span style={{ background: s.bg, color: s.color, fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: 500 }}>{s.label}</span>
                       <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{paidCount}/{b.players?.length || 1} joueur{paidCount !== 1 ? 's' : ''} payé{paidCount !== 1 ? 's' : ''}</span>
-                      <span style={{ fontSize: '13px', color: 'var(--green)', fontFamily: "'Syne',sans-serif", fontWeight: 600 }}>{b.total_price} €</span>
+                      <span style={{ fontSize: '13px', color: 'var(--brand)', fontFamily: "'Syne',sans-serif", fontWeight: 600 }}>{b.total_price} €</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
