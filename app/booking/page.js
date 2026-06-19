@@ -7,6 +7,22 @@ import { Suspense } from 'react'
 
 const PAYMENT_MODE_LABELS = { full: 'Paiement complet', split: 'Split par joueur', wallet: 'Wallet' }
 
+const PERIODS = [
+  { key: 'all', label: 'Tout', icon: '◷' },
+  { key: 'morning', label: 'Matin', icon: '🌅' },
+  { key: 'afternoon', label: 'Après-midi', icon: '☀️' },
+  { key: 'evening', label: 'Soirée', icon: '🌙' },
+]
+
+function isInPeriod(date, periodKey) {
+  if (periodKey === 'all') return true
+  const h = date.getHours() + date.getMinutes() / 60
+  if (periodKey === 'morning') return h >= 0 && h < 12
+  if (periodKey === 'afternoon') return h >= 12 && h < 17
+  if (periodKey === 'evening') return h >= 17 && h < 24
+  return true
+}
+
 function BookingForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -21,6 +37,7 @@ function BookingForm() {
   const [accessRules, setAccessRules] = useState([])
   const [isPublic, setIsPublic] = useState(false)
   const [paymentMode, setPaymentMode] = useState('full')
+  const [periodFilter, setPeriodFilter] = useState('all') // 'morning' | 'afternoon' | 'evening' | 'all'
   const [loading, setLoading] = useState(true)
   const [booking, setBooking] = useState(false)
   const [error, setError] = useState(null)
@@ -136,6 +153,7 @@ function BookingForm() {
 
   const pricePerPlayerDisplay = selectedCourt ? (selectedCourt.price_per_slot / 4) : 0
   const myPrice = selectedCourt ? calcEffectivePrice(pricePerPlayerDisplay, profile?.discount_percent || 0) : 0
+  const filteredSlots = slots.filter(s => isInPeriod(s.start, periodFilter))
 
   return (
     <div>
@@ -181,11 +199,31 @@ function BookingForm() {
         <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)', marginBottom: '10px', fontWeight: 500 }}>
           Horaires disponibles — {formatDate(selectedDate)}
         </h2>
+
+        {/* Filtre période — n'affiche que les périodes réellement présentes dans les créneaux du terrain */}
+        {slots.length > 0 && (
+          <div style={{ display: 'flex', gap: '6px', marginBottom: '14px', overflowX: 'auto', paddingBottom: '2px' }}>
+            {PERIODS.filter(p => p.key === 'all' || slots.some(s => isInPeriod(s.start, p.key))).map(p => (
+              <button key={p.key} onClick={() => setPeriodFilter(p.key)}
+                style={{
+                  flexShrink: 0, background: periodFilter === p.key ? 'var(--brand-dim)' : 'var(--surface)',
+                  border: '1px solid ' + (periodFilter === p.key ? 'var(--brand)' : 'var(--border)'),
+                  color: periodFilter === p.key ? 'var(--brand-light)' : 'var(--muted)',
+                  borderRadius: '99px', padding: '7px 14px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', transition: 'all .15s', whiteSpace: 'nowrap',
+                }}>
+                {p.icon} {p.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {slots.length === 0 ? (
           <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Aucun horaire disponible ce jour.</p>
+        ) : filteredSlots.length === 0 ? (
+          <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Aucun horaire dans cette période.</p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px' }}>
-            {slots.map((slot, i) => {
+            {filteredSlots.map((slot, i) => {
               const unavailable = !slot.available
               const isPastSlot = slot.past
               return (
