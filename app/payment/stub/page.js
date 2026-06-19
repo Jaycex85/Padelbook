@@ -30,20 +30,20 @@ function StubPaymentContent() {
         {done ? (
           <>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--green)', marginBottom: '8px' }}>Paiement confirmé !</h2>
+            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand)', marginBottom: '8px' }}>Paiement confirmé !</h2>
             <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Redirection vers vos réservations...</p>
           </>
         ) : (
           <>
             <div style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)', borderRadius: '8px', padding: '8px 14px', display: 'inline-block', marginBottom: '20px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--green)', fontWeight: 500 }}>⚠️ Mode STUB — PayConic non connecté</span>
+              <span style={{ fontSize: '12px', color: 'var(--brand)', fontWeight: 500 }}>⚠️ Mode STUB — PayConic non connecté</span>
             </div>
             <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Simulation de paiement</h2>
             <p style={{ color: 'var(--muted)', fontSize: '14px', marginBottom: '24px' }}>
-              Référence : <code style={{ fontFamily: 'monospace', color: 'var(--green)' }}>{ref}</code>
+              Référence : <code style={{ fontFamily: 'monospace', color: 'var(--brand)' }}>{ref}</code>
             </p>
             <button onClick={confirmPayment} disabled={processing}
-              style={{ width: '100%', background: 'var(--green)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: processing ? 0.6 : 1 }}>
+              style={{ width: '100%', background: 'var(--brand)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: processing ? 0.6 : 1 }}>
               {processing ? 'Traitement...' : 'Simuler le paiement ✓'}
             </button>
             <button onClick={() => router.back()} style={{ width: '100%', background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '11px', fontSize: '14px', cursor: 'pointer', marginTop: '8px' }}>
