@@ -9,14 +9,11 @@
   --surface: #161B22;
   --surface2: #1C2333;
   --border: #30363D;
-
-  /* Violet RSCA */
   --brand: #7C3AED;
   --brand-light: #C084FC;
   --brand-dark: #4C1D95;
   --brand-dim: rgba(124,58,237,0.10);
   --brand-dim2: rgba(124,58,237,0.06);
-
   --text: #E6EDF3;
   --muted: #8B949E;
   --red: #F87171;
@@ -36,15 +33,43 @@ html, body {
   font-size: 15px;
   line-height: 1.6;
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-
-/* Scrollbar horizontal fine */
 ::-webkit-scrollbar:horizontal { height: 4px; }
 
 @media (max-width: 767px) {
   main { padding-bottom: calc(var(--bottom-nav-h) + 16px); }
+}
+
+/* ─── Responsive utilities partagées ─── */
+
+/* Table desktop / cards mobile */
+.table-desktop-only { display: block; }
+.cards-mobile-only { display: none; }
+@media (max-width: 767px) {
+  .table-desktop-only { display: none; }
+  .cards-mobile-only { display: flex; flex-direction: column; gap: 10px; }
+}
+
+/* Modal toujours dans le viewport */
+.modal-responsive {
+  width: 100%;
+  max-width: 460px;
+}
+@media (max-width: 480px) {
+  .modal-responsive { max-width: calc(100vw - 32px); }
+}
+
+/* Form row : 2 colonnes desktop, 1 colonne mobile */
+.form-row-responsive {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 480px) {
+  .form-row-responsive { grid-template-columns: 1fr; }
 }
