@@ -57,7 +57,7 @@ export default function AdminIntegrationsPage() {
           </p>
         </div>
         <button onClick={() => setShowForm(true)}
-          style={{ background: 'var(--green)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
+          style={{ background: 'var(--brand)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
           + Ajouter
         </button>
       </div>
@@ -81,13 +81,13 @@ export default function AdminIntegrationsPage() {
                 <div style={{ fontSize: '12px', color: 'var(--muted)', fontFamily: 'monospace', marginBottom: '8px', wordBreak: 'break-all' }}>{integ.endpoint_url}</div>
                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                   {(integ.event_types || []).map(et => (
-                    <span key={et} style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.15)', color: 'var(--green)', fontSize: '10px', padding: '2px 8px', borderRadius: '99px' }}>{et}</span>
+                    <span key={et} style={{ background: 'rgba(74,222,128,0.06)', border: '1px solid rgba(74,222,128,0.15)', color: 'var(--brand)', fontSize: '10px', padding: '2px 8px', borderRadius: '99px' }}>{et}</span>
                   ))}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <button onClick={() => toggleActive(integ)}
-                  style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '99px', cursor: 'pointer', border: '1px solid ' + (integ.is_active ? 'var(--green)' : 'var(--border)'), background: integ.is_active ? 'rgba(74,222,128,0.08)' : 'none', color: integ.is_active ? 'var(--green)' : 'var(--muted)' }}>
+                  style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '99px', cursor: 'pointer', border: '1px solid ' + (integ.is_active ? 'var(--brand)' : 'var(--border)'), background: integ.is_active ? 'rgba(74,222,128,0.08)' : 'none', color: integ.is_active ? 'var(--brand)' : 'var(--muted)' }}>
                   {integ.is_active ? 'Actif' : 'Inactif'}
                 </button>
                 <button onClick={() => deleteInteg(integ.id)}
@@ -133,7 +133,7 @@ export default function AdminIntegrationsPage() {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                 {EVENT_TYPES.map(et => (
                   <button key={et} onClick={() => toggleEventType(et)}
-                    style={{ background: form.event_types.includes(et) ? 'rgba(74,222,128,0.08)' : 'var(--surface2)', border: '1px solid ' + (form.event_types.includes(et) ? 'var(--green)' : 'var(--border)'), color: form.event_types.includes(et) ? 'var(--green)' : 'var(--muted)', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }}>
+                    style={{ background: form.event_types.includes(et) ? 'rgba(74,222,128,0.08)' : 'var(--surface2)', border: '1px solid ' + (form.event_types.includes(et) ? 'var(--brand)' : 'var(--border)'), color: form.event_types.includes(et) ? 'var(--brand)' : 'var(--muted)', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }}>
                     {et}
                   </button>
                 ))}
@@ -143,7 +143,7 @@ export default function AdminIntegrationsPage() {
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowForm(false)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}>Annuler</button>
               <button onClick={handleSave} disabled={saving || !form.name || !form.endpoint_url}
-                style={{ background: 'var(--green)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: (saving || !form.name || !form.endpoint_url) ? 0.5 : 1 }}>
+                style={{ background: 'var(--brand)', color: '#0D1117', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: (saving || !form.name || !form.endpoint_url) ? 0.5 : 1 }}>
                 {saving ? 'Enregistrement...' : 'Enregistrer'}
               </button>
             </div>
