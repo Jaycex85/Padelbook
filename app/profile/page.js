@@ -152,9 +152,14 @@ export default function ProfilePage() {
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Solde wallet</div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '24px', fontWeight: 700, color: 'var(--brand-light)' }}>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '24px', fontWeight: 700, color: (profile?.wallet_balance || 0) < 0 ? 'var(--red)' : 'var(--brand-light)' }}>
             {(profile?.wallet_balance || 0).toFixed(2)} €
           </div>
+          {(profile?.wallet_balance || 0) < 0 && (
+            <p style={{ fontSize: '11px', color: 'var(--red)', marginTop: '4px' }}>
+              Solde négatif — rechargez avant de pouvoir réserver à nouveau.
+            </p>
+          )}
         </div>
         <div style={{ fontSize: '28px' }}>💳</div>
       </div>
