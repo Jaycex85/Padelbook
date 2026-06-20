@@ -260,7 +260,7 @@ function BookingForm() {
                   }}>
                     {formatTime(slot.start)}
                   </div>
-                  <div style={{ fontSize: '10px', color: unavailable ? 'var(--brand-dark)' : 'var(--muted)', marginTop: '3px', fontWeight: unavailable ? 600 : 400, letterSpacing: unavailable ? '0.3px' : 0 }}>
+                  <div style={{ fontSize: '10px', color: unavailable ? 'var(--brand-light)' : 'var(--muted)', marginTop: '3px', fontWeight: unavailable ? 600 : 400, letterSpacing: unavailable ? '0.3px' : 0 }}>
                     {unavailable ? (isPastSlot ? 'Passé' : 'Complet') : (slot.duration + ' min')}
                   </div>
                 </button>
