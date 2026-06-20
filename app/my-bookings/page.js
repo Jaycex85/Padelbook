@@ -27,6 +27,10 @@ function MyBookingsList() {
   const [searching, setSearching] = useState(false)
   const [inviting, setInviting] = useState(false)
   const [settling, setSettling] = useState(null)
+  const [inviteTab, setInviteTab] = useState('member') // 'member' | 'guest'
+  const [guestName, setGuestName] = useState('')
+  const [guestEmail, setGuestEmail] = useState('')
+  const [guestPayMethod, setGuestPayMethod] = useState('wallet') // 'wallet' | 'payconic'
   const supabase = createClient()
 
   async function load() {
@@ -118,6 +122,10 @@ function MyBookingsList() {
     setInviteTarget(booking)
     setSearch('')
     setSearchResults([])
+    setInviteTab('member')
+    setGuestName('')
+    setGuestEmail('')
+    setGuestPayMethod('wallet')
   }
 
   async function runSearch(q) {
@@ -159,6 +167,73 @@ function MyBookingsList() {
     setInviting(false)
     setInviteTarget(null)
     load()
+  }
+
+  // ─── Ajout d'un invité sans compte — le owner paie immédiatement sa part ───
+  async function inviteGuest() {
+    if (!inviteTarget || !guestName.trim()) return
+    const spotsLeft = (inviteTarget.max_players || 4) - (inviteTarget.players || []).length
+    if (spotsLeft <= 0) { alert('Ce match est déjà complet.'); return }
+
+    const basePrice = inviteTarget.price_per_player
+
+    if (guestPayMethod === 'wallet') {
+      const { data: ownerProfile } = await supabase.from('profiles').select('wallet_balance').eq('id', userId).single()
+      const available = ownerProfile?.wallet_balance || 0
+      if (available < basePrice) {
+        alert('Solde wallet insuffisant pour couvrir cet invité (' + basePrice.toFixed(2) + ' € requis). Rechargez votre wallet ou choisissez le paiement par carte.')
+        return
+      }
+
+      setInviting(true)
+      const { data: newPlayer } = await supabase.from('booking_players').insert({
+        booking_id: inviteTarget.id,
+        guest_name: guestName.trim(),
+        guest_email: guestEmail.trim() || null,
+        is_owner: false,
+        payment_status: 'paid',
+        paid_at: new Date().toISOString(),
+        base_price: basePrice,
+        discount_percent: 0,
+        effective_price: basePrice,
+      }).select().single()
+
+      await supabase.from('profiles').update({ wallet_balance: available - basePrice }).eq('id', userId)
+      await supabase.from('wallet_transactions').insert({
+        profile_id: userId, amount: -basePrice, type: 'debit',
+        description: 'Invité ' + guestName.trim() + ' - ' + (inviteTarget.court?.name || ''),
+        booking_id: inviteTarget.id,
+      })
+
+      setInviting(false)
+      setInviteTarget(null)
+      load()
+    } else {
+      // Paiement carte (PayConic) — passe par le flow de paiement stub existant.
+      // On crée d'abord la place invité en pending, puis on redirige vers le paiement.
+      setInviting(true)
+      const { data: newPlayer } = await supabase.from('booking_players').insert({
+        booking_id: inviteTarget.id,
+        guest_name: guestName.trim(),
+        guest_email: guestEmail.trim() || null,
+        is_owner: false,
+        payment_status: 'pending',
+        base_price: basePrice,
+        discount_percent: 0,
+        effective_price: basePrice,
+      }).select().single()
+
+      const res = await fetch('/api/payments/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: inviteTarget.id, booking_player_id: newPlayer.id }),
+      })
+      const payData = await res.json()
+      setInviting(false)
+      if (payData.payment_url) {
+        window.location.href = payData.payment_url
+      }
+    }
   }
 
   // ─── Règlement manuel du solde dû (depuis le wallet du owner) ───
