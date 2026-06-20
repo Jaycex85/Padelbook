@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
-import { generateSlots, evaluateAccessRules, calcEffectivePrice, shouldSkipPayment, isBookingFullyPaid } from '../../lib/bookingUtils'
+import { generateSlots, evaluateAccessRules, calcEffectivePrice, shouldSkipPayment, isBookingFullyPaid, hasUnpaidBalance, calcOpenBalance } from '../../lib/bookingUtils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
@@ -41,6 +41,7 @@ function BookingForm() {
   const [loading, setLoading] = useState(true)
   const [booking, setBooking] = useState(false)
   const [error, setError] = useState(null)
+  const [blockedByUnpaidBalance, setBlockedByUnpaidBalance] = useState(false)
 
   const dates = Array.from({ length: 14 }, (_, i) => {
     const d = new Date()
@@ -59,6 +60,17 @@ function BookingForm() {
       setCourts(c || [])
       const { data: r } = await supabase.from('access_rules').select('*').eq('is_active', true)
       setAccessRules(r || [])
+
+      // Bloquer si le user a déjà une réservation avec solde impayé
+      if (user) {
+        const { data: ownerBookings } = await supabase
+          .from('bookings')
+          .select('*, players:booking_players(*)')
+          .eq('owner_id', user.id)
+          .in('status', ['pending', 'confirmed'])
+        const unpaid = hasUnpaidBalance((ownerBookings || []).map(b => ({ booking: b, players: b.players || [] })))
+        setBlockedByUnpaidBalance(unpaid)
+      }
 
       const courtParam = searchParams.get('court')
       if (courtParam && c) {
@@ -100,6 +112,10 @@ function BookingForm() {
   async function handleBook() {
     if (!selectedSlot || !selectedCourt) return
     if (!profile) { router.push('/login'); return }
+    if (blockedByUnpaidBalance) {
+      setError('Vous avez un solde impayé sur une réservation existante. Réglez-le avant de réserver à nouveau.')
+      return
+    }
 
     const userRole = profile?.role || 'public'
     const timeStr = selectedSlot.start.toTimeString().substring(0, 5)
@@ -145,10 +161,32 @@ function BookingForm() {
     })
 
     // En mode 'full', si le owner ne doit rien payer, la résa est immédiatement confirmée.
-    // En mode 'split'/'wallet', il faut attendre que TOUS les joueurs présents aient payé —
-    // donc on ne confirme pas tant que d'autres joueurs n'ont pas rejoint/payé.
     if (paymentMode === 'full' && ownerSkipsPayment) {
       await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', newBooking.id)
+    }
+
+    // En mode split/wallet : les 3 autres places sont vides pour l'instant (à inviter après coup).
+    // On tente de débiter le wallet du owner pour couvrir ces places vides automatiquement.
+    if (paymentMode !== 'full') {
+      const emptySlotsCount = 3 // max_players(4) - owner(1), tant qu'aucun autre joueur n'est encore invité
+      const emptySlotsCost = emptySlotsCount * pricePerPlayer
+      if (emptySlotsCost > 0) {
+        const { data: ownerProfile } = await supabase.from('profiles').select('wallet_balance').eq('id', profile.id).single()
+        const available = ownerProfile?.wallet_balance || 0
+        const debited = Math.min(available, emptySlotsCost)
+        if (debited > 0) {
+          await supabase.from('profiles').update({ wallet_balance: available - debited }).eq('id', profile.id)
+          await supabase.from('wallet_transactions').insert({
+            profile_id: profile.id,
+            amount: -debited,
+            type: 'debit',
+            description: 'Avance places vides - réservation ' + selectedCourt.name,
+            booking_id: newBooking.id,
+          })
+        }
+        // Si le wallet ne couvre pas tout, le solde restant apparaîtra comme "à régler"
+        // dans Mes réservations (bouton manuel), conformément à la règle définie.
+      }
     }
 
     setBooking(false)
