@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
-import { generateSlots, evaluateAccessRules, calcEffectivePrice } from '../../lib/bookingUtils'
+import { generateSlots, evaluateAccessRules, calcEffectivePrice, shouldSkipPayment, isBookingFullyPaid } from '../../lib/bookingUtils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
@@ -130,15 +130,26 @@ function BookingForm() {
 
     if (bookErr) { setError(bookErr.message); setBooking(false); return }
 
+    // Cas particulier : remise à 100% (effectivePrice = 0) => rien à payer, paiement auto-validé
+    const ownerSkipsPayment = shouldSkipPayment(effectivePrice)
+
     await supabase.from('booking_players').insert({
       booking_id: newBooking.id,
       player_id: profile.id,
       is_owner: true,
-      payment_status: 'pending',
+      payment_status: ownerSkipsPayment ? 'paid' : 'pending',
+      paid_at: ownerSkipsPayment ? new Date().toISOString() : null,
       base_price: pricePerPlayer,
       discount_percent: discount,
       effective_price: effectivePrice,
     })
+
+    // En mode 'full', si le owner ne doit rien payer, la résa est immédiatement confirmée.
+    // En mode 'split'/'wallet', il faut attendre que TOUS les joueurs présents aient payé —
+    // donc on ne confirme pas tant que d'autres joueurs n'ont pas rejoint/payé.
+    if (paymentMode === 'full' && ownerSkipsPayment) {
+      await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', newBooking.id)
+    }
 
     setBooking(false)
     router.push('/my-bookings?new=' + newBooking.id)
