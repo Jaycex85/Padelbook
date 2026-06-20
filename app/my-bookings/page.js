@@ -274,7 +274,7 @@ function MyBookingsList() {
 
   const fmt = d => new Date(d).toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
   const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
-  const memberName = p => p.profile ? ((p.profile.first_name || p.profile.email || 'Joueur')) : 'Joueur'
+  const memberName = p => p.profile ? (p.profile.first_name || p.profile.email || 'Joueur') : (p.guest_name ? p.guest_name + ' (invité)' : 'Joueur')
 
   if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
 
@@ -435,49 +435,99 @@ function MyBookingsList() {
         </div>
       )}
 
-      {/* Modal invitation de membres */}
+      {/* Modal invitation : membre existant OU invité sans compte */}
       {inviteTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}
           onClick={e => e.target === e.currentTarget && setInviteTarget(null)}>
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: 'min(420px, calc(100vw - 32px))', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: 'min(420px, calc(100vw - 32px))', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '18px', fontWeight: 700 }}>Inviter un joueur</h2>
               <button onClick={() => setInviteTarget(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '18px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <input
-              type="text"
-              placeholder="Rechercher par nom ou email..."
-              value={search}
-              onChange={e => runSearch(e.target.value)}
-              style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', color: 'var(--text)', fontSize: '14px', marginBottom: '14px' }}
-              autoFocus
-            />
-
-            <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {searching && <p style={{ fontSize: '13px', color: 'var(--muted)', textAlign: 'center' }}>Recherche...</p>}
-              {!searching && search.length >= 2 && searchResults.length === 0 && (
-                <p style={{ fontSize: '13px', color: 'var(--muted)', textAlign: 'center', padding: '12px 0' }}>Aucun membre trouvé.</p>
-              )}
-              {searchResults.map(m => (
-                <button key={m.id} onClick={() => inviteMember(m)} disabled={inviting}
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', cursor: 'pointer' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--brand-dim)', border: '1px solid var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 600, color: 'var(--brand-light)', flexShrink: 0 }}>
-                    {(m.first_name || m.email || '?')[0].toUpperCase()}
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {m.first_name ? (m.first_name + ' ' + (m.last_name || '')) : m.email}
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>
-                  </div>
-                </button>
-              ))}
+            {/* Onglets */}
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '16px' }}>
+              <button onClick={() => setInviteTab('member')}
+                style={{ flex: 1, background: inviteTab === 'member' ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (inviteTab === 'member' ? 'var(--brand)' : 'var(--border)'), color: inviteTab === 'member' ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '8px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
+                👤 Membre du club
+              </button>
+              <button onClick={() => setInviteTab('guest')}
+                style={{ flex: 1, background: inviteTab === 'guest' ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (inviteTab === 'guest' ? 'var(--brand)' : 'var(--border)'), color: inviteTab === 'guest' ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '8px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
+                🎾 Invité (sans compte)
+              </button>
             </div>
 
-            <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '14px', textAlign: 'center' }}>
-              Pour inviter quelqu'un qui n'a pas encore de compte, cette fonctionnalité arrive bientôt (envoi d'email).
-            </p>
+            {inviteTab === 'member' ? (
+              <>
+                <input
+                  type="text"
+                  placeholder="Rechercher par nom ou email..."
+                  value={search}
+                  onChange={e => runSearch(e.target.value)}
+                  style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', color: 'var(--text)', fontSize: '14px', marginBottom: '14px' }}
+                  autoFocus
+                />
+                <div style={{ overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {searching && <p style={{ fontSize: '13px', color: 'var(--muted)', textAlign: 'center' }}>Recherche...</p>}
+                  {!searching && search.length >= 2 && searchResults.length === 0 && (
+                    <p style={{ fontSize: '13px', color: 'var(--muted)', textAlign: 'center', padding: '12px 0' }}>Aucun membre trouvé.</p>
+                  )}
+                  {searchResults.map(m => (
+                    <button key={m.id} onClick={() => inviteMember(m)} disabled={inviting}
+                      style={{ display: 'flex', alignItems: 'center', gap: '10px', textAlign: 'left', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '10px 12px', cursor: 'pointer' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--brand-dim)', border: '1px solid var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 600, color: 'var(--brand-light)', flexShrink: 0 }}>
+                        {(m.first_name || m.email || '?')[0].toUpperCase()}
+                      </div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {m.first_name ? (m.first_name + ' ' + (m.last_name || '')) : m.email}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.email}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '14px', textAlign: 'center' }}>
+                  Le membre paiera sa part lui-même. Sinon, elle sera couverte par votre wallet en fin de match.
+                </p>
+              </>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Nom de l'invité</label>
+                  <input type="text" value={guestName} onChange={e => setGuestName(e.target.value)} placeholder="Ex: Marc Dupont"
+                    style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', color: 'var(--text)', fontSize: '14px' }} autoFocus />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Email (optionnel)</label>
+                  <input type="email" value={guestEmail} onChange={e => setGuestEmail(e.target.value)} placeholder="marc@exemple.com"
+                    style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', color: 'var(--text)', fontSize: '14px' }} />
+                </div>
+
+                <div style={{ background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: 'var(--amber)' }}>
+                  Cet invité n'a pas de compte — c'est <strong>vous</strong> qui réglez sa part ({inviteTarget.price_per_player?.toFixed(2)} €) maintenant.
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Mode de paiement</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={() => setGuestPayMethod('wallet')}
+                      style={{ flex: 1, background: guestPayMethod === 'wallet' ? 'var(--brand-dim)' : 'var(--surface2)', border: '1.5px solid ' + (guestPayMethod === 'wallet' ? 'var(--brand)' : 'var(--border)'), color: guestPayMethod === 'wallet' ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
+                      💳 Wallet
+                    </button>
+                    <button onClick={() => setGuestPayMethod('payconic')}
+                      style={{ flex: 1, background: guestPayMethod === 'payconic' ? 'var(--brand-dim)' : 'var(--surface2)', border: '1.5px solid ' + (guestPayMethod === 'payconic' ? 'var(--brand)' : 'var(--border)'), color: guestPayMethod === 'payconic' ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
+                      💳 Carte (PayConic)
+                    </button>
+                  </div>
+                </div>
+
+                <button onClick={inviteGuest} disabled={inviting || !guestName.trim()}
+                  style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: (inviting || !guestName.trim()) ? 0.5 : 1, marginTop: '4px' }}>
+                  {inviting ? 'Traitement...' : 'Ajouter et payer ' + (inviteTarget.price_per_player?.toFixed(2) || '') + ' €'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
