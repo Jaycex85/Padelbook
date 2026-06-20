@@ -78,6 +78,14 @@ function BookingForm() {
     loadSlots()
   }, [selectedCourt, selectedDate])
 
+  useEffect(() => {
+    if (!selectedCourt) return
+    const modes = (selectedCourt.payment_modes && selectedCourt.payment_modes.length > 0) ? selectedCourt.payment_modes : [selectedCourt.payment_mode || 'full']
+    if (!modes.includes(paymentMode)) {
+      setPaymentMode(modes[0])
+    }
+  }, [selectedCourt])
+
   async function loadSlots() {
     const [{ data: schedule }, { data: bookings }, { data: blocks }] = await Promise.all([
       supabase.from('weekly_schedule').select('*').eq('court_id', selectedCourt.id).eq('is_active', true),
@@ -144,12 +152,6 @@ function BookingForm() {
   const availableModes = selectedCourt
     ? ((selectedCourt.payment_modes && selectedCourt.payment_modes.length > 0) ? selectedCourt.payment_modes : [selectedCourt.payment_mode || 'full'])
     : ['full']
-
-  useEffect(() => {
-    if (selectedCourt && !availableModes.includes(paymentMode)) {
-      setPaymentMode(availableModes[0])
-    }
-  }, [selectedCourt])
 
   const pricePerPlayerDisplay = selectedCourt ? (selectedCourt.price_per_slot / 4) : 0
   const myPrice = selectedCourt ? calcEffectivePrice(pricePerPlayerDisplay, profile?.discount_percent || 0) : 0
