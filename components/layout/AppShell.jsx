@@ -15,7 +15,7 @@ export default function AppShell({ children, user, profile }) {
   if (isAuth) return <>{children}</>
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
 
       {/* Sidebar desktop */}
       <div className="sidebar-desktop-wrapper">
@@ -35,10 +35,10 @@ export default function AppShell({ children, user, profile }) {
         <Sidebar profile={profile} onClose={() => setSidebarOpen(false)} />
       </div>
 
-      {/* Main */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      {/* Main — colonne indépendante avec SON PROPRE scroll vertical */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh', overflow: 'hidden' }}>
         <TopBar user={user} profile={profile} onHamburger={() => setSidebarOpen(o => !o)} sidebarOpen={sidebarOpen} />
-        <main style={{ flex: 1, padding: '24px' }} className="app-main-content">
+        <main style={{ flex: 1, padding: '24px', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }} className="app-main-content">
           {children}
         </main>
       </div>
@@ -62,7 +62,7 @@ export default function AppShell({ children, user, profile }) {
         @media (max-width: 767px) {
           .sidebar-desktop-wrapper { display: none; }
           .sidebar-mobile-wrapper { display: flex; }
-          .app-main-content { padding: 16px !important; }
+          .app-main-content { padding: 16px !important; padding-bottom: calc(var(--bottom-nav-h) + 16px) !important; }
         }
       `}</style>
     </div>
