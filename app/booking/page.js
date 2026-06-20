@@ -61,15 +61,19 @@ function BookingForm() {
       const { data: r } = await supabase.from('access_rules').select('*').eq('is_active', true)
       setAccessRules(r || [])
 
-      // Bloquer si le user a déjà une réservation avec solde impayé
+      // Bloquer si le user a un solde impayé sur un match terminé, OU un wallet négatif (dette)
       if (user) {
         const { data: ownerBookings } = await supabase
           .from('bookings')
           .select('*, players:booking_players(*)')
           .eq('owner_id', user.id)
-          .in('status', ['pending', 'confirmed'])
-        const unpaid = hasUnpaidBalance((ownerBookings || []).map(b => ({ booking: b, players: b.players || [] })))
-        setBlockedByUnpaidBalance(unpaid)
+          .in('status', ['pending', 'confirmed', 'completed'])
+        const unpaidBooking = hasUnpaidBalance((ownerBookings || []).map(b => ({ booking: b, players: b.players || [] })))
+
+        const { data: currentProfile } = await supabase.from('profiles').select('wallet_balance').eq('id', user.id).single()
+        const walletInDebt = (currentProfile?.wallet_balance || 0) < 0
+
+        setBlockedByUnpaidBalance(unpaidBooking || walletInDebt)
       }
 
       const courtParam = searchParams.get('court')
