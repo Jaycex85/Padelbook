@@ -165,29 +165,10 @@ function BookingForm() {
       await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', newBooking.id)
     }
 
-    // En mode split/wallet : les 3 autres places sont vides pour l'instant (à inviter après coup).
-    // On tente de débiter le wallet du owner pour couvrir ces places vides automatiquement.
-    if (paymentMode !== 'full') {
-      const emptySlotsCount = 3 // max_players(4) - owner(1), tant qu'aucun autre joueur n'est encore invité
-      const emptySlotsCost = emptySlotsCount * pricePerPlayer
-      if (emptySlotsCost > 0) {
-        const { data: ownerProfile } = await supabase.from('profiles').select('wallet_balance').eq('id', profile.id).single()
-        const available = ownerProfile?.wallet_balance || 0
-        const debited = Math.min(available, emptySlotsCost)
-        if (debited > 0) {
-          await supabase.from('profiles').update({ wallet_balance: available - debited }).eq('id', profile.id)
-          await supabase.from('wallet_transactions').insert({
-            profile_id: profile.id,
-            amount: -debited,
-            type: 'debit',
-            description: 'Avance places vides - réservation ' + selectedCourt.name,
-            booking_id: newBooking.id,
-          })
-        }
-        // Si le wallet ne couvre pas tout, le solde restant apparaîtra comme "à régler"
-        // dans Mes réservations (bouton manuel), conformément à la règle définie.
-      }
-    }
+    // En mode split/wallet : les places vides ou joueurs non payés ne sont PLUS débités
+    // immédiatement. Le owner peut inviter/laisser payer les autres jusqu'à la fin du match.
+    // Le solde restant dû sera réglé automatiquement à ends_at par le cron de règlement,
+    // ou manuellement via le bouton "Régler (wallet)" dans Mes réservations.
 
     setBooking(false)
     router.push('/my-bookings?new=' + newBooking.id)
