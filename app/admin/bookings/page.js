@@ -14,6 +14,8 @@ export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
   const supabase = createClient()
 
   async function load() {
@@ -29,6 +31,18 @@ export default function AdminBookingsPage() {
 
   async function updateStatus(id, status) {
     await supabase.from('bookings').update({ status }).eq('id', id)
+    load()
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    // Supprimer d'abord les enregistrements liés (paiements, joueurs) pour respecter les FK
+    await supabase.from('payments').delete().eq('booking_id', deleteTarget.id)
+    await supabase.from('booking_players').delete().eq('booking_id', deleteTarget.id)
+    await supabase.from('bookings').delete().eq('id', deleteTarget.id)
+    setDeleting(false)
+    setDeleteTarget(null)
     load()
   }
 
@@ -94,6 +108,7 @@ export default function AdminBookingsPage() {
                             {['pending', 'confirmed'].includes(b.status) && (
                               <button onClick={() => updateStatus(b.id, 'cancelled')} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>Annuler</button>
                             )}
+                            <button onClick={() => setDeleteTarget(b)} title="Supprimer définitivement" style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '6px', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}>🗑</button>
                           </div>
                         </td>
                       </tr>
@@ -132,6 +147,7 @@ export default function AdminBookingsPage() {
                       {['pending', 'confirmed'].includes(b.status) && (
                         <button onClick={() => updateStatus(b.id, 'cancelled')} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }}>Annuler</button>
                       )}
+                      <button onClick={() => setDeleteTarget(b)} title="Supprimer" style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', cursor: 'pointer' }}>🗑</button>
                     </div>
                   </div>
                 </div>
@@ -139,6 +155,33 @@ export default function AdminBookingsPage() {
             })}
           </div>
         </>
+      )}
+
+      {/* Modal confirmation suppression */}
+      {deleteTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}
+          onClick={e => e.target === e.currentTarget && setDeleteTarget(null)}>
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: 'min(420px, calc(100vw - 32px))' }}>
+            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '18px', fontWeight: 700, marginBottom: '12px' }}>
+              Supprimer cette réservation ?
+            </h2>
+            <p style={{ fontSize: '14px', color: 'var(--muted)', marginBottom: '4px' }}>
+              {deleteTarget.court?.name} — {fmt(deleteTarget.starts_at)} à {fmtTime(deleteTarget.starts_at)}
+            </p>
+            <p style={{ fontSize: '13px', color: 'var(--red)', marginBottom: '20px' }}>
+              Action irréversible. Les paiements et joueurs liés seront aussi supprimés.
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setDeleteTarget(null)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}>
+                Annuler
+              </button>
+              <button onClick={handleDelete} disabled={deleting}
+                style={{ background: 'var(--red)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: deleting ? 0.6 : 1 }}>
+                {deleting ? 'Suppression...' : 'Supprimer définitivement'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
