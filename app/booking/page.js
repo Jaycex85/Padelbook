@@ -197,7 +197,7 @@ function BookingForm() {
 
       {blockedByUnpaidBalance && (
         <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', fontSize: '14px', color: 'var(--red)' }}>
-          ⚠️ Vous avez un solde impayé sur une réservation en cours. Réglez-le depuis <a href="/my-bookings" style={{color:'var(--red)', textDecoration:'underline'}}>Mes réservations</a> avant de réserver à nouveau.
+          ⚠️ Vous avez un solde impayé ou un wallet négatif. Réglez-le depuis <a href="/profile" style={{color:'var(--red)', textDecoration:'underline'}}>votre profil</a> ou <a href="/my-bookings" style={{color:'var(--red)', textDecoration:'underline'}}>Mes réservations</a> avant de réserver à nouveau.
         </div>
       )}
 
