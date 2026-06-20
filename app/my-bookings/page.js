@@ -270,12 +270,17 @@ function MyBookingsList() {
                     )}
 
                     {openBalance > 0 && isOwner && (
-                      <div style={{ marginTop: '10px', background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', color: 'var(--amber)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
-                        <span>Solde dû : <strong>{openBalance.toFixed(2)} €</strong></span>
-                        <button onClick={() => settleBalance(b)} disabled={settling === b.id}
-                          style={{ background: 'var(--amber)', color: '#1a1400', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
-                          {settling === b.id ? '...' : 'Régler (wallet)'}
-                        </button>
+                      <div style={{ marginTop: '10px', background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', color: 'var(--amber)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                          <span>Solde non couvert : <strong>{openBalance.toFixed(2)} €</strong></span>
+                          <button onClick={() => settleBalance(b)} disabled={settling === b.id}
+                            style={{ background: 'var(--amber)', color: '#1a1400', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                            {settling === b.id ? '...' : 'Régler maintenant'}
+                          </button>
+                        </div>
+                        <p style={{ fontSize: '10px', marginTop: '4px', opacity: 0.85 }}>
+                          Si non réglé avant la fin du match, ce montant sera automatiquement débité de votre wallet.
+                        </p>
                       </div>
                     )}
 
