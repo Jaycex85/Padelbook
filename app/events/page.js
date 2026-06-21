@@ -97,7 +97,7 @@ export default function EventsPage() {
             const isFull = spotsLeft <= 0
             const myReg = profile && (ev.event_registrations || []).find(r => r.player_id === profile.id && r.status !== 'cancelled')
             const courtsNames = (ev.club_event_courts || []).map(c => c.courts?.name).filter(Boolean).join(', ')
-            const canWriteChat = !!myReg || profile?.role === 'admin'
+            const isRegistered = !!myReg
 
             return (
               <div key={ev.id} style={{ background: 'var(--surface)', border: '1px solid var(--brand)', borderRadius: '16px', padding: '20px', position: 'relative', overflow: 'hidden' }}>
