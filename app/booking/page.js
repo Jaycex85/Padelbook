@@ -130,9 +130,25 @@ function BookingForm() {
     }
 
     const userRole = profile?.role || 'public'
+    const isActiveMember = profile?.membership_status === 'active'
+      && (!profile?.membership_valid_until || profile.membership_valid_until >= new Date().toISOString().split('T')[0])
+    const userContext = { role: userRole, isActiveMember }
     const timeStr = selectedSlot.start.toTimeString().substring(0, 5)
-    const allowed = evaluateAccessRules(accessRules, userRole, selectedDate, timeStr)
+
+    const allowed = evaluateAccessRules(accessRules, userContext, selectedDate, timeStr)
     if (!allowed) { setError("Ce créneau n'est pas accessible avec votre profil."); return }
+
+    const windowCheck = checkBookingWindow(accessRules, userContext, selectedSlot.start)
+    if (!windowCheck.allowed) {
+      setError('Ce créneau ouvre à la réservation dans ' + windowCheck.daysUntilOpen + ' jour(s) pour votre profil (fenêtre de ' + windowCheck.windowDays + ' jours).')
+      return
+    }
+
+    const maxCheck = checkMaxConcurrentBookings(accessRules, userContext, activeOwnerCount)
+    if (!maxCheck.allowed) {
+      setError('Vous avez déjà ' + maxCheck.current + '/' + maxCheck.max + ' réservation(s) active(s) en tant qu\'organisateur — limite atteinte pour votre profil.')
+      return
+    }
 
     setBooking(true)
     setError(null)
