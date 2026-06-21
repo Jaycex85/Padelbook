@@ -1,10 +1,17 @@
 import Link from 'next/link'
 import { createServerSupabase } from '../lib/supabaseServer'
+import ClubFeed from '../components/ClubFeed'
 
 export default async function HomePage() {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
   const { data: courts } = await supabase.from('courts').select('*').eq('status', 'active').order('sort_order')
+
+  let profile = null
+  if (user) {
+    const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    profile = p
+  }
 
   const btnPrimary = { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 28px', borderRadius: '10px', fontSize: '15px', fontWeight: 600, textDecoration: 'none', background: 'var(--brand)', color: '#fff', fontFamily: "'Syne', sans-serif" }
   const btnOutline = { display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 28px', borderRadius: '10px', fontSize: '15px', fontWeight: 500, textDecoration: 'none', background: 'none', color: 'var(--text)', border: '1px solid var(--border)' }
@@ -85,6 +92,8 @@ export default async function HomePage() {
           </div>
         </Link>
       )}
+
+      <ClubFeed isAdmin={profile?.role === 'admin'} userId={user.id} />
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px', marginBottom: '32px' }}>
         {[
