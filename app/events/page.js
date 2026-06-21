@@ -1,12 +1,14 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
+import Chat from '../../components/Chat'
 
 export default function EventsPage() {
   const [events, setEvents] = useState([])
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [registering, setRegistering] = useState(null)
+  const [openChatId, setOpenChatId] = useState(null)
   const supabase = createClient()
 
   async function load() {
@@ -26,7 +28,6 @@ export default function EventsPage() {
       .gte('ends_at', now)
       .order('starts_at')
 
-    // Filtrer selon l'accès (who)
     const role = p?.role || 'public'
     const visible = (data || []).filter(ev => {
       if (ev.who === 'all') return true
@@ -55,7 +56,6 @@ export default function EventsPage() {
 
     if (error) { alert(error.message); setRegistering(null); return }
 
-    // Rediriger vers le paiement stub
     const res = await fetch('/api/payments/initiate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -97,6 +97,7 @@ export default function EventsPage() {
             const isFull = spotsLeft <= 0
             const myReg = profile && (ev.event_registrations || []).find(r => r.player_id === profile.id && r.status !== 'cancelled')
             const courtsNames = (ev.club_event_courts || []).map(c => c.courts?.name).filter(Boolean).join(', ')
+            const canWriteChat = !!myReg || profile?.role === 'admin'
 
             return (
               <div key={ev.id} style={{ background: 'var(--surface)', border: '1px solid var(--brand)', borderRadius: '16px', padding: '20px', position: 'relative', overflow: 'hidden' }}>
@@ -121,7 +122,7 @@ export default function EventsPage() {
                   </p>
                 )}
 
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '99px', background: isFull ? 'rgba(248,113,113,0.1)' : 'var(--brand-dim)', color: isFull ? 'var(--red)' : 'var(--brand-light)' }}>
                       {isFull ? 'Complet' : spotsLeft + ' place' + (spotsLeft > 1 ? 's' : '') + ' libre' + (spotsLeft > 1 ? 's' : '')}
@@ -148,6 +149,17 @@ export default function EventsPage() {
                     )}
                   </div>
                 </div>
+
+                <button onClick={() => setOpenChatId(openChatId === ev.id ? null : ev.id)}
+                  style={{ background: openChatId === ev.id ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (openChatId === ev.id ? 'var(--brand)' : 'var(--border)'), color: openChatId === ev.id ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', cursor: 'pointer' }}>
+                  💬 Discussion {openChatId === ev.id ? '▲' : '▼'}
+                </button>
+
+                {openChatId === ev.id && (
+                  <div style={{ marginTop: '12px' }}>
+                    <Chat eventId={ev.id} endsAt={ev.ends_at} canWrite={canWriteChat} />
+                  </div>
+                )}
               </div>
             )
           })}
