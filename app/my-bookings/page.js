@@ -4,6 +4,7 @@ import { createClient } from '../../lib/supabase'
 import { canCancelBooking, calcRefundAmount, calcEffectivePrice, calcOpenBalance } from '../../lib/bookingUtils'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
+import Chat from '../../components/Chat'
 
 const STATUS_STYLES = {
   confirmed: { bg: 'var(--brand-dim)', color: 'var(--brand-light)', label: 'Confirmé' },
@@ -31,6 +32,7 @@ function MyBookingsList() {
   const [guestName, setGuestName] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
   const [guestPayMethod, setGuestPayMethod] = useState('wallet') // 'wallet' | 'payconic'
+  const [openChatId, setOpenChatId] = useState(null)
   const supabase = createClient()
 
   async function load() {
@@ -388,8 +390,18 @@ function MyBookingsList() {
                         {b.is_public ? 'Rendre privé' : 'Rendre public'}
                       </button>
                     )}
+                    <button onClick={() => setOpenChatId(openChatId === b.id ? null : b.id)}
+                      style={{ background: openChatId === b.id ? 'var(--brand-dim)' : 'none', border: '1px solid ' + (openChatId === b.id ? 'var(--brand)' : 'var(--border)'), color: openChatId === b.id ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
+                      💬 Discussion
+                    </button>
                   </div>
                 </div>
+
+                {openChatId === b.id && (
+                  <div style={{ marginTop: '14px' }}>
+                    <Chat bookingId={b.id} endsAt={b.ends_at} canWrite={true} />
+                  </div>
+                )}
               </div>
             )
           })}
