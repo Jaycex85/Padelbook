@@ -1,8 +1,7 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../lib/supabase'
-import { isBookingFullyPaid } from '../../../lib/bookingUtils'
 import { Suspense } from 'react'
 
 function StubPaymentContent() {
@@ -10,6 +9,7 @@ function StubPaymentContent() {
   const router = useRouter()
   const ref = searchParams.get('ref')
   const bookingId = searchParams.get('booking')
+  const eventRegistrationId = searchParams.get('event_registration')
   const [processing, setProcessing] = useState(false)
   const [done, setDone] = useState(false)
   const supabase = createClient()
@@ -17,28 +17,18 @@ function StubPaymentContent() {
   async function confirmPayment() {
     setProcessing(true)
 
-    // 1. Marquer ce paiement comme payé
-    const { data: payment } = await supabase.from('payments').update({ status: 'paid' }).eq('payconic_ref', ref).select().single()
-
-    // 2. Marquer le booking_player correspondant comme payé (si applicable)
-    if (payment?.booking_player_id) {
-      await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', payment.booking_player_id)
-    }
-
-    // 3. Récupérer le booking + tous ses joueurs pour vérifier si le solde est à 0
-    const { data: booking } = await supabase.from('bookings').select('*').eq('id', bookingId).single()
-    const { data: players } = await supabase.from('booking_players').select('*').eq('booking_id', bookingId)
-
-    // 4. Auto-confirmer UNIQUEMENT si le solde dû est entièrement couvert
-    if (booking && isBookingFullyPaid(booking, players || [])) {
+    if (bookingId) {
+      await supabase.from('payments').update({ status: 'paid' }).eq('payconic_ref', ref)
       await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', bookingId)
     }
-    // Sinon : le statut reste 'pending', en attente des autres paiements
-    // ou d'une validation manuelle par l'admin (cas exceptionnel, ex: paiement cash)
+
+    if (eventRegistrationId) {
+      await supabase.from('event_registrations').update({ status: 'confirmed', payment_status: 'paid' }).eq('id', eventRegistrationId)
+    }
 
     setDone(true)
     setProcessing(false)
-    setTimeout(() => router.push('/my-bookings'), 2000)
+    setTimeout(() => router.push(eventRegistrationId ? '/events' : '/my-bookings'), 2000)
   }
 
   return (
@@ -47,8 +37,8 @@ function StubPaymentContent() {
         {done ? (
           <>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand-light)', marginBottom: '8px' }}>Paiement enregistré</h2>
-            <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Redirection vers vos réservations...</p>
+            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand-light)', marginBottom: '8px' }}>Paiement confirmé !</h2>
+            <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Redirection...</p>
           </>
         ) : (
           <>
