@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 const playerLinks = [
   { href: '/', icon: '⊞', label: 'Accueil' },
   { href: '/booking', icon: '📅', label: 'Réserver' },
+  { href: '/events', icon: '🏆', label: 'Club Events' },
   { href: '/my-bookings', icon: '🎾', label: 'Mes réservations' },
   { href: '/open-matches', icon: '👥', label: 'Matchs ouverts' },
   { href: '/profile', icon: '👤', label: 'Mon profil' },
@@ -14,6 +15,7 @@ const adminLinks = [
   { href: '/admin', icon: '◈', label: 'Dashboard' },
   { href: '/admin/courts', icon: '🏟', label: 'Terrains' },
   { href: '/admin/schedule', icon: '🗓', label: 'Calendrier' },
+  { href: '/admin/events', icon: '🏆', label: 'Club Events' },
   { href: '/admin/rules', icon: '⚙', label: "Règles d'accès" },
   { href: '/admin/members', icon: '👥', label: 'Membres' },
   { href: '/admin/bookings', icon: '📋', label: 'Réservations' },
@@ -34,7 +36,6 @@ export default function Sidebar({ profile, onClose }) {
       height: '100vh',
       flexShrink: 0,
     }}>
-      {/* Logo + close */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
           <img src="/logo.png" alt="Mayfair Padel Club" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
@@ -48,7 +49,6 @@ export default function Sidebar({ profile, onClose }) {
         )}
       </div>
 
-      {/* Nav */}
       <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
         {isAdmin && <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--muted)', padding: '0 10px', marginBottom: '6px' }}>Joueur</div>}
         {playerLinks.map(link => {
@@ -91,7 +91,6 @@ export default function Sidebar({ profile, onClose }) {
         )}
       </nav>
 
-      {/* Profile footer */}
       {profile && (
         <Link href="/profile" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderTop: '1px solid var(--border)', textDecoration: 'none' }}>
           <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--brand-dim)', border: '1px solid var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 600, color: 'var(--brand-light)', flexShrink: 0 }}>
