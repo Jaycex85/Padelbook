@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
-import { generateSlots, evaluateAccessRules, calcEffectivePrice, shouldSkipPayment, isBookingFullyPaid, hasUnpaidBalance, calcOpenBalance } from '../../lib/bookingUtils'
+import { generateSlots, evaluateAccessRules, calcEffectivePrice, shouldSkipPayment, isBookingFullyPaid, hasUnpaidBalance, calcOpenBalance, checkBookingWindow, checkMaxConcurrentBookings } from '../../lib/bookingUtils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
@@ -42,6 +42,7 @@ function BookingForm() {
   const [booking, setBooking] = useState(false)
   const [error, setError] = useState(null)
   const [blockedByUnpaidBalance, setBlockedByUnpaidBalance] = useState(false)
+  const [activeOwnerCount, setActiveOwnerCount] = useState(0)
 
   const dates = Array.from({ length: 14 }, (_, i) => {
     const d = new Date()
@@ -74,6 +75,13 @@ function BookingForm() {
         const walletInDebt = (currentProfile?.wallet_balance || 0) < 0
 
         setBlockedByUnpaidBalance(unpaidBooking || walletInDebt)
+
+        // Compte des réservations actives à venir (pour la règle max simultanées)
+        const now = new Date()
+        const upcomingActiveCount = (ownerBookings || []).filter(b =>
+          ['pending', 'confirmed'].includes(b.status) && new Date(b.starts_at) > now
+        ).length
+        setActiveOwnerCount(upcomingActiveCount)
       }
 
       const courtParam = searchParams.get('court')
