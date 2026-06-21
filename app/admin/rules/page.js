@@ -3,14 +3,21 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-const WHO_LABELS = { all: 'Tout le monde', member: 'Membres uniquement', public: 'Public uniquement' }
+const WHO_LABELS = { all: 'Tout le monde', member: 'Membres (rôle app)', public: 'Public uniquement', cotisant: 'Membre cotisant actif' }
 const EFFECT_LABELS = { allow: '✓ Autoriser', deny: '✕ Bloquer' }
+
+const EMPTY_FORM = {
+  label: '', who: 'member', effect: 'allow', all_courts: true, court_id: null,
+  days_of_week: [], time_from: '', time_to: '', date_from: '', date_to: '',
+  priority: 0, is_active: true,
+  max_concurrent_bookings: '', booking_window_days: '',
+}
 
 export default function AdminRulesPage() {
   const [rules, setRules] = useState([])
   const [courts, setCourts] = useState([])
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ label: '', who: 'member', effect: 'allow', all_courts: true, court_id: null, days_of_week: [], time_from: '', time_to: '', date_from: '', date_to: '', priority: 0, is_active: true })
+  const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
 
@@ -49,10 +56,13 @@ export default function AdminRulesPage() {
       date_to: form.date_to || null,
       priority: parseInt(form.priority),
       is_active: true,
+      max_concurrent_bookings: form.max_concurrent_bookings !== '' ? parseInt(form.max_concurrent_bookings) : null,
+      booking_window_days: form.booking_window_days !== '' ? parseInt(form.booking_window_days) : null,
     }
     await supabase.from('access_rules').insert(payload)
     setSaving(false)
     setShowForm(false)
+    setForm(EMPTY_FORM)
     load()
   }
 
@@ -66,41 +76,50 @@ export default function AdminRulesPage() {
     load()
   }
 
+  const fieldStyle = { width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '9px 12px', color: 'var(--text)', fontSize: '14px', fontFamily: "'Inter',sans-serif" }
+  const labelStyle = { display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.3px' }
+
   return (
     <div>
-      <div className="page-header">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', gap: '16px', flexWrap: 'wrap' }}>
         <div>
-          <h1 className="page-title">Règles d'accès</h1>
-          <p className="page-sub">Les règles sont évaluées par priorité décroissante — la dernière règle qui s'applique gagne.</p>
+          <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Règles d'accès</h1>
+          <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px', maxWidth: '480px' }}>
+            Une règle peut cumuler plusieurs effets : autoriser/bloquer, limiter le nombre de réservations simultanées, et/ou définir une fenêtre d'ouverture. Évaluées par priorité croissante — la dernière règle qui matche gagne pour chaque effet.
+          </p>
         </div>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>+ Ajouter une règle</button>
+        <button onClick={() => setShowForm(true)} style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
+          + Ajouter une règle
+        </button>
       </div>
 
       {rules.length === 0 ? (
-        <div className="empty">Aucune règle configurée. Par défaut, tout le monde peut réserver.</div>
+        <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)', fontSize: '14px' }}>Aucune règle configurée. Par défaut, tout le monde peut réserver sans limite.</div>
       ) : (
-        <div className="rules-list">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {rules.map(rule => (
-            <div key={rule.id} className={'rule-row' + (rule.is_active ? '' : ' rule-inactive')}>
-              <div className={'effect-badge ' + (rule.effect === 'allow' ? 'effect-allow' : 'effect-deny')}>
+            <div key={rule.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: '12px', opacity: rule.is_active ? 1 : 0.45 }}>
+              <div style={{ width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, flexShrink: 0, marginTop: '2px', background: rule.effect === 'allow' ? 'rgba(74,222,128,0.12)' : 'rgba(248,113,113,0.12)', color: rule.effect === 'allow' ? '#4ADE80' : 'var(--red)' }}>
                 {rule.effect === 'allow' ? '✓' : '✕'}
               </div>
-              <div className="rule-info">
-                <div className="rule-label">{rule.label || 'Sans titre'}</div>
-                <div className="rule-meta">
-                  <span className="badge badge-blue">{WHO_LABELS[rule.who]}</span>
-                  {rule.all_courts ? <span className="badge badge-muted">Tous terrains</span> : <span className="badge badge-muted">{rule.court?.name}</span>}
-                  {rule.days_of_week && <span className="badge badge-muted">{rule.days_of_week.map(d => DAYS[d]).join(', ')}</span>}
-                  {rule.time_from && <span className="badge badge-muted">{rule.time_from.substring(0,5)} → {rule.time_to?.substring(0,5)}</span>}
-                  {rule.date_from && <span className="badge badge-muted">{rule.date_from} → {rule.date_to}</span>}
-                  <span className="priority-label">Priorité {rule.priority}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>{rule.label || 'Sans titre'}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: rule.who === 'cotisant' ? 'var(--brand-dim)' : 'rgba(96,165,250,0.1)', color: rule.who === 'cotisant' ? 'var(--brand-light)' : '#93C5FD' }}>{WHO_LABELS[rule.who]}</span>
+                  {rule.all_courts ? <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(139,148,158,0.1)', color: 'var(--muted)' }}>Tous terrains</span> : <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(139,148,158,0.1)', color: 'var(--muted)' }}>{rule.court?.name}</span>}
+                  {rule.days_of_week && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(139,148,158,0.1)', color: 'var(--muted)' }}>{rule.days_of_week.map(d => DAYS[d]).join(', ')}</span>}
+                  {rule.time_from && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(139,148,158,0.1)', color: 'var(--muted)' }}>{rule.time_from.substring(0,5)} → {rule.time_to?.substring(0,5)}</span>}
+                  {rule.date_from && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(139,148,158,0.1)', color: 'var(--muted)' }}>{rule.date_from} → {rule.date_to}</span>}
+                  {rule.max_concurrent_bookings != null && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(252,211,77,0.1)', color: 'var(--amber)' }}>Max {rule.max_concurrent_bookings} résa simultanée{rule.max_concurrent_bookings > 1 ? 's' : ''}</span>}
+                  {rule.booking_window_days != null && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(252,211,77,0.1)', color: 'var(--amber)' }}>Ouvre {rule.booking_window_days}j avant</span>}
+                  <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Priorité {rule.priority}</span>
                 </div>
               </div>
-              <div className="rule-actions">
-                <button className={'toggle-btn' + (rule.is_active ? ' on' : '')} onClick={() => toggleRule(rule)}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                <button onClick={() => toggleRule(rule)} style={{ fontSize: '11px', padding: '4px 10px', borderRadius: '99px', cursor: 'pointer', border: '1px solid ' + (rule.is_active ? 'var(--brand)' : 'var(--border)'), background: rule.is_active ? 'var(--brand-dim)' : 'none', color: rule.is_active ? 'var(--brand-light)' : 'var(--muted)' }}>
                   {rule.is_active ? 'Actif' : 'Inactif'}
                 </button>
-                <button className="btn-icon" onClick={() => deleteRule(rule.id)}>🗑</button>
+                <button onClick={() => deleteRule(rule.id)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '5px 9px', cursor: 'pointer', fontSize: '13px' }}>🗑</button>
               </div>
             </div>
           ))}
@@ -108,140 +127,112 @@ export default function AdminRulesPage() {
       )}
 
       {showForm && (
-        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowForm(false)}>
-          <div className="modal">
-            <div className="modal-header">
-              <h2>Nouvelle règle</h2>
-              <button className="modal-close" onClick={() => setShowForm(false)}>✕</button>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}
+          onClick={e => e.target === e.currentTarget && setShowForm(false)}>
+          <div className="modal-responsive" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', maxWidth: 'min(520px, calc(100vw - 32px))', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+              <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '18px', fontWeight: 700 }}>Nouvelle règle</h2>
+              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '18px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Label (description)</label>
-              <input className="form-input" value={form.label} onChange={e => setForm({...form, label: e.target.value})} placeholder="Ex: Membres seulement le soir" />
+            <div style={{ marginBottom: '14px' }}>
+              <label style={labelStyle}>Label (description)</label>
+              <input style={fieldStyle} value={form.label} onChange={e => setForm({...form, label: e.target.value})} placeholder="Ex: Membres cotisants — accès prioritaire" />
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Qui ?</label>
-                <select className="form-input" value={form.who} onChange={e => setForm({...form, who: e.target.value})}>
+            <div className="form-row-responsive" style={{ marginBottom: '14px' }}>
+              <div>
+                <label style={labelStyle}>Qui ?</label>
+                <select style={fieldStyle} value={form.who} onChange={e => setForm({...form, who: e.target.value})}>
                   <option value="all">Tout le monde</option>
-                  <option value="member">Membres uniquement</option>
+                  <option value="member">Membres (rôle app)</option>
                   <option value="public">Public uniquement</option>
+                  <option value="cotisant">Membre cotisant actif</option>
                 </select>
               </div>
-              <div className="form-group">
-                <label className="form-label">Effet</label>
-                <select className="form-input" value={form.effect} onChange={e => setForm({...form, effect: e.target.value})}>
+              <div>
+                <label style={labelStyle}>Effet allow/deny</label>
+                <select style={fieldStyle} value={form.effect} onChange={e => setForm({...form, effect: e.target.value})}>
                   <option value="allow">Autoriser</option>
                   <option value="deny">Bloquer</option>
                 </select>
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Terrain concerné</label>
-              <div style={{display:'flex', gap:'8px', flexWrap:'wrap'}}>
-                <button className={'tag-btn' + (form.all_courts ? ' active' : '')} onClick={() => setForm({...form, all_courts: true})}>Tous</button>
+            <div style={{ marginBottom: '14px' }}>
+              <label style={labelStyle}>Terrain concerné</label>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button onClick={() => setForm({...form, all_courts: true})} style={{ background: form.all_courts ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (form.all_courts ? 'var(--brand)' : 'var(--border)'), color: form.all_courts ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>Tous</button>
                 {courts.map(c => (
-                  <button key={c.id} className={'tag-btn' + (!form.all_courts && form.court_id === c.id ? ' active' : '')} onClick={() => setForm({...form, all_courts: false, court_id: c.id})}>
+                  <button key={c.id} onClick={() => setForm({...form, all_courts: false, court_id: c.id})} style={{ background: !form.all_courts && form.court_id === c.id ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (!form.all_courts && form.court_id === c.id ? 'var(--brand)' : 'var(--border)'), color: !form.all_courts && form.court_id === c.id ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
                     {c.name}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Jours (vide = tous)</label>
-              <div style={{display:'flex', gap:'6px', flexWrap:'wrap'}}>
+            <div style={{ marginBottom: '14px' }}>
+              <label style={labelStyle}>Jours (vide = tous)</label>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {DAYS.map((d, i) => (
-                  <button key={i} className={'tag-btn' + (form.days_of_week.includes(i) ? ' active' : '')} onClick={() => toggleDay(i)}>{d}</button>
+                  <button key={i} onClick={() => toggleDay(i)} style={{ background: form.days_of_week.includes(i) ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (form.days_of_week.includes(i) ? 'var(--brand)' : 'var(--border)'), color: form.days_of_week.includes(i) ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}>{d}</button>
                 ))}
               </div>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Heure de (vide = toute la journée)</label>
-                <input type="time" className="form-input" value={form.time_from} onChange={e => setForm({...form, time_from: e.target.value})} />
+            <div className="form-row-responsive" style={{ marginBottom: '14px' }}>
+              <div>
+                <label style={labelStyle}>Heure de (vide = toute la journée)</label>
+                <input type="time" style={fieldStyle} value={form.time_from} onChange={e => setForm({...form, time_from: e.target.value})} />
               </div>
-              <div className="form-group">
-                <label className="form-label">Heure à</label>
-                <input type="time" className="form-input" value={form.time_to} onChange={e => setForm({...form, time_to: e.target.value})} />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label className="form-label">Date de (optionnel)</label>
-                <input type="date" className="form-input" value={form.date_from} onChange={e => setForm({...form, date_from: e.target.value})} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Date à</label>
-                <input type="date" className="form-input" value={form.date_to} onChange={e => setForm({...form, date_to: e.target.value})} />
+              <div>
+                <label style={labelStyle}>Heure à</label>
+                <input type="time" style={fieldStyle} value={form.time_to} onChange={e => setForm({...form, time_to: e.target.value})} />
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">Priorité (plus élevé = évalué en dernier)</label>
-              <input type="number" className="form-input" value={form.priority} onChange={e => setForm({...form, priority: e.target.value})} />
+            <div className="form-row-responsive" style={{ marginBottom: '14px' }}>
+              <div>
+                <label style={labelStyle}>Date de (optionnel)</label>
+                <input type="date" style={fieldStyle} value={form.date_from} onChange={e => setForm({...form, date_from: e.target.value})} />
+              </div>
+              <div>
+                <label style={labelStyle}>Date à</label>
+                <input type="date" style={fieldStyle} value={form.date_to} onChange={e => setForm({...form, date_to: e.target.value})} />
+              </div>
             </div>
 
-            <div className="modal-footer">
-              <button className="btn-outline" onClick={() => setShowForm(false)}>Annuler</button>
-              <button className="btn-primary" onClick={handleSave} disabled={saving}>
+            <div style={{ background: 'var(--surface2)', borderRadius: '10px', padding: '14px', marginBottom: '14px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--brand-light)', marginBottom: '10px' }}>⚙️ Contraintes avancées (optionnel)</div>
+              <div className="form-row-responsive">
+                <div>
+                  <label style={labelStyle}>Max réservations simultanées (owner)</label>
+                  <input type="number" min="0" style={fieldStyle} value={form.max_concurrent_bookings} onChange={e => setForm({...form, max_concurrent_bookings: e.target.value})} placeholder="Illimité" />
+                </div>
+                <div>
+                  <label style={labelStyle}>Fenêtre d'ouverture (jours avant)</label>
+                  <input type="number" min="0" style={fieldStyle} value={form.booking_window_days} onChange={e => setForm({...form, booking_window_days: e.target.value})} placeholder="Illimité" />
+                </div>
+              </div>
+              <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
+                Laisser vide = pas de contrainte de ce type pour cette règle. Ex: "Membre cotisant" + fenêtre 14j + max 3 résa.
+              </p>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={labelStyle}>Priorité (plus élevé = évalué en dernier, donc prioritaire)</label>
+              <input type="number" style={fieldStyle} value={form.priority} onChange={e => setForm({...form, priority: e.target.value})} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}>Annuler</button>
+              <button onClick={handleSave} disabled={saving} style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: saving ? 0.6 : 1 }}>
                 {saving ? 'Enregistrement...' : 'Enregistrer'}
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        .page-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px; gap:16px; flex-wrap:wrap; }
-        .page-title { font-family:'Syne',sans-serif; font-size:22px; font-weight:700; }
-        .page-sub { font-size:13px; color:var(--muted); margin-top:2px; max-width:480px; }
-        .empty { text-align:center; padding:48px; color:var(--muted); font-size:14px; }
-        .rules-list { display:flex; flex-direction:column; gap:8px; }
-        .rule-row { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:14px 16px; display:flex; align-items:flex-start; gap:12px; }
-        .rule-inactive { opacity:0.45; }
-        .effect-badge { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; flex-shrink:0; margin-top:2px; }
-        .effect-allow { background:rgba(74,222,128,0.12); color:var(--brand); }
-        .effect-deny { background:rgba(248,113,113,0.12); color:var(--red); }
-        .rule-info { flex:1; min-width:0; }
-        .rule-label { font-size:14px; font-weight:500; margin-bottom:6px; }
-        .rule-meta { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-        .badge { font-size:11px; padding:2px 8px; border-radius:99px; font-weight:500; }
-        .badge-blue { background:rgba(96,165,250,0.1); color:#93C5FD; }
-        .badge-muted { background:rgba(139,148,158,0.1); color:var(--muted); }
-        .priority-label { font-size:11px; color:var(--muted); }
-        .rule-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
-        .toggle-btn { font-size:11px; padding:4px 10px; border-radius:99px; cursor:pointer; border:1px solid var(--border); background:none; color:var(--muted); transition:all .15s; }
-        .toggle-btn.on { border-color:var(--brand); color:var(--brand); background:rgba(74,222,128,0.08); }
-        .btn-icon { background:none; border:1px solid var(--border); border-radius:8px; padding:5px 9px; cursor:pointer; font-size:13px; }
-        .btn-icon:hover { border-color:var(--red); }
-        .btn-primary { background:var(--brand); color:#0D1117; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer; font-family:'Syne',sans-serif; }
-        .btn-primary:hover { background:#86efac; }
-        .btn-primary:disabled { opacity:0.5; cursor:not-allowed; }
-        .btn-outline { background:none; border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:10px 20px; font-size:14px; cursor:pointer; }
-        .tag-btn { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; color:var(--muted); transition:all .15s; }
-        .tag-btn.active { border-color:var(--brand); color:var(--brand); background:rgba(74,222,128,0.08); }
-        .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:200; padding:16px; }
-        .modal { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:24px; width:100%; max-width:500px; max-height:90vh; overflow-y:auto; }
-        .modal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
-        .modal-header h2 { font-family:'Syne',sans-serif; font-size:18px; font-weight:700; }
-        .modal-close { background:none; border:none; color:var(--muted); font-size:18px; cursor:pointer; }
-        .modal-footer { display:flex; gap:10px; justify-content:flex-end; margin-top:20px; }
-        .form-group { margin-bottom:14px; }
-        .form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-        .form-label { display:block; font-size:11px; font-weight:500; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:0.3px; }
-        .form-input { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:9px 12px; color:var(--text); font-size:14px; font-family:'Inter',sans-serif; }
-        .form-input:focus { outline:none; border-color:var(--brand); }
-      
-        @media (max-width: 480px) {
-          .modal { max-width: calc(100vw - 32px) !important; }
-          .form-row { grid-template-columns: 1fr !important; }
-        }
-`}</style>
     </div>
   )
 }
