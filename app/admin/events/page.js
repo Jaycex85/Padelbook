@@ -318,16 +318,21 @@ export default function AdminEventsPage() {
               {!compact && <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '99px', background: 'var(--surface2)', color: 'var(--muted)' }}>{ev.price_per_player} €/pers</span>}
             </div>
           </div>
-          {!isCancelled && (
-            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-              <button onClick={() => openEdit(ev)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--brand-light)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', cursor: 'pointer' }}>
-                Modifier
-              </button>
-              <button onClick={() => cancelEvent(ev)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', cursor: 'pointer' }}>
-                Annuler
-              </button>
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: '6px', flexShrink: 0, flexWrap: 'wrap' }}>
+            {!isCancelled && (
+              <>
+                <button onClick={() => openEdit(ev)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--brand-light)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', cursor: 'pointer' }}>
+                  Modifier
+                </button>
+                <button onClick={() => cancelEvent(ev)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--amber)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', cursor: 'pointer' }}>
+                  Annuler
+                </button>
+              </>
+            )}
+            <button onClick={() => deleteEvent(ev)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', cursor: 'pointer' }}>
+              Supprimer
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -386,10 +391,13 @@ export default function AdminEventsPage() {
                             {isExpanded ? 'Masquer' : 'Voir'} les dates
                           </button>
                           {!isCancelled && (
-                            <button onClick={() => cancelSeries(s)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
+                            <button onClick={() => cancelSeries(s)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--amber)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
                               Annuler la série
                             </button>
                           )}
+                          <button onClick={() => deleteSeries(s)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
+                            Supprimer la série
+                          </button>
                         </div>
                       </div>
 
