@@ -49,6 +49,14 @@ export default function ProfilePage() {
     setTimeout(() => setSaved(false), 3000)
   }
 
+  async function requestMembership() {
+    await supabase.from('profiles').update({
+      membership_status: 'pending',
+      membership_requested_at: new Date().toISOString(),
+    }).eq('id', profile.id)
+    setProfile(p => ({ ...p, membership_status: 'pending', membership_requested_at: new Date().toISOString() }))
+  }
+
   async function handleAvatarChange(e) {
     const file = e.target.files?.[0]
     if (!file) return
@@ -162,6 +170,40 @@ export default function ProfilePage() {
           )}
         </div>
         <div style={{ fontSize: '28px' }}>💳</div>
+      </div>
+
+      {/* Statut membre cotisant */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: profile?.membership_status === 'active' ? '4px' : '0' }}>
+          <div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Statut membre du club</div>
+            {profile?.membership_status === 'none' || !profile?.membership_status ? (
+              <div style={{ fontSize: '14px', color: 'var(--muted)' }}>Vous n'êtes pas encore membre cotisant</div>
+            ) : profile?.membership_status === 'pending' ? (
+              <div style={{ fontSize: '14px', color: 'var(--amber)', fontWeight: 500 }}>⏳ Demande en attente de validation</div>
+            ) : profile?.membership_status === 'active' && (!profile?.membership_valid_until || profile.membership_valid_until >= new Date().toISOString().split('T')[0]) ? (
+              <div style={{ fontSize: '14px', color: '#4ADE80', fontWeight: 500 }}>✓ Membre cotisant actif</div>
+            ) : (
+              <div style={{ fontSize: '14px', color: 'var(--red)', fontWeight: 500 }}>Cotisation expirée</div>
+            )}
+          </div>
+          <div style={{ fontSize: '28px' }}>🎖️</div>
+        </div>
+        {profile?.membership_status === 'active' && profile?.membership_valid_until && (
+          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>
+            Valide jusqu'au {new Date(profile.membership_valid_until).toLocaleDateString('fr-BE')}
+          </div>
+        )}
+        {(!profile?.membership_status || profile.membership_status === 'none' || profile.membership_status === 'expired') && (
+          <button onClick={requestMembership} style={{ marginTop: '10px', background: 'var(--brand-dim)', border: '1px solid var(--brand)', color: 'var(--brand-light)', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}>
+            {profile?.membership_status === 'expired' ? 'Renouveler ma cotisation' : 'Devenir membre cotisant'}
+          </button>
+        )}
+        {(!profile?.membership_status || profile.membership_status === 'none') && (
+          <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
+            La cotisation se paie directement au club (hors application). Votre demande sera validée par un administrateur.
+          </p>
+        )}
       </div>
 
       {/* Formulaire infos perso */}
