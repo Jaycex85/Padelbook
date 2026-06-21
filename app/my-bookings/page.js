@@ -399,7 +399,7 @@ function MyBookingsList() {
 
                 {openChatId === b.id && (
                   <div style={{ marginTop: '14px' }}>
-                    <Chat bookingId={b.id} endsAt={b.ends_at} canWrite={true} />
+                    <Chat bookingId={b.id} endsAt={b.ends_at} isRegistered={true} isPublicAccess={b.is_public} isAdmin={false} />
                   </div>
                 )}
               </div>
