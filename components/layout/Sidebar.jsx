@@ -18,6 +18,7 @@ const adminLinks = [
   { href: '/admin/events', icon: '🏆', label: 'Club Events' },
   { href: '/admin/rules', icon: '⚙', label: "Règles d'accès" },
   { href: '/admin/members', icon: '👥', label: 'Membres' },
+  { href: '/admin/membership', icon: '🎖️', label: 'Membres cotisants' },
   { href: '/admin/bookings', icon: '📋', label: 'Réservations' },
   { href: '/admin/integrations', icon: '🔌', label: 'Intégrations' },
 ]
