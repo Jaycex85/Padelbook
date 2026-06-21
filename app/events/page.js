@@ -157,7 +157,7 @@ export default function EventsPage() {
 
                 {openChatId === ev.id && (
                   <div style={{ marginTop: '12px' }}>
-                    <Chat eventId={ev.id} endsAt={ev.ends_at} canWrite={canWriteChat} />
+                    <Chat eventId={ev.id} endsAt={ev.ends_at} isRegistered={isRegistered} isPublicAccess={true} isAdmin={profile?.role === 'admin'} />
                   </div>
                 )}
               </div>
