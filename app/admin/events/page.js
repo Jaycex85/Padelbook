@@ -6,6 +6,14 @@ import { generateSeriesDates, buildOccurrencePayload } from '../../../lib/eventS
 const WHO_LABELS = { all: 'Tout le monde', member: 'Membres uniquement', public: 'Public uniquement' }
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
+const EMPTY_FORM = {
+  label: '', starts_at: '', ends_at: '', max_players: 8,
+  price_per_player: 10, description: '', who: 'all',
+  cancellation_deadline_hours: 24, court_ids: [],
+  day_of_week: 4, start_time: '19:00', end_time: '21:00',
+  series_starts_on: '', series_ends_on: '',
+}
+
 export default function AdminEventsPage() {
   const [events, setEvents] = useState([])
   const [series, setSeries] = useState([])
@@ -15,15 +23,9 @@ export default function AdminEventsPage() {
   const [saving, setSaving] = useState(false)
   const [mode, setMode] = useState('single') // 'single' | 'series'
   const [expandedSeries, setExpandedSeries] = useState(null)
+  const [editingEventId, setEditingEventId] = useState(null) // si set : on est en mode édition d'un event ponctuel/occurrence
 
-  const [form, setForm] = useState({
-    label: '', starts_at: '', ends_at: '', max_players: 8,
-    price_per_player: 10, description: '', who: 'all',
-    cancellation_deadline_hours: 24, court_ids: [],
-    // série
-    day_of_week: 4, start_time: '19:00', end_time: '21:00',
-    series_starts_on: '', series_ends_on: '',
-  })
+  const [form, setForm] = useState(EMPTY_FORM)
   const supabase = createClient()
 
   async function load() {
@@ -46,11 +48,41 @@ export default function AdminEventsPage() {
   }
 
   function resetForm() {
-    setForm({ label: '', starts_at: '', ends_at: '', max_players: 8, price_per_player: 10, description: '', who: 'all', cancellation_deadline_hours: 24, court_ids: [], day_of_week: 4, start_time: '19:00', end_time: '21:00', series_starts_on: '', series_ends_on: '' })
+    setForm(EMPTY_FORM)
     setMode('single')
+    setEditingEventId(null)
   }
 
-  // ─── Création event ponctuel (logique existante) ───
+  function openCreate() {
+    resetForm()
+    setShowForm(true)
+  }
+
+  // Pré-remplit le formulaire pour modifier un event ponctuel ou une occurrence de série
+  function openEdit(ev) {
+    const toLocalInput = iso => {
+      const d = new Date(iso)
+      const pad = n => String(n).padStart(2, '0')
+      return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes())
+    }
+    setMode('single') // on édite toujours UNE occurrence précise, jamais le moule de la série
+    setEditingEventId(ev.id)
+    setForm({
+      ...EMPTY_FORM,
+      label: ev.label,
+      starts_at: toLocalInput(ev.starts_at),
+      ends_at: toLocalInput(ev.ends_at),
+      max_players: ev.max_players,
+      price_per_player: ev.price_per_player,
+      description: ev.description || '',
+      who: ev.who,
+      cancellation_deadline_hours: ev.cancellation_deadline_hours,
+      court_ids: (ev.club_event_courts || []).map(c => c.court_id),
+    })
+    setShowForm(true)
+  }
+
+  // ─── Création event ponctuel ───
   async function createSingleEvent() {
     const { data: event, error: evErr } = await supabase.from('club_events').insert({
       label: form.label,
@@ -73,6 +105,54 @@ export default function AdminEventsPage() {
       }).select().single()
 
       await supabase.from('club_event_courts').insert({ event_id: event.id, court_id: courtId, block_id: block?.id || null })
+    }
+  }
+
+  // ─── Modification d'un event ponctuel OU d'une occurrence de série ───
+  async function updateEvent(eventId) {
+    // 1. Mettre à jour les champs de l'event
+    await supabase.from('club_events').update({
+      label: form.label,
+      starts_at: form.starts_at,
+      ends_at: form.ends_at,
+      max_players: parseInt(form.max_players),
+      price_per_player: parseFloat(form.price_per_player),
+      description: form.description || null,
+      who: form.who,
+      cancellation_deadline_hours: parseInt(form.cancellation_deadline_hours),
+    }).eq('id', eventId)
+
+    // 2. Récupérer les liaisons terrain existantes (avec leur block)
+    const { data: existingLinks } = await supabase.from('club_event_courts').select('*').eq('event_id', eventId)
+
+    // 3. Supprimer les blocks + liaisons qui ne sont plus sélectionnés
+    const toRemove = (existingLinks || []).filter(l => !form.court_ids.includes(l.court_id))
+    for (const link of toRemove) {
+      if (link.block_id) await supabase.from('blocks').delete().eq('id', link.block_id)
+      await supabase.from('club_event_courts').delete().eq('id', link.id)
+    }
+
+    // 4. Mettre à jour les dates des blocks existants qui restent sélectionnés
+    const stillLinked = (existingLinks || []).filter(l => form.court_ids.includes(l.court_id))
+    for (const link of stillLinked) {
+      if (link.block_id) {
+        await supabase.from('blocks').update({
+          starts_at: form.starts_at, ends_at: form.ends_at,
+          label: 'Mayfair Padel — ' + form.label,
+        }).eq('id', link.block_id)
+      }
+    }
+
+    // 5. Créer les nouveaux terrains ajoutés
+    const existingCourtIds = (existingLinks || []).map(l => l.court_id)
+    const newCourtIds = form.court_ids.filter(id => !existingCourtIds.includes(id))
+    for (const courtId of newCourtIds) {
+      const { data: block } = await supabase.from('blocks').insert({
+        court_id: courtId, reason: 'event',
+        label: 'Mayfair Padel — ' + form.label,
+        starts_at: form.starts_at, ends_at: form.ends_at, all_courts: false,
+      }).select().single()
+      await supabase.from('club_event_courts').insert({ event_id: eventId, court_id: courtId, block_id: block?.id || null })
     }
   }
 
@@ -117,8 +197,21 @@ export default function AdminEventsPage() {
     }
   }
 
-  async function handleCreate() {
+  async function handleSubmit() {
     if (!form.label || form.court_ids.length === 0) return
+
+    if (editingEventId) {
+      // Édition : toujours une occurrence unique, jamais le moule de série
+      if (!form.starts_at || !form.ends_at) return
+      setSaving(true)
+      await updateEvent(editingEventId)
+      setSaving(false)
+      setShowForm(false)
+      resetForm()
+      load()
+      return
+    }
+
     if (mode === 'single' && (!form.starts_at || !form.ends_at)) return
     if (mode === 'series' && (!form.series_starts_on || !form.series_ends_on)) return
 
@@ -157,9 +250,7 @@ export default function AdminEventsPage() {
   const fieldStyle = { width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '9px 12px', color: 'var(--text)', fontSize: '14px', fontFamily: "'Inter',sans-serif" }
   const labelStyle = { display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.3px' }
 
-  // Events sans série (ponctuels)
   const singleEvents = events.filter(e => !e.series_id)
-  // Compter occurrences par série
   const seriesWithCounts = series.map(s => {
     const occ = events.filter(e => e.series_id === s.id)
     const upcoming = occ.filter(e => e.status === 'active' && new Date(e.starts_at) > new Date())
@@ -193,9 +284,14 @@ export default function AdminEventsPage() {
             </div>
           </div>
           {!isCancelled && (
-            <button onClick={() => cancelEvent(ev)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', cursor: 'pointer', flexShrink: 0 }}>
-              Annuler
-            </button>
+            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+              <button onClick={() => openEdit(ev)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--brand-light)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', cursor: 'pointer' }}>
+                Modifier
+              </button>
+              <button onClick={() => cancelEvent(ev)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '6px 12px', fontSize: '11px', cursor: 'pointer' }}>
+                Annuler
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -209,7 +305,7 @@ export default function AdminEventsPage() {
           <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Club Events</h1>
           <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>Tournois, soirées et séries récurrentes du club</p>
         </div>
-        <button onClick={() => setShowForm(true)} style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
+        <button onClick={openCreate} style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
           + Créer un event
         </button>
       </div>
@@ -246,6 +342,9 @@ export default function AdminEventsPage() {
                             <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '99px', background: 'var(--surface2)', color: 'var(--muted)' }}>{s.price_per_player} €/pers</span>
                             <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '99px', background: 'var(--surface2)', color: 'var(--muted)' }}>{WHO_LABELS[s.who]}</span>
                           </div>
+                          <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
+                            💡 Pour modifier une date précise (prix, capacité...), déplie les dates ci-dessous et clique "Modifier" sur l'occurrence concernée.
+                          </p>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flexShrink: 0 }}>
                           <button onClick={() => setExpandedSeries(isExpanded ? null : s.id)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
@@ -285,25 +384,35 @@ export default function AdminEventsPage() {
         </>
       )}
 
-      {/* Modal création */}
+      {/* Modal création / édition */}
       {showForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}
           onClick={e => e.target === e.currentTarget && setShowForm(false)}>
           <div className="modal-responsive" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', maxWidth: 'min(560px, calc(100vw - 32px))', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '18px', fontWeight: 700 }}>Nouvel événement</h2>
-              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+              <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '18px', fontWeight: 700 }}>
+                {editingEventId ? "Modifier l'événement" : 'Nouvel événement'}
+              </h2>
+              <button onClick={() => { setShowForm(false); resetForm() }} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '18px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            {/* Toggle ponctuel / série */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: 'var(--surface2)', padding: '4px', borderRadius: '10px' }}>
-              <button onClick={() => setMode('single')} style={{ flex: 1, background: mode === 'single' ? 'var(--brand)' : 'none', color: mode === 'single' ? '#fff' : 'var(--muted)', border: 'none', borderRadius: '8px', padding: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
-                📍 Event ponctuel
-              </button>
-              <button onClick={() => setMode('series')} style={{ flex: 1, background: mode === 'series' ? 'var(--brand)' : 'none', color: mode === 'series' ? '#fff' : 'var(--muted)', border: 'none', borderRadius: '8px', padding: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
-                🔁 Série récurrente
-              </button>
-            </div>
+            {/* Toggle ponctuel / série — masqué en mode édition (on édite toujours une occurrence unique) */}
+            {!editingEventId && (
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', background: 'var(--surface2)', padding: '4px', borderRadius: '10px' }}>
+                <button onClick={() => setMode('single')} style={{ flex: 1, background: mode === 'single' ? 'var(--brand)' : 'none', color: mode === 'single' ? '#fff' : 'var(--muted)', border: 'none', borderRadius: '8px', padding: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
+                  📍 Event ponctuel
+                </button>
+                <button onClick={() => setMode('series')} style={{ flex: 1, background: mode === 'series' ? 'var(--brand)' : 'none', color: mode === 'series' ? '#fff' : 'var(--muted)', border: 'none', borderRadius: '8px', padding: '9px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
+                  🔁 Série récurrente
+                </button>
+              </div>
+            )}
+
+            {editingEventId && (
+              <div style={{ background: 'var(--brand-dim)', border: '1px solid var(--brand)', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', color: 'var(--brand-light)', marginBottom: '16px' }}>
+                ✏️ Modification de cette occurrence uniquement — les autres dates de la série ne sont pas affectées.
+              </div>
+            )}
 
             <div style={{ marginBottom: '14px' }}>
               <label style={labelStyle}>Libellé</label>
@@ -313,7 +422,7 @@ export default function AdminEventsPage() {
               </div>
             </div>
 
-            {mode === 'single' ? (
+            {(mode === 'single' || editingEventId) ? (
               <div className="form-row-responsive" style={{ marginBottom: '14px' }}>
                 <div>
                   <label style={labelStyle}>Début</label>
@@ -404,10 +513,10 @@ export default function AdminEventsPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}>Annuler</button>
-              <button onClick={handleCreate} disabled={saving || !form.label || form.court_ids.length === 0}
+              <button onClick={() => { setShowForm(false); resetForm() }} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}>Annuler</button>
+              <button onClick={handleSubmit} disabled={saving || !form.label || form.court_ids.length === 0}
                 style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: saving ? 0.6 : 1 }}>
-                {saving ? 'Création...' : (mode === 'series' ? 'Créer la série' : "Créer l'événement")}
+                {saving ? 'Enregistrement...' : editingEventId ? 'Enregistrer' : (mode === 'series' ? 'Créer la série' : "Créer l'événement")}
               </button>
             </div>
           </div>
