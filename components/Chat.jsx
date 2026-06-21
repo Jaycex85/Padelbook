@@ -5,32 +5,56 @@ import { createClient } from '../lib/supabase'
 const POLL_INTERVAL_MS = 7000
 const CHAT_CLOSES_AFTER_DAYS = 2
 
-export default function Chat({ bookingId, eventId, endsAt, canWrite }) {
+/**
+ * Chat réutilisable pour un booking (match) ou un club_event.
+ * L'accès (lecture ET écriture) est entièrement dérivé de l'état courant :
+ *  - inscrit (booking_players / event_registrations actif) => accès
+ *  - sinon, accès seulement si le booking est public (is_public) ou l'event
+ *    accepte le rôle de l'utilisateur (who: all/member/public)
+ * Le RLS Supabase applique strictement la même règle côté serveur — ce composant
+ * ne fait qu'anticiper l'UI, jamais une garantie de sécurité à lui seul.
+ *
+ * Props :
+ *  - bookingId / eventId
+ *  - endsAt : pour la fermeture auto du chat
+ *  - isRegistered : l'utilisateur est-il inscrit (joueur du booking / event) ?
+ *  - isPublicAccess : le booking/event est-il actuellement accessible publiquement
+ *    (is_public=true pour un booking, ou who compatible avec le rôle pour un event) ?
+ *  - isAdmin
+ */
+export default function Chat({ bookingId, eventId, endsAt, isRegistered, isPublicAccess, isAdmin }) {
   const [messages, setMessages] = useState([])
   const [profiles, setProfiles] = useState({})
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
+  const [accessDenied, setAccessDenied] = useState(false)
   const scrollRef = useRef(null)
   const supabase = createClient()
+
+  const hasAccess = isAdmin || isRegistered || isPublicAccess
+  const canWrite = hasAccess && !!userId
 
   const isClosed = endsAt
     ? (new Date() > new Date(new Date(endsAt).getTime() + CHAT_CLOSES_AFTER_DAYS * 24 * 3600 * 1000))
     : false
 
   const load = useCallback(async () => {
+    if (!hasAccess) { setLoading(false); return }
+
     const filterCol = bookingId ? 'booking_id' : 'event_id'
     const filterVal = bookingId || eventId
-    const { data: msgs } = await supabase
+    const { data: msgs, error } = await supabase
       .from('chat_messages')
       .select('*')
       .eq(filterCol, filterVal)
       .order('created_at', { ascending: true })
 
+    if (error) { setAccessDenied(true); setLoading(false); return }
+
     setMessages(msgs || [])
 
-    // Charger les profils des expéditeurs uniques non déjà connus
     const senderIds = [...new Set((msgs || []).map(m => m.sender_id))]
     const unknown = senderIds.filter(id => !profiles[id])
     if (unknown.length > 0) {
@@ -44,22 +68,25 @@ export default function Chat({ bookingId, eventId, endsAt, canWrite }) {
       }
     }
     setLoading(false)
-  }, [bookingId, eventId])
+  }, [bookingId, eventId, hasAccess])
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id || null))
+  }, [])
+
+  useEffect(() => {
     load()
-    if (isClosed) return
+    if (isClosed || !hasAccess) return
     const interval = setInterval(load, POLL_INTERVAL_MS)
     return () => clearInterval(interval)
-  }, [load, isClosed])
+  }, [load, isClosed, hasAccess])
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight
   }, [messages.length])
 
   async function handleSend() {
-    if (!text.trim() || sending) return
+    if (!text.trim() || sending || !canWrite) return
     setSending(true)
     const payload = {
       sender_id: userId,
@@ -81,6 +108,15 @@ export default function Chat({ bookingId, eventId, endsAt, canWrite }) {
 
   const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
 
+  // Pas d'accès du tout (ni inscrit, ni public) => le composant ne s'affiche pas
+  if (!hasAccess) {
+    return (
+      <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--muted)' }}>
+        🔒 Ce chat est réservé aux joueurs inscrits.
+      </div>
+    )
+  }
+
   if (isClosed) {
     return (
       <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--muted)' }}>
@@ -91,24 +127,31 @@ export default function Chat({ bookingId, eventId, endsAt, canWrite }) {
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-        💬 Discussion
+      <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'space-between' }}>
+        <span>💬 Discussion</span>
+        {!isRegistered && isPublicAccess && (
+          <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--brand-light)', background: 'var(--brand-dim)', padding: '2px 8px', borderRadius: '99px' }}>
+            Vous n'êtes pas inscrit
+          </span>
+        )}
       </div>
 
       <div ref={scrollRef} style={{ maxHeight: '280px', minHeight: '120px', overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '13px', padding: '12px' }}>Chargement...</div>
         ) : messages.length === 0 ? (
-          <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '13px', padding: '12px' }}>Aucun message. Lancez la discussion !</div>
+          <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '13px', padding: '12px' }}>
+            {isRegistered ? 'Aucun message. Lancez la discussion !' : 'Aucun message. Posez votre question !'}
+          </div>
         ) : (
           messages.map(m => {
             const isMe = m.sender_id === userId
             const p = profiles[m.sender_id]
-            const isAdmin = p?.role === 'admin'
+            const isAdminMsg = p?.role === 'admin'
             return (
               <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
-                <div style={{ fontSize: '11px', color: isAdmin ? 'var(--brand-light)' : 'var(--muted)', marginBottom: '2px', fontWeight: isAdmin ? 600 : 400 }}>
-                  {isMe ? 'Vous' : displayName(p)}{isAdmin ? ' · Admin' : ''}
+                <div style={{ fontSize: '11px', color: isAdminMsg ? 'var(--brand-light)' : 'var(--muted)', marginBottom: '2px', fontWeight: isAdminMsg ? 600 : 400 }}>
+                  {isMe ? 'Vous' : displayName(p)}{isAdminMsg ? ' · Admin' : ''}
                 </div>
                 <div style={{
                   background: isMe ? 'var(--brand)' : 'var(--surface2)',
@@ -136,7 +179,7 @@ export default function Chat({ bookingId, eventId, endsAt, canWrite }) {
             value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
-            placeholder="Votre message..."
+            placeholder={isRegistered ? 'Votre message...' : 'Poser une question avant de rejoindre...'}
             style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '20px', padding: '9px 14px', color: 'var(--text)', fontSize: '13px', fontFamily: "'Inter',sans-serif" }}
           />
           <button onClick={handleSend} disabled={sending || !text.trim()}
@@ -146,7 +189,7 @@ export default function Chat({ bookingId, eventId, endsAt, canWrite }) {
         </div>
       ) : (
         <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', fontSize: '12px', color: 'var(--muted)', textAlign: 'center' }}>
-          Seuls les joueurs inscrits peuvent écrire.
+          Connectez-vous pour écrire.
         </div>
       )}
     </div>
