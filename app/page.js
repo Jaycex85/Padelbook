@@ -45,18 +45,51 @@ export default async function HomePage() {
     )
   }
 
+  // Prochain événement à venir (le plus proche dans le temps)
+  const now = new Date().toISOString()
+  const { data: nextEvents } = await supabase
+    .from('club_events')
+    .select('*, club_event_courts(courts(name)), event_registrations(id, status)')
+    .eq('status', 'active')
+    .gte('ends_at', now)
+    .order('starts_at')
+    .limit(1)
+
+  const nextEvent = nextEvents && nextEvents[0]
+  const fmtEventDate = d => new Date(d).toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' })
+  const fmtEventTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+
   return (
     <div>
-      <div style={{ marginBottom: '28px' }}>
+      <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 700 }}>Bonjour 👋</h1>
         <p style={{ color: 'var(--muted)', fontSize: '14px', marginTop: '4px' }}>
           {new Date().toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
       </div>
 
+      {/* Prochain Club Event en avant si présent */}
+      {nextEvent && (
+        <Link href="/events" style={{ display: 'block', textDecoration: 'none', marginBottom: '20px' }}>
+          <div style={{ background: 'linear-gradient(135deg, var(--brand-dark), var(--surface))', border: '1px solid var(--brand)', borderRadius: '16px', padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: 0, right: 0, background: 'var(--brand)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '4px 14px', borderRadius: '0 0 0 10px', letterSpacing: '0.5px' }}>
+              PROCHAIN EVENT
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--brand-light)', marginBottom: '4px' }}>🏆 Club Event</div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '17px', fontWeight: 700, marginBottom: '6px', paddingRight: '60px' }}>
+              Mayfair Padel — {nextEvent.label}
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
+              {fmtEventDate(nextEvent.starts_at)} · {fmtEventTime(nextEvent.starts_at)} · {nextEvent.price_per_player} €/pers
+            </div>
+          </div>
+        </Link>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px', marginBottom: '32px' }}>
         {[
           { href: '/booking', icon: '📅', label: 'Réserver', sub: 'un terrain' },
+          { href: '/events', icon: '🏆', label: 'Club Events', sub: 'tournois & soirées' },
           { href: '/open-matches', icon: '👥', label: 'Matchs ouverts', sub: 'rejoindre' },
           { href: '/my-bookings', icon: '🎾', label: 'Mes réservations', sub: 'historique' },
         ].map(a => (
