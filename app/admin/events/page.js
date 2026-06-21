@@ -232,6 +232,22 @@ export default function AdminEventsPage() {
     load()
   }
 
+  async function deleteEvent(event) {
+    const regs = event.event_registrations || []
+    const activeRegs = regs.filter(r => r.status !== 'cancelled')
+    const warning = activeRegs.length > 0
+      ? "ATTENTION : " + activeRegs.length + " joueur(s) inscrit(s) seront aussi supprimés. "
+      : ""
+    if (!confirm(warning + "Supprimer définitivement \"" + event.label + "\" ? Cette action est irréversible.")) return
+
+    const blockIds = (event.club_event_courts || []).map(c => c.block_id).filter(Boolean)
+    if (blockIds.length > 0) await supabase.from('blocks').delete().in('id', blockIds)
+    // event_registrations et club_event_courts ont ON DELETE CASCADE sur club_events,
+    // donc la suppression de l'event suffit à tout nettoyer en base.
+    await supabase.from('club_events').delete().eq('id', event.id)
+    load()
+  }
+
   async function cancelSeries(seriesItem) {
     if (!confirm("Annuler TOUTE la série \"" + seriesItem.label + "\" ? Toutes les occurrences futures seront annulées et les terrains débloqués.")) return
     const seriesEvents = events.filter(e => e.series_id === seriesItem.id && e.status === 'active' && new Date(e.starts_at) > new Date())
@@ -241,6 +257,25 @@ export default function AdminEventsPage() {
       await supabase.from('club_events').update({ status: 'cancelled' }).eq('id', ev.id)
     }
     await supabase.from('club_event_series').update({ status: 'cancelled' }).eq('id', seriesItem.id)
+    load()
+  }
+
+  async function deleteSeries(seriesItem) {
+    const totalRegs = seriesItem.occurrences.reduce((sum, e) => sum + (e.event_registrations || []).filter(r => r.status !== 'cancelled').length, 0)
+    const warning = totalRegs > 0
+      ? "ATTENTION : " + totalRegs + " inscription(s) au total seront aussi supprimées. "
+      : ""
+    if (!confirm(warning + "Supprimer définitivement TOUTE la série \"" + seriesItem.label + "\" et ses " + seriesItem.occurrences.length + " occurrence(s) ? Cette action est irréversible.")) return
+
+    for (const ev of seriesItem.occurrences) {
+      const blockIds = (ev.club_event_courts || []).map(c => c.block_id).filter(Boolean)
+      if (blockIds.length > 0) await supabase.from('blocks').delete().in('id', blockIds)
+    }
+    // Supprimer toutes les occurrences (cascade sur event_registrations et club_event_courts)
+    const eventIds = seriesItem.occurrences.map(e => e.id)
+    if (eventIds.length > 0) await supabase.from('club_events').delete().in('id', eventIds)
+
+    await supabase.from('club_event_series').delete().eq('id', seriesItem.id)
     load()
   }
 
