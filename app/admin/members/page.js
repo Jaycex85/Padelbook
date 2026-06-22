@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 
-const ROLE_LABELS = { admin: 'Admin', member: 'Membre', public: 'Public' }
+const ROLE_LABELS = { admin: 'Admin', member: 'Joueur (ancien)', public: 'Joueur' }
 const ROLE_COLORS = {
   admin: { bg: 'rgba(248,113,113,0.1)', color: 'var(--red)' },
   member: { bg: 'var(--brand-dim)', color: 'var(--brand-light)' },
