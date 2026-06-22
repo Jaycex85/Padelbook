@@ -179,8 +179,7 @@ export default function AdminMembersPage() {
             <div style={{ marginBottom: '14px' }}>
               <label style={labelStyle}>Rôle</label>
               <select value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })} style={fieldStyle}>
-                <option value="public">Public</option>
-                <option value="member">Membre</option>
+                <option value="public">Joueur</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
