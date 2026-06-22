@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { generateSeriesDates, buildOccurrencePayload } from '../../../lib/eventSeriesUtils'
 
-const WHO_LABELS = { all: 'Tout le monde', member: 'Membres uniquement', public: 'Public uniquement' }
+const WHO_LABELS = { all: 'Tout le monde', member: 'Joueurs (ancien rôle)', public: 'Joueurs enregistrés', cotisant: 'Membres du club' }
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 
 const EMPTY_FORM = {
@@ -540,8 +540,8 @@ export default function AdminEventsPage() {
                 <label style={labelStyle}>Qui peut s'inscrire</label>
                 <select style={fieldStyle} value={form.who} onChange={e => setForm({ ...form, who: e.target.value })}>
                   <option value="all">Tout le monde</option>
-                  <option value="member">Membres uniquement</option>
-                  <option value="public">Public uniquement</option>
+                  <option value="public">Joueurs enregistrés</option>
+                  <option value="cotisant">Membres du club</option>
                 </select>
               </div>
               <div>
