@@ -135,7 +135,7 @@ export default function ProfilePage() {
           <div style={{ fontSize: '15px', fontWeight: 500 }}>{profile?.email}</div>
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'var(--brand-dim)', color: 'var(--brand-light)', fontWeight: 500 }}>
-              {profile?.role}
+              {profile?.role === 'admin' ? 'Admin' : 'Joueur'}
             </span>
             {profile?.discount_percent > 0 && (
               <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(252,211,77,0.1)', color: 'var(--amber)', fontWeight: 500 }}>
@@ -178,11 +178,11 @@ export default function ProfilePage() {
           <div>
             <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Statut membre du club</div>
             {profile?.membership_status === 'none' || !profile?.membership_status ? (
-              <div style={{ fontSize: '14px', color: 'var(--muted)' }}>Vous n'êtes pas encore membre cotisant</div>
+              <div style={{ fontSize: '14px', color: 'var(--muted)' }}>Vous n'êtes pas encore membre du club</div>
             ) : profile?.membership_status === 'pending' ? (
               <div style={{ fontSize: '14px', color: 'var(--amber)', fontWeight: 500 }}>⏳ Demande en attente de validation</div>
             ) : profile?.membership_status === 'active' && (!profile?.membership_valid_until || profile.membership_valid_until >= new Date().toISOString().split('T')[0]) ? (
-              <div style={{ fontSize: '14px', color: '#4ADE80', fontWeight: 500 }}>✓ Membre cotisant actif</div>
+              <div style={{ fontSize: '14px', color: '#4ADE80', fontWeight: 500 }}>✓ Membre du club</div>
             ) : (
               <div style={{ fontSize: '14px', color: 'var(--red)', fontWeight: 500 }}>Cotisation expirée</div>
             )}
@@ -196,12 +196,12 @@ export default function ProfilePage() {
         )}
         {(!profile?.membership_status || profile.membership_status === 'none' || profile.membership_status === 'expired') && (
           <button onClick={requestMembership} style={{ marginTop: '10px', background: 'var(--brand-dim)', border: '1px solid var(--brand)', color: 'var(--brand-light)', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}>
-            {profile?.membership_status === 'expired' ? 'Renouveler ma cotisation' : 'Devenir membre cotisant'}
+            {profile?.membership_status === 'expired' ? 'Renouveler mon adhésion' : 'Devenir membre du club'}
           </button>
         )}
         {(!profile?.membership_status || profile.membership_status === 'none') && (
           <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
-            La cotisation se paie directement au club (hors application). Votre demande sera validée par un administrateur.
+            L'adhésion se règle directement au club (hors application). Votre demande sera validée par un administrateur.
           </p>
         )}
       </div>
