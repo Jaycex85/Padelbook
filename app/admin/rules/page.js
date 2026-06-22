@@ -31,7 +31,7 @@ const RULE_TYPES = [
     key: 'window',
     icon: '📆',
     label: "Fenêtre d'ouverture",
-    desc: 'Définit combien de jours à l'avance un profil peut réserver.',
+    desc: "Définit combien de jours à l'avance un profil peut réserver.",
     fields: ['who', 'window_days'],
   },
 ]
