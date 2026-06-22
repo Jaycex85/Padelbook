@@ -101,7 +101,7 @@ export default function Sidebar({ profile, onClose }) {
             <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {profile.first_name ? (profile.first_name + ' ' + (profile.last_name || '')) : profile.email}
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--muted)', textTransform: 'capitalize' }}>{profile.role}</div>
+            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{profile.role === 'admin' ? 'Admin' : profile.role === 'member' ? 'Joueur' : 'Joueur'}</div>
           </div>
         </Link>
       )}
