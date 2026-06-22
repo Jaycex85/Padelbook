@@ -24,7 +24,7 @@ const RULE_TYPES = [
     key: 'quota',
     icon: '🔢',
     label: 'Quota de réservations',
-    desc: 'Limite le nombre de réservations actives simultanées en tant qu'organisateur.',
+    desc: "Limite le nombre de réservations actives simultanées en tant qu'organisateur.",
     fields: ['who', 'max_concurrent'],
   },
   {
@@ -325,7 +325,7 @@ export default function AdminRulesPage() {
               onChange={e => setForm({...form, booking_window_days: e.target.value})}
               placeholder="Ex: 14" />
             <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '6px' }}>
-              Ex: 14 = peut réserver jusqu'à 2 semaines à l'avance. Les créneaux au-delà ne sont pas encore réservables.
+              Ex: 14 = peut réserver jusqu'à 2 semaines à l'avance. Les créneaux au-delà ne sont pas encore disponibles.
             </p>
           </div>
         )}
