@@ -12,8 +12,9 @@ const PAGE_TITLES = {
   '/admin/courts': 'Terrains',
   '/admin/schedule': 'Calendrier',
   '/admin/rules': "Règles d'accès",
-  '/admin/members': 'Membres',
+  '/admin/members': 'Joueurs',
   '/admin/bookings': 'Réservations',
+  '/admin/membership': 'Membres du club',
   '/admin/integrations': 'Intégrations',
 }
 
