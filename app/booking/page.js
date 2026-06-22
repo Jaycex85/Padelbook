@@ -136,7 +136,7 @@ function BookingForm() {
     const timeStr = selectedSlot.start.toTimeString().substring(0, 5)
 
     const allowed = evaluateAccessRules(accessRules, userContext, selectedDate, timeStr)
-    if (!allowed) { setError("Ce créneau n'est pas accessible avec votre profil."); return }
+    if (!allowed) { setError("Ce créneau n'est pas accessible pour les joueurs non membres du club."); return }
 
     const windowCheck = checkBookingWindow(accessRules, userContext, selectedSlot.start)
     if (!windowCheck.allowed) {
