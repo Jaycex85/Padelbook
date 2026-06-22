@@ -17,7 +17,7 @@ const RULE_TYPES = [
     key: 'access',
     icon: '📅',
     label: 'Accès horaire',
-    desc: 'Définit qui peut réserver, quels jours et à quelles heures.',
+    desc: "Définit qui peut réserver, quels jours et à quelles heures.",
     fields: ['who', 'effect', 'days', 'time', 'date', 'courts'],
   },
   {
