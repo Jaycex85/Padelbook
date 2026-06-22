@@ -79,9 +79,9 @@ export default function AdminMembershipPage() {
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Membres cotisants</h1>
+        <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Membres du club</h1>
         <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>
-          Valide les demandes de cotisation annuelle (paiement géré hors application).
+          Valide les demandes d'adhésion annuelle (paiement géré hors application).
         </p>
       </div>
 
@@ -154,7 +154,7 @@ export default function AdminMembershipPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}
           onClick={e => e.target === e.currentTarget && setValidating(null)}>
           <div className="modal-responsive" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', maxWidth: 'min(380px, calc(100vw - 32px))' }}>
-            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '17px', fontWeight: 700, marginBottom: '16px' }}>Valider la cotisation</h2>
+            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '17px', fontWeight: 700, marginBottom: '16px' }}>Valider l'adhésion</h2>
             <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Valide jusqu'au</label>
             <input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)}
               style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', color: 'var(--text)', fontSize: '14px', marginBottom: '20px' }} />
