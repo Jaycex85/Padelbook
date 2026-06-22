@@ -120,7 +120,7 @@ export default function AdminRulesPage() {
   function autoLabel() {
     const who = WHO_LABELS[form.who] || form.who
     if (ruleType === 'quota') return who + ' — max ' + form.max_concurrent_bookings + ' résa simultanée(s)'
-    if (ruleType === 'window') return who + ' — ouverture ' + form.booking_window_days + 'j à l'avance'
+    if (ruleType === 'window') return who + " — ouverture " + form.booking_window_days + "j à l'avance"
     const effect = form.effect === 'allow' ? 'Autoriser' : 'Bloquer'
     return effect + ' — ' + who
   }
