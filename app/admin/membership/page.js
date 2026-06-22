@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 
-const STATUS_LABELS = { none: 'Aucune demande', pending: 'En attente', active: 'Cotisant actif', expired: 'Expiré' }
+const STATUS_LABELS = { none: 'Aucune demande', pending: 'Demande en cours', active: 'Membre du club', expired: 'Adhésion expirée' }
 const STATUS_COLORS = {
   none: { bg: 'rgba(139,148,158,0.1)', color: 'var(--muted)' },
   pending: { bg: 'rgba(252,211,77,0.1)', color: 'var(--amber)' },
