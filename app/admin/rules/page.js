@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-const WHO_LABELS = { all: 'Tout le monde', member: 'Membres (rôle app)', public: 'Public uniquement', cotisant: 'Membre cotisant actif' }
+const WHO_LABELS = { all: 'Tout le monde', member: 'Joueurs (ancien rôle)', public: 'Joueurs enregistrés', cotisant: 'Membres du club' }
 const EFFECT_LABELS = { allow: '✓ Autoriser', deny: '✕ Bloquer' }
 
 const EMPTY_FORM = {
@@ -145,9 +145,8 @@ export default function AdminRulesPage() {
                 <label style={labelStyle}>Qui ?</label>
                 <select style={fieldStyle} value={form.who} onChange={e => setForm({...form, who: e.target.value})}>
                   <option value="all">Tout le monde</option>
-                  <option value="member">Membres (rôle app)</option>
-                  <option value="public">Public uniquement</option>
-                  <option value="cotisant">Membre cotisant actif</option>
+                  <option value="public">Joueurs enregistrés</option>
+                  <option value="cotisant">Membres du club</option>
                 </select>
               </div>
               <div>
