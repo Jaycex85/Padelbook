@@ -25,7 +25,7 @@ export default function AdminSchedulePage() {
 
   const [showBlockForm, setShowBlockForm] = useState(false)
   const [blockMode, setBlockMode] = useState('simple') // 'simple' | 'recurring'
-  const [blockForm, setBlockForm] = useState({ label: '', reason: 'other', starts_at: '', ends_at: '', all_courts: false })
+  const [blockForm, setBlockForm] = useState({ label: '', reason: 'other', starts_at: '', ends_at: '', all_courts: false, court_id: null })
   const [recurringForm, setRecurringForm] = useState({
     label: '', reason: 'other',
     days_of_week: [], time_from: '09:00', time_to: '20:00',
@@ -103,12 +103,22 @@ export default function AdminSchedulePage() {
 
   // ─── Bloc simple (1 terrain, 1 plage) ───
   async function addBlock() {
+    if (!blockForm.starts_at || !blockForm.ends_at) return
+    if (!blockForm.all_courts && !blockForm.court_id) return
     setSaving(true)
-    const payload = { ...blockForm }
-    if (blockForm.all_courts) { delete payload.court_id } else { payload.court_id = selectedCourt }
-    await supabase.from('blocks').insert(payload)
+    const payload = {
+      label: blockForm.label,
+      reason: blockForm.reason,
+      starts_at: blockForm.starts_at,
+      ends_at: blockForm.ends_at,
+      all_courts: blockForm.all_courts,
+      court_id: blockForm.all_courts ? null : blockForm.court_id,
+    }
+    const { error } = await supabase.from('blocks').insert(payload)
+    if (error) { alert('Erreur : ' + error.message); setSaving(false); return }
     setSaving(false)
     setShowBlockForm(false)
+    setBlockForm({ label: '', reason: 'other', starts_at: '', ends_at: '', all_courts: false, court_id: null })
     loadBlocks()
   }
 
@@ -359,13 +369,26 @@ export default function AdminSchedulePage() {
                     <input type="datetime-local" className="form-input" value={blockForm.ends_at} onChange={e => setBlockForm({...blockForm, ends_at: e.target.value})} />
                   </div>
                 </div>
-                <div className="form-group" style={{display:'flex', alignItems:'center', gap:'10px'}}>
-                  <input type="checkbox" id="all_courts" checked={blockForm.all_courts} onChange={e => setBlockForm({...blockForm, all_courts: e.target.checked})} />
-                  <label htmlFor="all_courts" style={{fontSize:'14px', cursor:'pointer'}}>Bloquer tous les terrains</label>
+                <div className="form-group">
+                  <label className="form-label">Terrain(s) concerné(s)</label>
+                  <div style={{display:'flex', gap:'6px', flexWrap:'wrap', marginBottom:'8px'}}>
+                    <button
+                      onClick={() => setBlockForm({...blockForm, all_courts: true, court_id: null})}
+                      style={{background: blockForm.all_courts ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (blockForm.all_courts ? 'var(--brand)' : 'var(--border)'), color: blockForm.all_courts ? 'var(--brand-light)' : 'var(--muted)', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor:'pointer'}}>
+                      Tous les terrains
+                    </button>
+                    {courts.map(c => (
+                      <button key={c.id}
+                        onClick={() => setBlockForm({...blockForm, all_courts: false, court_id: c.id})}
+                        style={{background: !blockForm.all_courts && blockForm.court_id === c.id ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (!blockForm.all_courts && blockForm.court_id === c.id ? 'var(--brand)' : 'var(--border)'), color: !blockForm.all_courts && blockForm.court_id === c.id ? 'var(--brand-light)' : 'var(--muted)', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor:'pointer'}}>
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="modal-footer">
                   <button className="btn-outline" onClick={() => setShowBlockForm(false)}>Annuler</button>
-                  <button className="btn-primary" onClick={addBlock} disabled={saving || !blockForm.starts_at || !blockForm.ends_at}>
+                  <button className="btn-primary" onClick={addBlock} disabled={saving || !blockForm.starts_at || !blockForm.ends_at || (!blockForm.all_courts && !blockForm.court_id)}>
                     {saving ? 'Ajout...' : 'Ajouter'}
                   </button>
                 </div>
