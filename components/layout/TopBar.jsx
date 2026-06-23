@@ -10,6 +10,7 @@ const PAGE_TITLES = {
   '/profile': 'Mon profil',
   '/admin': 'Dashboard',
   '/admin/courts': 'Terrains',
+  '/admin/pricing': 'Tarification',
   '/admin/schedule': 'Calendrier',
   '/admin/rules': "Règles d'accès",
   '/admin/members': 'Joueurs',
