@@ -17,21 +17,21 @@ const RULE_TYPES = [
     key: 'access',
     icon: '📅',
     label: 'Accès horaire',
-    desc: "Définit qui peut réserver, quels jours et à quelles heures.",
+    desc: "Qui peut réserver, quels jours, quelles heures. Évaluées par priorité — la plus haute l'emporte. Les admins sont toujours autorisés.",
     fields: ['who', 'effect', 'days', 'time', 'date', 'courts'],
   },
   {
     key: 'quota',
     icon: '🔢',
     label: 'Quota de réservations',
-    desc: "Limite le nombre de réservations actives simultanées en tant qu'organisateur.",
+    desc: "Nombre max de réservations actives simultanées. La règle la plus spécifique s'applique (Membres du club > Joueurs > Tout le monde). Pas de limite pour les admins.",
     fields: ['who', 'max_concurrent'],
   },
   {
     key: 'window',
     icon: '📆',
     label: "Fenêtre d'ouverture",
-    desc: "Définit combien de jours à l'avance un profil peut réserver.",
+    desc: "Combien de jours à l'avance on peut réserver. La règle la plus spécifique s'applique (Membres du club > Joueurs > Tout le monde). Aucune limite pour les admins.",
     fields: ['who', 'window_days'],
   },
 ]
@@ -313,7 +313,8 @@ export default function AdminRulesPage() {
               onChange={e => setForm({...form, max_concurrent_bookings: e.target.value})}
               placeholder="Ex: 2" />
             <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '6px' }}>
-              Réservations futures en cours (pending ou confirmées) où ce joueur est organisateur.
+              Réservations futures actives (pending ou confirmées) en tant qu'organisateur.
+              Si plusieurs règles s'appliquent, la plus spécifique gagne automatiquement.
             </p>
           </div>
         )}
@@ -330,11 +331,15 @@ export default function AdminRulesPage() {
           </div>
         )}
 
-        <div style={{ marginBottom: '20px' }}>
-          <label style={labelStyle}>Priorité</label>
-          <input type="number" style={fieldStyle} value={form.priority} onChange={e => setForm({...form, priority: e.target.value})} />
-          <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>Plus élevé = s'applique en dernier (prioritaire en cas de conflit).</p>
-        </div>
+        {ruleType === 'access' && (
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Priorité</label>
+            <input type="number" style={fieldStyle} value={form.priority} onChange={e => setForm({...form, priority: e.target.value})} />
+            <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>
+              Plus élevé = s'applique en dernier (prioritaire en cas de conflit).
+            </p>
+          </div>
+        )}
       </>
     )
   }
