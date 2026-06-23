@@ -14,6 +14,7 @@ const playerLinks = [
 const adminLinks = [
   { href: '/admin', icon: '◈', label: 'Dashboard' },
   { href: '/admin/courts', icon: '🏟', label: 'Terrains' },
+  { href: '/admin/pricing', icon: '💶', label: 'Tarification' },
   { href: '/admin/schedule', icon: '🗓', label: 'Calendrier' },
   { href: '/admin/events', icon: '🏆', label: 'Club Events' },
   { href: '/admin/rules', icon: '⚙', label: "Règles d'accès" },
