@@ -156,8 +156,9 @@ function BookingForm() {
     setBooking(true)
     setError(null)
 
-    const totalPrice = selectedCourt.price_per_slot
-    const pricePerPlayer = totalPrice / 4
+    const slotPricing = calcSlotPrice(selectedSlot.start, priceSlots, selectedCourt.price_per_slot)
+    const totalPrice = slotPricing.price
+    const pricePerPlayer = selectedCourt.price_per_slot / 4
     const discount = profile?.discount_percent || 0
     const effectivePrice = calcEffectivePrice(pricePerPlayer, discount)
 
@@ -317,7 +318,7 @@ function BookingForm() {
                     {formatTime(slot.start)}
                   </div>
                   <div style={{ fontSize: '10px', color: unavailable ? 'var(--brand-light)' : 'var(--muted)', marginTop: '3px', fontWeight: unavailable ? 600 : 400, letterSpacing: unavailable ? '0.3px' : 0 }}>
-                    {unavailable ? (isPastSlot ? 'Passé' : 'Complet') : (slot.duration + ' min')}
+                    {unavailable ? (isPastSlot ? 'Passé' : 'Complet') : (() => { const sp = calcSlotPrice(slot.start, priceSlots, selectedCourt?.price_per_slot || 0); return sp.isDynamic ? sp.price + ' €' : slot.duration + ' min' })()}
                   </div>
                 </button>
               )
@@ -371,6 +372,9 @@ function BookingForm() {
               ['Horaire', formatTime(selectedSlot.start) + ' → ' + formatTime(selectedSlot.end)],
               ['Durée', selectedSlot.duration + ' min'],
               ['Visibilité', isPublic ? 'Public' : 'Privé'],
+              ...(calcSlotPrice(selectedSlot.start, priceSlots, selectedCourt.price_per_slot).isDynamic
+                ? [['Tarif', calcSlotPrice(selectedSlot.start, priceSlots, selectedCourt.price_per_slot).label || 'Tarif dynamique']]
+                : []),
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--muted)' }}>{k}</span>
