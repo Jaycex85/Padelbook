@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
-import { generateSlots, evaluateAccessRules, calcEffectivePrice, shouldSkipPayment, isBookingFullyPaid, hasUnpaidBalance, calcOpenBalance, checkBookingWindow, checkMaxConcurrentBookings } from '../../lib/bookingUtils'
+import { generateSlots, evaluateAccessRules, calcEffectivePrice, calcSlotPrice, shouldSkipPayment, isBookingFullyPaid, hasUnpaidBalance, calcOpenBalance, checkBookingWindow, checkMaxConcurrentBookings } from '../../lib/bookingUtils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 
@@ -43,6 +43,7 @@ function BookingForm() {
   const [error, setError] = useState(null)
   const [blockedByUnpaidBalance, setBlockedByUnpaidBalance] = useState(false)
   const [activeOwnerCount, setActiveOwnerCount] = useState(0)
+  const [priceSlots, setPriceSlots] = useState([])
 
   const dates = Array.from({ length: 14 }, (_, i) => {
     const d = new Date()
@@ -61,6 +62,8 @@ function BookingForm() {
       setCourts(c || [])
       const { data: r } = await supabase.from('access_rules').select('*').eq('is_active', true)
       setAccessRules(r || [])
+      const { data: ps } = await supabase.from('price_slots').select('*').eq('is_active', true).order('sort_order')
+      setPriceSlots(ps || [])
 
       // Bloquer si le user a un solde impayé sur un match terminé, OU un wallet négatif (dette)
       if (user) {
