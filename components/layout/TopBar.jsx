@@ -9,6 +9,7 @@ const PAGE_TITLES = {
   '/open-matches': 'Matchs ouverts',
   '/profile': 'Mon profil',
   '/admin': 'Dashboard',
+  '/admin/calendar': 'Calendrier',
   '/admin/courts': 'Terrains',
   '/admin/pricing': 'Tarification',
   '/admin/schedule': 'Calendrier',
