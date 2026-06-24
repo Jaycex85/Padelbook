@@ -218,32 +218,41 @@ export default function AdminCalendarPage() {
     const cells = Array.from({ length: 42 }, (_, i) => {
       const d = new Date(startDay); d.setDate(startDay.getDate() + i); return d
     })
+    const weeks = []
+    for (let i = 0; i < 42; i += 7) weeks.push(cells.slice(i, i + 7))
+
     return (
-      <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '1px solid var(--border)' }}>
-          {DAYS_SHORT.map(d => (
-            <div key={d} style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--muted)' }}>{d}</div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--border)' }}>
+            {DAYS_SHORT.map(d => (
+              <th key={d} style={{ padding: '8px 4px', textAlign: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--muted)', width: '14.28%' }}>{d}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {weeks.map((week, wi) => (
+            <tr key={wi}>
+              {week.map((day, di) => {
+                const isCurrentMonth = day.getMonth() === month
+                const isToday = isSameDay(day, new Date())
+                const dayEntries = entriesForDay(day)
+                return (
+                  <td key={di} style={{ borderTop: '1px solid var(--border)', borderRight: di < 6 ? '1px solid var(--border)' : 'none', verticalAlign: 'top', padding: '4px', background: isToday ? 'rgba(124,58,237,0.04)' : 'transparent', opacity: isCurrentMonth ? 1 : 0.3 }}>
+                    <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '12px', fontWeight: isToday ? 700 : 400, color: isToday ? 'var(--brand-light)' : 'var(--text)', marginBottom: '3px', minHeight: '18px' }}>
+                      {day.getDate()}
+                    </div>
+                    {dayEntries.slice(0, 2).map((entry, ei) => <EntryChip key={ei} entry={entry} compact={true} />)}
+                    {dayEntries.length > 2 && (
+                      <div style={{ fontSize: '10px', color: 'var(--muted)', paddingLeft: '2px' }}>+{dayEntries.length - 2}</div>
+                    )}
+                  </td>
+                )
+              })}
+            </tr>
           ))}
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
-          {cells.map((day, i) => {
-            const isCurrentMonth = day.getMonth() === month
-            const isToday = isSameDay(day, new Date())
-            const dayEntries = entriesForDay(day)
-            return (
-              <div key={i} style={{ borderTop: '1px solid var(--border)', borderRight: i % 7 !== 6 ? '1px solid var(--border)' : 'none', minHeight: '72px', padding: '4px', background: isToday ? 'rgba(124,58,237,0.04)' : 'transparent', opacity: isCurrentMonth ? 1 : 0.3 }}>
-                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '13px', fontWeight: isToday ? 700 : 400, color: isToday ? 'var(--brand-light)' : 'var(--text)', marginBottom: '3px' }}>
-                  {day.getDate()}
-                </div>
-                {dayEntries.slice(0, 2).map((entry, ei) => <EntryChip key={ei} entry={entry} compact={true} />)}
-                {dayEntries.length > 2 && (
-                  <div style={{ fontSize: '10px', color: 'var(--muted)', paddingLeft: '4px' }}>+{dayEntries.length - 2}</div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      </div>
+        </tbody>
+      </table>
     )
   }
 
