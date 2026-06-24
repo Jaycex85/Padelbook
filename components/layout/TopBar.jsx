@@ -16,6 +16,7 @@ const PAGE_TITLES = {
   '/admin/members': 'Joueurs',
   '/admin/bookings': 'Réservations',
   '/admin/membership': 'Membres du club',
+  '/admin/reports': 'Rapport financier',
   '/admin/integrations': 'Intégrations',
 }
 
