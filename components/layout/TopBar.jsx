@@ -12,7 +12,7 @@ const PAGE_TITLES = {
   '/admin/calendar': 'Calendrier',
   '/admin/courts': 'Terrains',
   '/admin/pricing': 'Tarification',
-  '/admin/schedule': 'Calendrier',
+  '/admin/schedule': 'Config créneaux',
   '/admin/rules': "Règles d'accès",
   '/admin/members': 'Joueurs',
   '/admin/bookings': 'Réservations',
