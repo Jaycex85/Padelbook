@@ -21,6 +21,7 @@ const adminLinks = [
   { href: '/admin/members', icon: '👥', label: 'Membres' },
   { href: '/admin/membership', icon: '🎖️', label: 'Membres du club' },
   { href: '/admin/bookings', icon: '📋', label: 'Réservations' },
+  { href: '/admin/reports', icon: '📊', label: 'Rapports' },
   { href: '/admin/integrations', icon: '🔌', label: 'Intégrations' },
 ]
 
