@@ -16,7 +16,7 @@ const adminLinks = [
   { href: '/admin/calendar', icon: '📆', label: 'Calendrier' },
   { href: '/admin/courts', icon: '🏟', label: 'Terrains' },
   { href: '/admin/pricing', icon: '💶', label: 'Tarification' },
-  { href: '/admin/schedule', icon: '🗓', label: 'Calendrier' },
+  { href: '/admin/schedule', icon: '⚙️', label: 'Config créneaux' },
   { href: '/admin/events', icon: '🏆', label: 'Club Events' },
   { href: '/admin/rules', icon: '⚙', label: "Règles d'accès" },
   { href: '/admin/members', icon: '👥', label: 'Membres' },
