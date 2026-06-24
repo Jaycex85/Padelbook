@@ -3,15 +3,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '../../../lib/supabase'
 
 const DAYS_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-const DAYS_FULL = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
-const HOURS = Array.from({ length: 15 }, (_, i) => i + 7) // 7h → 21h
 
-// Couleurs par type d'entrée
 const COLORS = {
-  booking: { bg: 'rgba(124,58,237,0.18)', border: '#7C3AED', text: '#C084FC' },
-  event:   { bg: 'rgba(74,222,128,0.12)', border: '#4ADE80', text: '#4ADE80' },
-  block:   { bg: 'rgba(252,211,77,0.1)',  border: '#FCD34D', text: '#FCD34D' },
+  booking: { bg: 'rgba(124,58,237,0.18)', border: '#7C3AED', text: '#C084FC', badge: '#7C3AED' },
+  event:   { bg: 'rgba(74,222,128,0.12)',  border: '#4ADE80', text: '#4ADE80', badge: '#4ADE80' },
+  block:   { bg: 'rgba(252,211,77,0.1)',   border: '#FCD34D', text: '#FCD34D', badge: '#FCD34D' },
 }
+const TYPE_LABELS = { booking: 'Réservation', event: 'Club Event', block: 'Bloc' }
 
 function startOfWeek(date) {
   const d = new Date(date)
@@ -25,19 +23,14 @@ function isSameDay(a, b) {
   return a.toISOString().substring(0, 10) === b.toISOString().substring(0, 10)
 }
 
-function toLocalMidnight(dateStr) {
-  return new Date(dateStr + 'T00:00:00')
-}
-
 export default function AdminCalendarPage() {
-  const [view, setView] = useState('week') // 'day' | 'week' | 'month'
+  const [view, setView] = useState('week')
   const [current, setCurrent] = useState(new Date())
-  const [entries, setEntries] = useState([]) // { type, label, owner, starts_at, ends_at, color }
+  const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
-  const [tooltip, setTooltip] = useState(null)
+  const [selected, setSelected] = useState(null)
   const supabase = createClient()
 
-  // Plage à charger selon la vue
   function getRangeDates() {
     if (view === 'day') {
       const from = new Date(current); from.setHours(0,0,0,0)
@@ -49,7 +42,6 @@ export default function AdminCalendarPage() {
       const to = new Date(from); to.setDate(from.getDate() + 6); to.setHours(23,59,59,999)
       return { from, to }
     }
-    // month
     const from = new Date(current.getFullYear(), current.getMonth(), 1)
     const to = new Date(current.getFullYear(), current.getMonth() + 1, 0, 23, 59, 59, 999)
     return { from, to }
@@ -58,8 +50,7 @@ export default function AdminCalendarPage() {
   const load = useCallback(async () => {
     setLoading(true)
     const { from, to } = getRangeDates()
-    const f = from.toISOString()
-    const t = to.toISOString()
+    const f = from.toISOString(), t = to.toISOString()
 
     const [{ data: bookings }, { data: events }, { data: blocks }] = await Promise.all([
       supabase.from('bookings')
@@ -67,44 +58,38 @@ export default function AdminCalendarPage() {
         .in('status', ['confirmed', 'pending'])
         .gte('starts_at', f).lte('starts_at', t),
       supabase.from('club_events')
-        .select('id, label, starts_at, ends_at, status, club_event_courts(courts(name))')
-        .eq('status', 'active')
-        .gte('starts_at', f).lte('starts_at', t),
+        .select('id, label, starts_at, ends_at, club_event_courts(courts(name))')
+        .eq('status', 'active').gte('starts_at', f).lte('starts_at', t),
       supabase.from('blocks')
         .select('id, label, reason, starts_at, ends_at, all_courts, court:courts(name)')
         .gte('starts_at', f).lte('ends_at', t),
     ])
 
-    const all = [
+    setEntries([
       ...(bookings || []).map(b => ({
         type: 'booking',
         label: b.court?.name || 'Terrain',
-        sublabel: b.owner ? ((b.owner.first_name || b.owner.email || '').trim()) : '',
-        starts_at: b.starts_at,
-        ends_at: b.ends_at,
-        status: b.status,
-        price: b.total_price,
+        sublabel: b.owner ? ((b.owner.first_name || '') + ' ' + (b.owner.last_name || '')).trim() || b.owner.email : '',
+        starts_at: b.starts_at, ends_at: b.ends_at,
+        status: b.status, price: b.total_price,
         color: COLORS.booking,
       })),
       ...(events || []).map(e => ({
         type: 'event',
         label: 'Mayfair Padel — ' + e.label,
         sublabel: (e.club_event_courts || []).map(c => c.courts?.name).filter(Boolean).join(', '),
-        starts_at: e.starts_at,
-        ends_at: e.ends_at,
+        starts_at: e.starts_at, ends_at: e.ends_at,
         color: COLORS.event,
       })),
       ...(blocks || []).map(b => ({
         type: 'block',
         label: b.label || b.reason,
         sublabel: b.all_courts ? 'Tous terrains' : (b.court?.name || ''),
-        starts_at: b.starts_at,
-        ends_at: b.ends_at,
+        starts_at: b.starts_at, ends_at: b.ends_at,
         color: COLORS.block,
       })),
-    ]
+    ].sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at)))
 
-    setEntries(all)
     setLoading(false)
   }, [view, current])
 
@@ -118,8 +103,6 @@ export default function AdminCalendarPage() {
     setCurrent(d)
   }
 
-  function goToday() { setCurrent(new Date()) }
-
   function formatHeader() {
     if (view === 'day') return current.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     if (view === 'week') {
@@ -131,121 +114,130 @@ export default function AdminCalendarPage() {
   }
 
   const fmtTime = iso => new Date(iso).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+  const fmtDate = iso => new Date(iso).toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
 
-  // ── VUE JOUR / SEMAINE ─────────────────────────────────────
-  function TimeGrid({ days }) {
-    const slotH = 56 // pixels par heure
+  function entriesForDay(day) {
+    return entries.filter(e => isSameDay(new Date(e.starts_at), day))
+  }
 
-    function entriesForDay(day) {
-      return entries.filter(e => {
-        const s = new Date(e.starts_at)
-        return isSameDay(s, day)
-      })
-    }
-
-    function positionEntry(entry) {
-      const s = new Date(entry.starts_at)
-      const e = new Date(entry.ends_at)
-      const startH = s.getHours() + s.getMinutes() / 60
-      const endH = e.getHours() + e.getMinutes() / 60
-      const top = (startH - 7) * slotH
-      const height = Math.max((endH - startH) * slotH, 24)
-      return { top, height }
-    }
-
+  // ── Chip entrée ─────────────────────────────────────────────
+  function EntryChip({ entry, compact }) {
     return (
-      <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 260px)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '48px ' + days.map(() => '1fr').join(' '), minWidth: days.length > 1 ? '600px' : '280px' }}>
-          {/* En-tête jours */}
-          <div style={{ borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)', background: 'var(--surface)' }} />
-          {days.map((day, i) => {
-            const isToday = isSameDay(day, new Date())
-            return (
-              <div key={i} style={{ borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)', padding: '8px 6px', textAlign: 'center', background: 'var(--surface)' }}>
-                <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{DAYS_SHORT[i % 7]}</div>
-                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '18px', fontWeight: 700, color: isToday ? 'var(--brand-light)' : 'var(--text)', background: isToday ? 'var(--brand-dim)' : 'none', borderRadius: '50%', width: '28px', height: '28px', lineHeight: '28px', margin: '2px auto 0', textAlign: 'center' }}>
-                  {day.getDate()}
-                </div>
-              </div>
-            )
-          })}
-
-          {/* Grille horaire */}
-          {HOURS.map(h => (
-            <>
-              <div key={'h' + h} style={{ borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)', height: slotH + 'px', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: '6px', paddingTop: '2px' }}>
-                <span style={{ fontSize: '10px', color: 'var(--muted)' }}>{h}h</span>
-              </div>
-              {days.map((day, i) => (
-                <div key={'cell' + h + i} style={{ borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)', height: slotH + 'px', position: 'relative', background: h % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)' }}>
-                  {entriesForDay(day).filter(e => {
-                    const sh = new Date(e.starts_at).getHours()
-                    return sh === h
-                  }).map((entry, ei) => {
-                    const { top, height } = positionEntry(entry)
-                    const relTop = (h - 7) * slotH
-                    return (
-                      <div key={ei}
-                        onMouseEnter={ev => setTooltip({ entry, x: ev.clientX, y: ev.clientY })}
-                        onMouseLeave={() => setTooltip(null)}
-                        onClick={() => setTooltip(tooltip?.entry === entry ? null : { entry, x: 0, y: 0 })}
-                        style={{ position: 'absolute', left: '2px', right: '2px', top: (top - relTop) + 'px', height: height + 'px', background: entry.color.bg, borderLeft: '3px solid ' + entry.color.border, borderRadius: '4px', padding: '2px 5px', overflow: 'hidden', cursor: 'pointer', zIndex: 1 }}>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: entry.color.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.label}</div>
-                        {height > 28 && <div style={{ fontSize: '10px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.sublabel}</div>}
-                      </div>
-                    )
-                  })}
-                </div>
-              ))}
-            </>
-          ))}
+      <button
+        onClick={() => setSelected(entry)}
+        style={{
+          width: '100%', textAlign: 'left',
+          background: entry.color.bg,
+          border: '1px solid ' + entry.color.border,
+          borderLeft: '3px solid ' + entry.color.border,
+          borderRadius: '6px',
+          padding: compact ? '3px 7px' : '5px 9px',
+          marginBottom: '3px',
+          cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '6px',
+        }}>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: compact ? '11px' : '12px', fontWeight: 600, color: entry.color.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {fmtTime(entry.starts_at)} {entry.label}
+          </div>
+          {!compact && entry.sublabel && (
+            <div style={{ fontSize: '10px', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {entry.sublabel}
+            </div>
+          )}
         </div>
+      </button>
+    )
+  }
+
+  // ── Vue semaine : ligne par jour ─────────────────────────────
+  function WeekView() {
+    const from = startOfWeek(current)
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(from); d.setDate(from.getDate() + i); return d
+    })
+    return (
+      <div>
+        {days.map((day, i) => {
+          const dayEntries = entriesForDay(day)
+          const isToday = isSameDay(day, new Date())
+          return (
+            <div key={i} style={{ borderBottom: '1px solid var(--border)', padding: '10px 14px', background: isToday ? 'rgba(124,58,237,0.03)' : 'transparent' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: dayEntries.length ? '8px' : 0 }}>
+                <div style={{ flexShrink: 0, minWidth: '80px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{DAYS_SHORT[i]} </span>
+                  <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '16px', fontWeight: 700, color: isToday ? 'var(--brand-light)' : 'var(--text)' }}>{day.getDate()}</span>
+                  {isToday && <span style={{ fontSize: '9px', background: 'var(--brand)', color: '#fff', borderRadius: '99px', padding: '1px 6px', marginLeft: '6px', fontWeight: 600 }}>Auj.</span>}
+                </div>
+                {dayEntries.length === 0 && <span style={{ fontSize: '12px', color: 'var(--border)' }}>—</span>}
+              </div>
+              {dayEntries.length > 0 && (
+                <div style={{ paddingLeft: '90px' }}>
+                  {dayEntries.map((entry, ei) => <EntryChip key={ei} entry={entry} compact={false} />)}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
     )
   }
 
-  // ── VUE MOIS ───────────────────────────────────────────────
-  function MonthGrid() {
-    const year = current.getFullYear()
-    const month = current.getMonth()
+  // ── Vue jour : liste chronologique ───────────────────────────
+  function DayView() {
+    const dayEntries = entriesForDay(current)
+    if (dayEntries.length === 0) {
+      return <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Aucune entrée ce jour.</div>
+    }
+    return (
+      <div style={{ padding: '14px' }}>
+        {dayEntries.map((entry, i) => (
+          <button key={i} onClick={() => setSelected(entry)}
+            style={{ width: '100%', textAlign: 'left', background: entry.color.bg, border: '1px solid ' + entry.color.border, borderLeft: '4px solid ' + entry.color.border, borderRadius: '10px', padding: '12px 14px', marginBottom: '8px', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: entry.color.text, marginBottom: '2px' }}>{entry.label}</div>
+                {entry.sublabel && <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{entry.sublabel}</div>}
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text)' }}>{fmtTime(entry.starts_at)} → {fmtTime(entry.ends_at)}</div>
+                {entry.price && <div style={{ fontSize: '12px', color: 'var(--brand-light)' }}>{entry.price} €</div>}
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    )
+  }
+
+  // ── Vue mois ─────────────────────────────────────────────────
+  function MonthView() {
+    const year = current.getFullYear(), month = current.getMonth()
     const firstDay = new Date(year, month, 1)
     const startDay = startOfWeek(firstDay)
-    const cells = []
-    const d = new Date(startDay)
-    for (let i = 0; i < 42; i++) {
-      cells.push(new Date(d))
-      d.setDate(d.getDate() + 1)
-    }
-
-    function entriesForDay(day) {
-      return entries.filter(e => isSameDay(new Date(e.starts_at), day))
-    }
-
+    const cells = Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(startDay); d.setDate(startDay.getDate() + i); return d
+    })
     return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderTop: '1px solid var(--border)', borderLeft: '1px solid var(--border)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: '1px solid var(--border)' }}>
           {DAYS_SHORT.map(d => (
-            <div key={d} style={{ borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)', padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--muted)', background: 'var(--surface)' }}>{d}</div>
+            <div key={d} style={{ padding: '8px 6px', textAlign: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--muted)' }}>{d}</div>
           ))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
           {cells.map((day, i) => {
             const isCurrentMonth = day.getMonth() === month
             const isToday = isSameDay(day, new Date())
             const dayEntries = entriesForDay(day)
             return (
-              <div key={i} style={{ borderBottom: '1px solid var(--border)', borderRight: '1px solid var(--border)', minHeight: '80px', padding: '4px', background: isToday ? 'rgba(124,58,237,0.04)' : 'transparent', opacity: isCurrentMonth ? 1 : 0.35 }}>
-                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '13px', fontWeight: isToday ? 700 : 400, color: isToday ? 'var(--brand-light)' : 'var(--text)', marginBottom: '4px' }}>
+              <div key={i} style={{ borderTop: '1px solid var(--border)', borderRight: i % 7 !== 6 ? '1px solid var(--border)' : 'none', minHeight: '72px', padding: '4px', background: isToday ? 'rgba(124,58,237,0.04)' : 'transparent', opacity: isCurrentMonth ? 1 : 0.3 }}>
+                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '13px', fontWeight: isToday ? 700 : 400, color: isToday ? 'var(--brand-light)' : 'var(--text)', marginBottom: '3px' }}>
                   {day.getDate()}
                 </div>
-                {dayEntries.slice(0, 3).map((entry, ei) => (
-                  <div key={ei}
-                    onMouseEnter={ev => setTooltip({ entry, x: ev.clientX, y: ev.clientY })}
-                    onMouseLeave={() => setTooltip(null)}
-                    style={{ background: entry.color.bg, borderLeft: '2px solid ' + entry.color.border, borderRadius: '3px', padding: '1px 5px', fontSize: '10px', color: entry.color.text, marginBottom: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', cursor: 'pointer' }}>
-                    {fmtTime(entry.starts_at)} {entry.label}
-                  </div>
-                ))}
-                {dayEntries.length > 3 && (
-                  <div style={{ fontSize: '10px', color: 'var(--muted)', paddingLeft: '4px' }}>+{dayEntries.length - 3} autres</div>
+                {dayEntries.slice(0, 2).map((entry, ei) => <EntryChip key={ei} entry={entry} compact={true} />)}
+                {dayEntries.length > 2 && (
+                  <div style={{ fontSize: '10px', color: 'var(--muted)', paddingLeft: '4px' }}>+{dayEntries.length - 2}</div>
                 )}
               </div>
             )
@@ -255,77 +247,87 @@ export default function AdminCalendarPage() {
     )
   }
 
-  // Jours pour vue jour/semaine
-  function getViewDays() {
-    if (view === 'day') return [new Date(current)]
-    const from = startOfWeek(current)
-    return Array.from({ length: 7 }, (_, i) => { const d = new Date(from); d.setDate(from.getDate() + i); return d })
-  }
-
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
         <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Calendrier</h1>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* Légende */}
-          {[['booking', 'Réservation'], ['event', 'Club Event'], ['block', 'Bloc']].map(([type, label]) => (
-            <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--muted)' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: COLORS[type].bg, border: '1.5px solid ' + COLORS[type].border }} />
-              {label}
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {[['booking', 'Réservation'], ['event', 'Event'], ['block', 'Bloc']].map(([t, l]) => (
+            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--muted)' }}>
+              <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: COLORS[t].bg, border: '1.5px solid ' + COLORS[t].border }} />
+              {l}
             </div>
           ))}
         </div>
       </div>
 
-      {/* Contrôles */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+      {/* Nav */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', gap: '4px' }}>
-          <button onClick={() => navigate(-1)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '8px', padding: '7px 12px', cursor: 'pointer', fontSize: '14px' }}>‹</button>
-          <button onClick={goToday} style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '7px 12px', cursor: 'pointer', fontSize: '12px' }}>Aujourd'hui</button>
-          <button onClick={() => navigate(1)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '8px', padding: '7px 12px', cursor: 'pointer', fontSize: '14px' }}>›</button>
+          <button onClick={() => navigate(-1)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '8px', padding: '7px 12px', cursor: 'pointer' }}>‹</button>
+          <button onClick={() => setCurrent(new Date())} style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '7px 12px', cursor: 'pointer', fontSize: '12px' }}>Auj.</button>
+          <button onClick={() => navigate(1)} style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '8px', padding: '7px 12px', cursor: 'pointer' }}>›</button>
         </div>
-
-        <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700, flex: 1, textAlign: 'center', minWidth: '180px' }}>
-          {formatHeader()}
-        </div>
-
-        <div style={{ display: 'flex', gap: '4px', background: 'var(--surface2)', padding: '3px', borderRadius: '8px' }}>
+        <div style={{ flex: 1, textAlign: 'center', fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700 }}>{formatHeader()}</div>
+        <div style={{ display: 'flex', gap: '3px', background: 'var(--surface2)', padding: '3px', borderRadius: '8px' }}>
           {[['day', 'Jour'], ['week', 'Semaine'], ['month', 'Mois']].map(([v, l]) => (
             <button key={v} onClick={() => setView(v)}
-              style={{ background: view === v ? 'var(--brand)' : 'none', color: view === v ? '#fff' : 'var(--muted)', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: view === v ? 600 : 400, cursor: 'pointer' }}>
+              style={{ background: view === v ? 'var(--brand)' : 'none', color: view === v ? '#fff' : 'var(--muted)', border: 'none', borderRadius: '6px', padding: '6px 10px', fontSize: '12px', fontWeight: view === v ? 600 : 400, cursor: 'pointer' }}>
               {l}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Calendrier */}
+      {/* Grille */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
-        ) : view === 'month' ? (
-          <MonthGrid />
-        ) : (
-          <TimeGrid days={getViewDays()} />
-        )}
+        ) : view === 'month' ? <MonthView /> : view === 'week' ? <WeekView /> : <DayView />}
       </div>
 
-      {/* Tooltip */}
-      {tooltip && (
-        <div style={{ position: 'fixed', top: Math.min(tooltip.y + 12, window.innerHeight - 160), left: Math.min(tooltip.x + 12, window.innerWidth - 220), zIndex: 999, background: 'var(--surface)', border: '1px solid ' + tooltip.entry.color.border, borderRadius: '12px', padding: '12px 14px', minWidth: '200px', pointerEvents: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
-          <div style={{ fontSize: '11px', fontWeight: 600, color: tooltip.entry.color.text, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
-            {tooltip.entry.type === 'booking' ? 'Réservation' : tooltip.entry.type === 'event' ? 'Club Event' : 'Bloc'}
+      {/* Panel détail — s'ouvre au clic, se ferme avec ✕ */}
+      {selected && (
+        <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--surface)', borderTop: '2px solid ' + selected.color.border, borderRadius: '16px 16px 0 0', padding: '20px', zIndex: 300, boxShadow: '0 -8px 32px rgba(0,0,0,0.4)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px', gap: '10px' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '99px', background: selected.color.bg, color: selected.color.text, border: '1px solid ' + selected.color.border }}>
+                  {TYPE_LABELS[selected.type]}
+                </span>
+                {selected.status === 'pending' && (
+                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(252,211,77,0.1)', color: 'var(--amber)' }}>En attente</span>
+                )}
+              </div>
+              <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '17px', fontWeight: 700 }}>{selected.label}</div>
+            </div>
+            <button onClick={() => setSelected(null)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 10px', cursor: 'pointer', color: 'var(--muted)', fontSize: '16px', flexShrink: 0 }}>✕</button>
           </div>
-          <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>{tooltip.entry.label}</div>
-          {tooltip.entry.sublabel && <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>{tooltip.entry.sublabel}</div>}
-          <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-            {fmtTime(tooltip.entry.starts_at)} → {fmtTime(tooltip.entry.ends_at)}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+            {selected.sublabel && (
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '2px' }}>
+                  {selected.type === 'booking' ? 'Organisateur' : 'Terrain(s)'}
+                </div>
+                <div style={{ fontSize: '14px' }}>{selected.sublabel}</div>
+              </div>
+            )}
+            <div>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '2px' }}>Date</div>
+              <div style={{ fontSize: '14px' }}>{fmtDate(selected.starts_at)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '2px' }}>Créneau</div>
+              <div style={{ fontSize: '14px' }}>{fmtTime(selected.starts_at)} → {fmtTime(selected.ends_at)}</div>
+            </div>
+            {selected.price && (
+              <div>
+                <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '2px' }}>Montant</div>
+                <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '16px', fontWeight: 700, color: 'var(--brand-light)' }}>{selected.price} €</div>
+              </div>
+            )}
           </div>
-          {tooltip.entry.price && (
-            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--brand-light)', marginTop: '4px' }}>{tooltip.entry.price} €</div>
-          )}
         </div>
       )}
     </div>
