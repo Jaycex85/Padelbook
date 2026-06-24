@@ -66,9 +66,9 @@ export default function AdminReportsPage() {
         .gte('created_at', fromISO).lte('created_at', toISO),
       supabase.from('bookings').select('id, status, total_price, court_id, starts_at, ends_at, created_at')
         .gte('created_at', prevFromISO).lte('created_at', prevToISO),
-      supabase.from('payments').select('amount, status, created_at')
+      supabase.from('payments').select('amount, status, created_at, booking_id')
         .eq('status', 'paid').gte('created_at', fromISO).lte('created_at', toISO),
-      supabase.from('payments').select('amount, status, created_at')
+      supabase.from('payments').select('amount, status, created_at, booking_id')
         .eq('status', 'paid').gte('created_at', prevFromISO).lte('created_at', prevToISO),
       supabase.from('profiles').select('id, membership_status, membership_validated_at')
         .eq('membership_status', 'active').gte('membership_validated_at', fromISO).lte('membership_validated_at', toISO),
@@ -94,19 +94,28 @@ export default function AdminReportsPage() {
     })
 
     // Stats par terrain
+    // Construire un index paiements par booking_id pour revenus réels
+    const paymentsByBooking = {}
+    ;(payments || []).forEach(p => {
+      if (p.booking_id) {
+        paymentsByBooking[p.booking_id] = (paymentsByBooking[p.booking_id] || 0) + parseFloat(p.amount || 0)
+      }
+    })
+
     const courtStats = (courts || []).map(court => {
       const courtBookings = (allBookings || []).filter(b => b.court_id === court.id)
-      const courtRevenue = courtBookings.reduce((s, b) => s + parseFloat(b.total_price || 0), 0)
-      // Taux occupation : total heures réservées / total heures dispo dans la période
-      const periodHours = (to - from) / 3600000
+      // Revenus réels = somme des paiements effectivement encaissés pour ce terrain
+      const courtRevenue = courtBookings.reduce((s, b) => s + (paymentsByBooking[b.id] || 0), 0)
+      // Taux occupation : heures réservées / heures disponibles dans la période
+      const periodDays = (to - from) / (24 * 3600 * 1000)
       const openHoursPerDay = 15 // 7h-22h
-      const totalAvailableHours = (periodHours / 24) * openHoursPerDay
-      const bookedHours = courtBookings.reduce((s, b) => {
-        const dur = (new Date(b.ends_at) - new Date(b.starts_at)) / 3600000
-        return s + dur
+      const totalAvailableHours = periodDays * openHoursPerDay
+      const bookedMinutes = courtBookings.reduce((s, b) => {
+        return s + (new Date(b.ends_at) - new Date(b.starts_at)) / 60000
       }, 0)
+      const bookedHours = bookedMinutes / 60
       const occupancy = totalAvailableHours > 0 ? Math.round((bookedHours / totalAvailableHours) * 100) : 0
-      return { ...court, bookings: courtBookings.length, revenue: courtRevenue, occupancy: Math.min(occupancy, 100), bookedHours }
+      return { ...court, bookings: courtBookings.length, revenue: courtRevenue, occupancy: Math.min(occupancy, 100), bookedMinutes }
     })
 
     setData({
@@ -284,7 +293,9 @@ export default function AdminReportsPage() {
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '16px', fontWeight: 700, color: 'var(--brand-light)' }}>{fmt(court.revenue)}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{court.bookings} résa · {Math.round(court.bookedHours)}h</div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                {court.bookings} résa · {Math.floor(court.bookedMinutes / 60)}h{court.bookedMinutes % 60 > 0 ? String(Math.round(court.bookedMinutes % 60)).padStart(2,'0') : ''}
+              </div>
                   </div>
                 </div>
               ))}
