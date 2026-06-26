@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
+import NotificationSettings from '../../components/NotificationSettings'
 import { useRouter } from 'next/navigation'
 
 const MD_RANKS = ['MD50','MD100','MD200','MD300','MD400','MD500','MD700','MD1000']
@@ -253,6 +254,8 @@ export default function ProfilePage() {
           {saving ? 'Enregistrement...' : 'Sauvegarder'}
         </button>
       </div>
+
+      <NotificationSettings />
 
       <button onClick={handleLogout}
         style={{ width: '100%', background: 'none', border: '1px solid rgba(248,113,113,0.3)', color: 'var(--red)', borderRadius: '8px', padding: '11px', fontSize: '14px', cursor: 'pointer' }}>
