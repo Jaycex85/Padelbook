@@ -5,9 +5,9 @@ import { registerPushSubscription, savePushSubscription, unregisterPushSubscript
 const PREF_LABELS = {
   booking_confirmed: { label: 'Confirmation de réservation', desc: 'Quand une réservation est confirmée' },
   booking_reminder:  { label: 'Rappel J-1', desc: "La veille de chaque réservation" },
-  chat_message:      { label: 'Nouveau message', desc: 'Quand quelqu'un écrit dans le chat d'un match/event' },
-  club_announcement: { label: 'Annonces du club', desc: 'Quand l'admin publie une annonce' },
-  spot_available:    { label: 'Place disponible', desc: 'Quand une place se libère sur un match complet suivi' },
+  chat_message:      { label: 'Nouveau message', desc: "Quand quelqu'un écrit dans le chat d'un match/event" },
+  club_announcement: { label: 'Annonces du club', desc: "Quand l'admin publie une annonce" },
+  spot_available:    { label: 'Place disponible', desc: "Quand une place se libère sur un match complet suivi" },
 }
 
 export default function NotificationSettings() {
