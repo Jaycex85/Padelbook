@@ -13,15 +13,26 @@ export async function GET(req) {
 
   const { data: bookings, error } = await supabase
     .from('bookings')
-    .select('*, owner:profiles(*), court:courts(*)')
+    .select('*, owner:profiles(id, first_name, email), court:courts(name)')
     .eq('status', 'confirmed')
     .gte('starts_at', dateStr + 'T00:00:00')
     .lte('starts_at', dateStr + 'T23:59:59')
 
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
 
-  // TODO: envoyer les emails de rappel
-  console.log('Reminders to send:', bookings.length)
+  const { sendPushToProfile } = await import('../../../../lib/pushServer')
 
-  return new Response(JSON.stringify({ sent: bookings.length }), { status: 200 })
+  let sent = 0
+  for (const booking of (bookings || [])) {
+    const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+    const result = await sendPushToProfile(booking.owner.id, {
+      title: 'Rappel - Demain vous jouez !',
+      body: (booking.court?.name || 'Terrain') + ' a ' + fmtTime(booking.starts_at),
+      url: '/my-bookings',
+      tag: 'booking-reminder',
+    }, 'booking_reminder')
+    if (result.sent > 0) sent++
+  }
+
+  return new Response(JSON.stringify({ sent }), { status: 200 })
 }
