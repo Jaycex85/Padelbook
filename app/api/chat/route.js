@@ -50,6 +50,5 @@ export async function POST(req) {
       tag: 'chat-message',
     }, 'chat_message')
   }
-
   return new Response(JSON.stringify(msg), { status: 201 })
 }
