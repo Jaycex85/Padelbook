@@ -44,7 +44,11 @@ export default function ClubFeed({ isAdmin, userId }) {
   async function handlePublish() {
     if (!newPostText.trim() || posting) return
     setPosting(true)
-    await supabase.from('club_posts').insert({ author_id: userId, content: newPostText.trim() })
+    await fetch('/api/club-posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: newPostText.trim(), pinned: false }),
+    })
     setNewPostText('')
     setPosting(false)
     load()
