@@ -20,7 +20,7 @@ export async function POST(req) {
 
   // Récupérer le nom de l'expéditeur
   const { data: sender } = await supabase.from('profiles').select('first_name, last_name, email').eq('id', user.id).single()
-  const senderName = sender?.first_name || sender?.email?.split('@')[0] || 'Quelqu'un'
+  const senderName = sender?.first_name || sender?.email?.split('@')[0] || "Quelqu'un"
 
   // Récupérer les participants à notifier (sauf l'expéditeur)
   let participantIds = []
