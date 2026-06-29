@@ -55,6 +55,22 @@ export default function OpenMatchesPage() {
     load()
   }
 
+  async function handleLeave(match) {
+    if (!profile) return
+    await supabase.from('booking_players').delete().eq('booking_id', match.id).eq('player_id', profile.id)
+    // Push terrain libéré si dans les J+10
+    await fetch('/api/push/court-available', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        court_name: match.court?.name || 'Terrain',
+        starts_at: match.starts_at,
+        ends_at: match.ends_at,
+      }),
+    })
+    load()
+  }
+
   const fmt = d => new Date(d).toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
   const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
   const ownerName = m => m.owner ? (m.owner.first_name || m.owner.email) : '—'
@@ -122,7 +138,10 @@ export default function OpenMatchesPage() {
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--muted)' }}>votre part</div>
                     {isAlreadyIn ? (
-                      <span style={{ fontSize: '12px', color: 'var(--brand)', padding: '6px 14px', border: '1px solid var(--brand)', borderRadius: '8px' }}>Inscrit ✓</span>
+                      <button onClick={() => handleLeave(m)}
+                        style={{ fontSize: '12px', color: 'var(--red)', padding: '6px 14px', border: '1px solid var(--red)', borderRadius: '8px', background: 'none', cursor: 'pointer' }}>
+                        Quitter ✓
+                      </button>
                     ) : (
                       <button onClick={() => handleJoin(m)} disabled={isFull || joining === m.id}
                         style={{ background: isFull ? 'var(--surface2)' : 'var(--brand)', color: isFull ? 'var(--muted)' : '#0D1117', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: 600, cursor: isFull ? 'not-allowed' : 'pointer', fontFamily: "'Syne',sans-serif", opacity: joining === m.id ? 0.6 : 1 }}>
