@@ -88,13 +88,15 @@ export default function Chat({ bookingId, eventId, endsAt, isRegistered, isPubli
   async function handleSend() {
     if (!text.trim() || sending || !canWrite) return
     setSending(true)
-    const payload = {
-      sender_id: userId,
-      content: text.trim(),
-      ...(bookingId ? { booking_id: bookingId } : { event_id: eventId }),
-    }
-    const { error } = await supabase.from('chat_messages').insert(payload)
-    if (!error) {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: text.trim(),
+        ...(bookingId ? { booking_id: bookingId } : { event_id: eventId }),
+      }),
+    })
+    if (res.ok) {
       setText('')
       load()
     }
