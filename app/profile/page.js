@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
 import NotificationSettings from '../../components/NotificationSettings'
+import PlayerStats from '../../components/PlayerStats'
 import { useRouter } from 'next/navigation'
 
 const MD_RANKS = ['MD50','MD100','MD200','MD300','MD400','MD500','MD700','MD1000']
@@ -177,6 +178,8 @@ export default function ProfilePage() {
         </div>
         <div style={{ fontSize: '28px' }}>💳</div>
       </div>
+
+      <PlayerStats userId={profile?.id} />
 
       {/* Statut membre cotisant */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
