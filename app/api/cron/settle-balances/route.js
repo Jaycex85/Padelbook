@@ -1,11 +1,16 @@
 import { createServiceSupabase } from '../../../../lib/supabaseServer'
+import { calcOpenBalance } from '../../../../lib/bookingUtils'
 
 /**
  * Cron horaire — règle automatiquement le solde des réservations terminées.
  *
  * Logique :
  * - Cherche les bookings avec ends_at < now(), status in (pending, confirmed)
- * - Pour chacune, calcule le solde dû (places vides + joueurs assignés non payés)
+ * - Pour chacune, calcule le solde dû via calcOpenBalance (centralisé, gère
+ *   correctement les modes 'full' / 'split' / 'wallet' et les remises).
+ *   - Mode 'full' : seul le owner doit payer le terrain entier ; les places
+ *     vides sont des invités optionnels gratuits, PAS une dette.
+ *   - Mode 'split'/'wallet' : places vides + joueurs assignés non payés sont dus.
  * - Si solde > 0, débite le wallet du owner pour COUVRIR la différence
  *   (le owner garantit toujours le montant total du terrain, même si des
  *   invités n'ont pas payé à temps)
@@ -38,12 +43,7 @@ export async function GET(req) {
 
   for (const booking of (dueBookings || [])) {
     const players = booking.players || []
-    const assignedCount = players.length
-    const emptySlots = Math.max(0, (booking.max_players || 4) - assignedCount)
-    const emptySlotsCost = emptySlots * (parseFloat(booking.price_per_player) || 0)
-    const unpaidAssigned = players.filter(p => p.payment_status !== 'paid')
-    const unpaidAssignedCost = unpaidAssigned.reduce((sum, p) => sum + (parseFloat(p.effective_price) || 0), 0)
-    const openBalance = parseFloat((emptySlotsCost + unpaidAssignedCost).toFixed(2))
+    const openBalance = calcOpenBalance(booking, players)
 
     if (openBalance > 0) {
       const { data: ownerProfile } = await supabase.from('profiles').select('wallet_balance').eq('id', booking.owner_id).single()
@@ -62,6 +62,8 @@ export async function GET(req) {
       }
 
       // Marquer les joueurs assignés non payés comme payés (couverts par le owner)
+      // Uniquement pertinent en mode split/wallet — en mode full il n'y a que le owner.
+      const unpaidAssigned = players.filter(p => p.payment_status !== 'paid')
       for (const p of unpaidAssigned) {
         await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: now }).eq('id', p.id)
       }
