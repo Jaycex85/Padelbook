@@ -540,7 +540,7 @@ function MyBookingsList() {
                 </div>
                 <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '14px', textAlign: 'center' }}>
                   {inviteTarget?.payment_mode === 'full'
-                    ? (() => { const o = (inviteTarget.players || []).find(p => p.is_owner); const name = (o?.profile?.first_name || 'Le réservant') + (o?.profile?.last_name ? ' ' + o.profile.last_name : ''); return 'Terrain payé par ' + name + '. Les arrangements se font entre joueurs.' })()
+                    ? (() => { const o = (inviteTarget.players || []).find(p => p.is_owner); const name = (o?.profile?.first_name || 'Le réservant') + (o?.profile?.last_name ? ' ' + o.profile.last_name : ''); return 'Terrain payé par ' + name + '.' })()
                     : 'Le membre paiera sa part lui-même. Sinon, elle sera couverte par votre wallet en fin de match.'}
                 </p>
               </>
