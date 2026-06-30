@@ -284,6 +284,9 @@ export default function AdminReportsPage() {
   }
 
 
+  return (
+    <div>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', gap: '12px', flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Rapport financier</h1>
