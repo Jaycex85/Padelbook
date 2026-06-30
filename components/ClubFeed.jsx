@@ -12,6 +12,7 @@ export default function ClubFeed({ isAdmin, userId }) {
   const [pollOptions, setPollOptions] = useState(['', ''])
   const [votes, setVotes] = useState({}) // option_id -> [voter_id, ...]
   const [voting, setVoting] = useState(null)
+  const [expandedOptions, setExpandedOptions] = useState({})
   const [expandedComments, setExpandedComments] = useState(null)
   const [commentDrafts, setCommentDrafts] = useState({})
   const [sendingComment, setSendingComment] = useState(null)
@@ -240,8 +241,16 @@ export default function ClubFeed({ isAdmin, userId }) {
                               </div>
                             </button>
                             {optVoters.length > 0 && (
-                              <div style={{ fontSize: '11px', color: 'var(--muted)', padding: '4px 12px 0' }}>
-                                {optVoters.map(vid => displayName(vid)).join(', ')}
+                              <div style={{ padding: '4px 12px 0' }}>
+                                <button onClick={() => setExpandedOptions(prev => ({ ...prev, [opt.id]: !prev[opt.id] }))}
+                                  style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '11px', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
+                                  {expandedOptions[opt.id] ? 'Masquer' : 'Voir qui a voté'} ({optVoters.length})
+                                </button>
+                                {expandedOptions[opt.id] && (
+                                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px' }}>
+                                    {optVoters.map(vid => displayName(vid)).join(', ')}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
