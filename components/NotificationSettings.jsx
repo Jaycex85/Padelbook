@@ -7,7 +7,7 @@ const PREF_LABELS = {
   booking_reminder:  { label: 'Rappel J-1', desc: "La veille de chaque réservation" },
   chat_message:      { label: 'Nouveau message', desc: "Quand quelqu'un écrit dans le chat d'un match/event" },
   club_announcement: { label: 'Annonces du club', desc: "Quand l'admin publie une annonce" },
-  spot_available:    { label: 'Place disponible', desc: "Quand une place se libère sur un match complet suivi" },
+  spot_available:    { label: 'Terrain disponible', desc: "Quand un créneau réservé se libère (annulation, événement ou bloc supprimé) et que vous pouvez le réserver" },
 }
 
 export default function NotificationSettings() {
@@ -125,3 +125,4 @@ export default function NotificationSettings() {
     </div>
   )
 }
+
