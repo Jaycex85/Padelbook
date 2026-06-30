@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { generateSeriesDates, buildOccurrencePayload } from '../../../lib/eventSeriesUtils'
+import DeletionHistory from '../../../components/DeletionHistory'
 
 const WHO_LABELS = { all: 'Tout le monde', member: 'Joueurs (ancien rôle)', public: 'Joueurs enregistrés', cotisant: 'Membres du club' }
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
@@ -242,6 +243,16 @@ export default function AdminEventsPage() {
 
     const blockIds = (event.club_event_courts || []).map(c => c.block_id).filter(Boolean)
     if (blockIds.length > 0) await supabase.from('blocks').delete().in('id', blockIds)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('deletion_log').insert({
+      entity_type: 'event',
+      entity_id: event.id,
+      label: event.label + ' — ' + new Date(event.starts_at).toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      snapshot: event,
+      deleted_by: user?.id,
+    })
+
     // event_registrations et club_event_courts ont ON DELETE CASCADE sur club_events,
     // donc la suppression de l'event suffit à tout nettoyer en base.
     await supabase.from('club_events').delete().eq('id', event.id)
@@ -271,6 +282,16 @@ export default function AdminEventsPage() {
       const blockIds = (ev.club_event_courts || []).map(c => c.block_id).filter(Boolean)
       if (blockIds.length > 0) await supabase.from('blocks').delete().in('id', blockIds)
     }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('deletion_log').insert({
+      entity_type: 'event_series',
+      entity_id: seriesItem.id,
+      label: seriesItem.label + ' (' + seriesItem.occurrences.length + ' occurrence(s))',
+      snapshot: seriesItem,
+      deleted_by: user?.id,
+    })
+
     // Supprimer toutes les occurrences (cascade sur event_registrations et club_event_courts)
     const eventIds = seriesItem.occurrences.map(e => e.id)
     if (eventIds.length > 0) await supabase.from('club_events').delete().in('id', eventIds)
@@ -565,6 +586,8 @@ export default function AdminEventsPage() {
           </div>
         </div>
       )}
+
+      <DeletionHistory entityTypes={['event', 'event_series']} title="Historique des événements supprimés" />
     </div>
   )
 }
