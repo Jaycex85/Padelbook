@@ -195,6 +195,22 @@ export default function AdminSchedulePage() {
       deleted_by: user?.id,
     })
     await supabase.from('blocks').delete().eq('id', block.id)
+
+    // Notifier les membres éligibles que le créneau est de nouveau disponible
+    // (seulement si le bloc visait un terrain précis, pas "tous les terrains")
+    if (block.court_id && new Date(block.starts_at) > new Date()) {
+      fetch('/api/push/court-available', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          court_id: block.court_id,
+          court_name: block.court?.name || 'Terrain',
+          starts_at: block.starts_at,
+          ends_at: block.ends_at,
+        }),
+      }).catch(() => {})
+    }
+
     loadBlocks()
   }
 
