@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
+import DeletionHistory from '../../../components/DeletionHistory'
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 const DAYS_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -184,8 +185,16 @@ export default function AdminSchedulePage() {
     loadBlocks()
   }
 
-  async function removeBlock(id) {
-    await supabase.from('blocks').delete().eq('id', id)
+  async function removeBlock(block) {
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('deletion_log').insert({
+      entity_type: 'block',
+      entity_id: block.id,
+      label: (block.label || block.reason || 'Blocage') + ' — ' + (block.court?.name || 'Tous terrains') + ' — ' + new Date(block.starts_at).toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      snapshot: block,
+      deleted_by: user?.id,
+    })
+    await supabase.from('blocks').delete().eq('id', block.id)
     loadBlocks()
   }
 
@@ -258,7 +267,7 @@ export default function AdminSchedulePage() {
               </div>
               {block.all_courts ? <span className="badge badge-amber">Tous terrains</span> : block.court?.name && <span className="badge badge-muted">{block.court.name}</span>}
               <button className="btn-icon" onClick={() => duplicateBlock(block)} title="Dupliquer">⎘</button>
-              <button className="btn-icon" onClick={() => removeBlock(block.id)} title="Supprimer">🗑</button>
+              <button className="btn-icon" onClick={() => removeBlock(block)} title="Supprimer">🗑</button>
             </div>
           ))}
         </div>
@@ -539,6 +548,8 @@ export default function AdminSchedulePage() {
           .form-row { grid-template-columns: 1fr !important; }
         }
       `}</style>
+
+      <DeletionHistory entityTypes={['block']} title="Historique des blocs supprimés" />
     </div>
   )
 }
