@@ -118,6 +118,41 @@ export default function AdminReportsPage() {
       return { ...court, bookings: courtBookings.length, revenue: courtRevenue, occupancy: Math.min(occupancy, 100), bookedMinutes }
     })
 
+    // Heatmap jour de la semaine (0=Lun..6=Dim) x heure (7h-21h) — nombre de réservations couvrant ce créneau
+    const HEATMAP_HOURS = Array.from({ length: 15 }, (_, i) => 7 + i) // 7h..21h
+    const heatmapGrid = Array.from({ length: 7 }, () => HEATMAP_HOURS.map(() => 0))
+    let weekdayMinutes = 0, weekendMinutes = 0
+
+    ;(allBookings || []).forEach(b => {
+      const start = new Date(b.starts_at)
+      const end = new Date(b.ends_at)
+      const jsDay = start.getDay() // 0=Dim..6=Sam
+      const dayIdx = jsDay === 0 ? 6 : jsDay - 1 // 0=Lun..6=Dim
+      const isWeekend = jsDay === 0 || jsDay === 6
+      const durationMin = (end - start) / 60000
+      if (isWeekend) weekendMinutes += durationMin; else weekdayMinutes += durationMin
+
+      let cursor = new Date(start)
+      while (cursor < end) {
+        const h = cursor.getHours()
+        const hIdx = HEATMAP_HOURS.indexOf(h)
+        if (hIdx !== -1) heatmapGrid[dayIdx][hIdx]++
+        cursor = new Date(cursor.getTime() + 30 * 60000)
+      }
+    })
+
+    // Heure de pointe globale (toutes journées confondues)
+    const hourTotals = HEATMAP_HOURS.map((h, hi) => ({ h, total: heatmapGrid.reduce((s, day) => s + day[hi], 0) }))
+    const peakHour = hourTotals.reduce((max, cur) => cur.total > max.total ? cur : max, hourTotals[0])
+
+    const heatmap = {
+      grid: heatmapGrid,
+      hours: HEATMAP_HOURS,
+      weekdayHours: Math.round(weekdayMinutes / 60),
+      weekendHours: Math.round(weekendMinutes / 60),
+      peakHour: peakHour?.h,
+    }
+
     setData({
       revenue, prevRevenue,
       confirmed: confirmed.length, prevConfirmed: prevConfirmed.length,
@@ -125,6 +160,7 @@ export default function AdminReportsPage() {
       newMembers: (members || []).length, prevMembers: (prevMembers || []).length,
       revenueByDay,
       courtStats,
+      heatmap,
       rawBookings: bookings || [],
       rawPayments: payments || [],
       from, to,
@@ -208,9 +244,46 @@ export default function AdminReportsPage() {
     )
   }
 
-  return (
-    <div>
-      {/* Header */}
+  function HeatmapChart({ heatmap }) {
+    const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
+    const maxVal = Math.max(...heatmap.grid.flat(), 1)
+    const cellSize = 20
+    const labelW = 36
+
+    function cellColor(v) {
+      if (v === 0) return 'rgba(255,255,255,0.04)'
+      const intensity = v / maxVal
+      // interpole entre brand-dim et brand
+      const alpha = 0.15 + intensity * 0.85
+      return `rgba(52, 211, 153, ${alpha})` // approx var(--brand) en rgba
+    }
+
+    return (
+      <div style={{ overflowX: 'auto' }}>
+        <svg width={labelW + heatmap.hours.length * (cellSize + 2)} height={DAYS.length * (cellSize + 2) + 20}>
+          {heatmap.hours.map((h, hi) => (
+            (hi % 2 === 0) && (
+              <text key={h} x={labelW + hi * (cellSize + 2) + cellSize / 2} y={DAYS.length * (cellSize + 2) + 14}
+                textAnchor="middle" fontSize="9" fill="var(--muted)">{h}h</text>
+            )
+          ))}
+          {DAYS.map((day, di) => (
+            <g key={day}>
+              <text x={labelW - 6} y={di * (cellSize + 2) + cellSize / 2 + 10} textAnchor="end" fontSize="10" fill="var(--muted)">{day}</text>
+              {heatmap.grid[di].map((v, hi) => (
+                <rect key={hi} x={labelW + hi * (cellSize + 2)} y={di * (cellSize + 2)}
+                  width={cellSize} height={cellSize} rx="3" fill={cellColor(v)}>
+                  <title>{day} {heatmap.hours[hi]}h — {v} réservation{v !== 1 ? 's' : ''}</title>
+                </rect>
+              ))}
+            </g>
+          ))}
+        </svg>
+      </div>
+    )
+  }
+
+
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', gap: '12px', flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Rapport financier</h1>
@@ -271,6 +344,21 @@ export default function AdminReportsPage() {
               Revenus par jour
             </h2>
             <RevenueChart byDay={data.revenueByDay} from={data.from} to={data.to} />
+          </div>
+
+          {/* Heatmap horaire */}
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+              <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700 }}>
+                Affluence — jour & heure
+              </h2>
+              <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--muted)' }}>
+                <span>🕐 Heure de pointe : <strong style={{ color: 'var(--text)' }}>{data.heatmap.peakHour}h</strong></span>
+                <span>Semaine : <strong style={{ color: 'var(--text)' }}>{data.heatmap.weekdayHours}h</strong></span>
+                <span>Week-end : <strong style={{ color: 'var(--text)' }}>{data.heatmap.weekendHours}h</strong></span>
+              </div>
+            </div>
+            <HeatmapChart heatmap={data.heatmap} />
           </div>
 
           {/* Stats par terrain */}
