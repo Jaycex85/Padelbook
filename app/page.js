@@ -9,7 +9,7 @@ export default async function HomePage() {
 
   let profile = null
   if (user) {
-    const { data: p } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+    const { data: p } = await supabase.from('profiles').select('role, first_name').eq('id', user.id).single()
     profile = p
   }
 
@@ -69,7 +69,7 @@ export default async function HomePage() {
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 700 }}>Bonjour 👋</h1>
+        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 700 }}>Bonjour{profile?.first_name ? ' ' + profile.first_name : ''} 👋</h1>
         <p style={{ color: 'var(--muted)', fontSize: '14px', marginTop: '4px' }}>
           {new Date().toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
