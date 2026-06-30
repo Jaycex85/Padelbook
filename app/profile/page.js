@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createClient } from '../../lib/supabase'
 import NotificationSettings from '../../components/NotificationSettings'
 import PlayerStats from '../../components/PlayerStats'
+import WalletHistory from '../../components/WalletHistory'
 import { useRouter } from 'next/navigation'
 
 const MD_RANKS = ['MD50','MD100','MD200','MD300','MD400','MD500','MD700','MD1000']
@@ -178,6 +179,8 @@ export default function ProfilePage() {
         </div>
         <div style={{ fontSize: '28px' }}>💳</div>
       </div>
+
+      <WalletHistory userId={profile?.id} />
 
       <PlayerStats userId={profile?.id} />
 
