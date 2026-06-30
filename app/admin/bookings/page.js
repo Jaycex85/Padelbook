@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
+import DeletionHistory from '../../../components/DeletionHistory'
 
 const STATUS_STYLES = {
   confirmed: { bg: 'var(--brand-dim)', color: 'var(--brand-light)', label: 'Confirmé' },
@@ -37,9 +38,29 @@ export default function AdminBookingsPage() {
   async function handleDelete() {
     if (!deleteTarget) return
     setDeleting(true)
+
+    // Snapshot complet pour l'historique avant suppression
+    const { data: fullBooking } = await supabase
+      .from('bookings')
+      .select('*, players:booking_players(*), payments(*), match_results(*)')
+      .eq('id', deleteTarget.id)
+      .single()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    const label = (deleteTarget.court?.name || 'Terrain') + ' — ' + new Date(deleteTarget.starts_at).toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' + new Date(deleteTarget.starts_at).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+
+    await supabase.from('deletion_log').insert({
+      entity_type: 'booking',
+      entity_id: deleteTarget.id,
+      label,
+      snapshot: fullBooking || deleteTarget,
+      deleted_by: user?.id,
+    })
+
     // Supprimer d'abord les enregistrements liés (paiements, joueurs) pour respecter les FK
     await supabase.from('payments').delete().eq('booking_id', deleteTarget.id)
     await supabase.from('booking_players').delete().eq('booking_id', deleteTarget.id)
+    await supabase.from('match_results').delete().eq('booking_id', deleteTarget.id)
     await supabase.from('bookings').delete().eq('id', deleteTarget.id)
     setDeleting(false)
     setDeleteTarget(null)
@@ -157,6 +178,8 @@ export default function AdminBookingsPage() {
         </>
       )}
 
+      <DeletionHistory entityTypes={['booking']} title="Historique des réservations supprimées" />
+
       {/* Modal confirmation suppression */}
       {deleteTarget && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}
@@ -168,8 +191,8 @@ export default function AdminBookingsPage() {
             <p style={{ fontSize: '14px', color: 'var(--muted)', marginBottom: '4px' }}>
               {deleteTarget.court?.name} — {fmt(deleteTarget.starts_at)} à {fmtTime(deleteTarget.starts_at)}
             </p>
-            <p style={{ fontSize: '13px', color: 'var(--red)', marginBottom: '20px' }}>
-              Action irréversible. Les paiements et joueurs liés seront aussi supprimés.
+            <p style={{ fontSize: '13px', color: 'var(--amber)', marginBottom: '20px' }}>
+              Un snapshot sera conservé dans l'historique des suppressions, mais l'élément disparaîtra des listes actives.
             </p>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={() => setDeleteTarget(null)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}>
