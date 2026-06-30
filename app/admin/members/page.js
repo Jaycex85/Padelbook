@@ -20,6 +20,7 @@ export default function AdminMembersPage() {
   const [walletAmount, setWalletAmount] = useState('')
   const [walletReason, setWalletReason] = useState('')
   const [walletSaving, setWalletSaving] = useState(false)
+  const [walletError, setWalletError] = useState('')
   const supabase = createClient()
 
   async function load() {
@@ -51,24 +52,39 @@ export default function AdminMembersPage() {
     setWalletTarget(profile)
     setWalletAmount('')
     setWalletReason('')
+    setWalletError('')
   }
 
   async function handleWalletAdjust() {
     const amount = parseFloat(walletAmount)
     if (!walletTarget || isNaN(amount) || amount === 0 || !walletReason.trim()) return
     setWalletSaving(true)
+    setWalletError('')
 
     const { data: { user } } = await supabase.auth.getUser()
     const newBalance = (walletTarget.wallet_balance || 0) + amount
 
-    await supabase.from('profiles').update({ wallet_balance: newBalance }).eq('id', walletTarget.id)
-    await supabase.from('wallet_transactions').insert({
+    // On insère la transaction en premier : si ça échoue (RLS, etc.), on ne touche pas au solde
+    const { error: txError } = await supabase.from('wallet_transactions').insert({
       profile_id: walletTarget.id,
       amount,
       type: amount > 0 ? 'credit' : 'debit',
       description: 'Ajustement manuel (admin) — ' + walletReason.trim(),
       created_by: user?.id,
     })
+
+    if (txError) {
+      setWalletError("Échec de l'enregistrement de la transaction : " + txError.message)
+      setWalletSaving(false)
+      return
+    }
+
+    const { error: balError } = await supabase.from('profiles').update({ wallet_balance: newBalance }).eq('id', walletTarget.id)
+    if (balError) {
+      setWalletError('Transaction enregistrée mais échec de la mise à jour du solde : ' + balError.message)
+      setWalletSaving(false)
+      return
+    }
 
     setWalletSaving(false)
     setWalletTarget(null)
@@ -275,6 +291,12 @@ export default function AdminMembersPage() {
               <input value={walletReason} onChange={e => setWalletReason(e.target.value)}
                 placeholder="ex: Erreur de facturation, geste commercial..." style={fieldStyle} />
             </div>
+
+            {walletError && (
+              <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--red)', marginBottom: '14px' }}>
+                {walletError}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={() => setWalletTarget(null)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}>
