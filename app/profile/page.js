@@ -7,6 +7,11 @@ import { useRouter } from 'next/navigation'
 const MD_RANKS = ['MD50','MD100','MD200','MD300','MD400','MD500','MD700','MD1000']
 const WD_RANKS = ['WD50','WD100','WD200','WD300','WD400','WD500']
 
+function formatMoney(value) {
+  const n = value || 0
+  return n.toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null)
   const [form, setForm] = useState({ first_name: '', last_name: '', phone: '', gender: '', afp_ranking: '' })
@@ -162,7 +167,7 @@ export default function ProfilePage() {
         <div>
           <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Solde wallet</div>
           <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '24px', fontWeight: 700, color: (profile?.wallet_balance || 0) < 0 ? 'var(--red)' : 'var(--brand-light)' }}>
-            {(profile?.wallet_balance || 0).toFixed(2)} €
+            {formatMoney(profile?.wallet_balance)} €
           </div>
           {(profile?.wallet_balance || 0) < 0 && (
             <p style={{ fontSize: '11px', color: 'var(--red)', marginTop: '4px' }}>
