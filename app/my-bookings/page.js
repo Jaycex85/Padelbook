@@ -5,6 +5,7 @@ import { canCancelBooking, calcRefundAmount, calcEffectivePrice, calcOpenBalance
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import Chat from '../../components/Chat'
+import MatchScore from '../../components/MatchScore'
 
 const STATUS_STYLES = {
   confirmed: { bg: 'var(--brand-dim)', color: 'var(--brand-light)', label: 'Confirmé' },
@@ -42,7 +43,7 @@ function MyBookingsList() {
 
     const { data: asOwner } = await supabase
       .from('bookings')
-      .select('*, court:courts(name, is_indoor), players:booking_players(id, player_id, is_owner, payment_status, effective_price, profile:profiles(first_name, last_name, email))')
+      .select('*, court:courts(name, is_indoor), players:booking_players(id, player_id, is_owner, payment_status, effective_price, team, profile:profiles(first_name, last_name, email)), match_results(id, sets, winning_team, recorded_by)')
       .eq('owner_id', user.id)
 
     const { data: myPlayerRows } = await supabase
@@ -56,7 +57,7 @@ function MyBookingsList() {
     if (otherBookingIds.length > 0) {
       const { data } = await supabase
         .from('bookings')
-        .select('*, court:courts(name, is_indoor), players:booking_players(id, player_id, is_owner, payment_status, effective_price, profile:profiles(first_name, last_name, email))')
+        .select('*, court:courts(name, is_indoor), players:booking_players(id, player_id, is_owner, payment_status, effective_price, team, profile:profiles(first_name, last_name, email)), match_results(id, sets, winning_team, recorded_by)')
         .in('id', otherBookingIds)
       asPlayer = data || []
     }
@@ -402,6 +403,10 @@ function MyBookingsList() {
                     <Chat bookingId={b.id} endsAt={b.ends_at} isRegistered={true} isPublicAccess={b.is_public} isAdmin={false} />
                   </div>
                 )}
+
+                {b.status === 'completed' && (b.players || []).length >= 2 && (
+                  <MatchScore booking={b} userId={userId} isAdmin={false} onUpdate={load} />
+                )}
               </div>
             )
           })}
@@ -554,3 +559,4 @@ export default function MyBookingsPage() {
     </Suspense>
   )
 }
+
