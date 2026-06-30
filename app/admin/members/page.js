@@ -16,6 +16,10 @@ export default function AdminMembersPage() {
   const [editing, setEditing] = useState(null)
   const [editForm, setEditForm] = useState({ role: 'public', discount_percent: 0 })
   const [saving, setSaving] = useState(false)
+  const [walletTarget, setWalletTarget] = useState(null)
+  const [walletAmount, setWalletAmount] = useState('')
+  const [walletReason, setWalletReason] = useState('')
+  const [walletSaving, setWalletSaving] = useState(false)
   const supabase = createClient()
 
   async function load() {
@@ -40,6 +44,34 @@ export default function AdminMembersPage() {
     }).eq('id', editing.id)
     setSaving(false)
     setEditing(null)
+    load()
+  }
+
+  function openWallet(profile) {
+    setWalletTarget(profile)
+    setWalletAmount('')
+    setWalletReason('')
+  }
+
+  async function handleWalletAdjust() {
+    const amount = parseFloat(walletAmount)
+    if (!walletTarget || isNaN(amount) || amount === 0 || !walletReason.trim()) return
+    setWalletSaving(true)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    const newBalance = (walletTarget.wallet_balance || 0) + amount
+
+    await supabase.from('profiles').update({ wallet_balance: newBalance }).eq('id', walletTarget.id)
+    await supabase.from('wallet_transactions').insert({
+      profile_id: walletTarget.id,
+      amount,
+      type: amount > 0 ? 'credit' : 'debit',
+      description: 'Ajustement manuel (admin) — ' + walletReason.trim(),
+      created_by: user?.id,
+    })
+
+    setWalletSaving(false)
+    setWalletTarget(null)
     load()
   }
 
@@ -115,9 +147,14 @@ export default function AdminMembersPage() {
                           {new Date(p.created_at).toLocaleDateString('fr-BE')}
                         </td>
                         <td style={{ padding: '13px 20px' }}>
-                          <button onClick={() => openEdit(p)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 10px', cursor: 'pointer', color: 'var(--muted)', fontSize: '12px' }}>
-                            Modifier
-                          </button>
+                          <div style={{ display: 'flex', gap: '6px' }}>
+                            <button onClick={() => openEdit(p)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 10px', cursor: 'pointer', color: 'var(--muted)', fontSize: '12px' }}>
+                              Modifier
+                            </button>
+                            <button onClick={() => openWallet(p)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '5px 10px', cursor: 'pointer', color: 'var(--brand-light)', fontSize: '12px' }}>
+                              💳 Wallet
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -151,11 +188,16 @@ export default function AdminMembersPage() {
                       {(p.wallet_balance || 0).toFixed(2)} €
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                     <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Inscrit le {new Date(p.created_at).toLocaleDateString('fr-BE')}</span>
-                    <button onClick={() => openEdit(p)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', color: 'var(--muted)', fontSize: '12px' }}>
-                      Modifier
-                    </button>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button onClick={() => openWallet(p)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', color: 'var(--brand-light)', fontSize: '12px' }}>
+                        💳
+                      </button>
+                      <button onClick={() => openEdit(p)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px 12px', cursor: 'pointer', color: 'var(--muted)', fontSize: '12px' }}>
+                        Modifier
+                      </button>
+                    </div>
                   </div>
                 </div>
               )
@@ -202,6 +244,45 @@ export default function AdminMembersPage() {
               <button onClick={() => setEditing(null)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}>Annuler</button>
               <button onClick={handleSave} disabled={saving} style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: saving ? 0.6 : 1 }}>
                 {saving ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal ajustement wallet */}
+      {walletTarget && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}
+          onClick={e => e.target === e.currentTarget && setWalletTarget(null)}>
+          <div className="modal-responsive" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', gap: '12px' }}>
+              <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '17px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                Wallet — {displayName(walletTarget)}
+              </h2>
+              <button onClick={() => setWalletTarget(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '18px', cursor: 'pointer', flexShrink: 0 }}>✕</button>
+            </div>
+            <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '18px' }}>
+              Solde actuel : <strong style={{ color: 'var(--brand-light)' }}>{(walletTarget.wallet_balance || 0).toFixed(2)} €</strong>
+            </p>
+
+            <div style={{ marginBottom: '14px' }}>
+              <label style={labelStyle}>Montant (€) — positif = crédit, négatif = dette/débit</label>
+              <input type="number" step="0.01" value={walletAmount} onChange={e => setWalletAmount(e.target.value)}
+                placeholder="ex: 10 ou -10" style={fieldStyle} />
+            </div>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={labelStyle}>Motif (obligatoire, visible dans l'historique du membre)</label>
+              <input value={walletReason} onChange={e => setWalletReason(e.target.value)}
+                placeholder="ex: Erreur de facturation, geste commercial..." style={fieldStyle} />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setWalletTarget(null)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', cursor: 'pointer' }}>
+                Annuler
+              </button>
+              <button onClick={handleWalletAdjust} disabled={walletSaving || !walletAmount || parseFloat(walletAmount) === 0 || !walletReason.trim()}
+                style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: (walletSaving || !walletAmount || parseFloat(walletAmount) === 0 || !walletReason.trim()) ? 0.6 : 1 }}>
+                {walletSaving ? 'Enregistrement...' : 'Valider l\'ajustement'}
               </button>
             </div>
           </div>
