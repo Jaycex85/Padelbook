@@ -79,6 +79,7 @@ export async function PATCH(req) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        court_id: existing.court_id,
         court_name: existing.court?.name || 'Terrain',
         starts_at: existing.starts_at,
         ends_at: existing.ends_at,
@@ -88,3 +89,4 @@ export async function PATCH(req) {
 
   return new Response(JSON.stringify(data), { status: 200 })
 }
+
