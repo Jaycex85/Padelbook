@@ -16,8 +16,20 @@ export default function NotificationSettings() {
   const [prefs, setPrefs] = useState(null)
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(false)
+  const [iosNotInstalled, setIosNotInstalled] = useState(false)
 
   useEffect(() => {
+    // Détection iOS Safari hors PWA installée : Apple n'autorise le Web Push
+    // que pour les PWA ajoutées à l'écran d'accueil (mode standalone).
+    const ua = navigator.userAgent
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+    if (isIOS && !isStandalone) {
+      setIosNotInstalled(true)
+      setLoading(false)
+      return
+    }
+
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setSupported(false); setLoading(false); return
     }
@@ -59,6 +71,16 @@ export default function NotificationSettings() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ [key]: value }),
     })
+  }
+
+  if (iosNotInstalled) {
+    return (
+      <div style={{ background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '12px', padding: '14px 16px', fontSize: '13px', color: 'var(--amber)', lineHeight: 1.5 }}>
+        📱 Sur iPhone/iPad, les notifications ne fonctionnent que si l'appli est installée sur l'écran d'accueil.
+        <br /><br />
+        Pour l'installer : appuie sur l'icône <strong>Partager</strong> ⬆️ dans Safari, puis <strong>"Sur l'écran d'accueil"</strong>. Ouvre ensuite l'appli depuis cette icône pour activer les notifications.
+      </div>
+    )
   }
 
   if (!supported) {
