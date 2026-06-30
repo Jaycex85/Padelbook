@@ -233,6 +233,21 @@ export default function AdminEventsPage() {
     load()
   }
 
+  function notifyCourtsFreed(clubEventCourts, starts_at, ends_at) {
+    ;(clubEventCourts || []).forEach(c => {
+      fetch('/api/push/court-available', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          court_id: c.court_id,
+          court_name: c.courts?.name || 'Terrain',
+          starts_at,
+          ends_at,
+        }),
+      }).catch(() => {})
+    })
+  }
+
   async function deleteEvent(event) {
     const regs = event.event_registrations || []
     const activeRegs = regs.filter(r => r.status !== 'cancelled')
@@ -243,6 +258,8 @@ export default function AdminEventsPage() {
 
     const blockIds = (event.club_event_courts || []).map(c => c.block_id).filter(Boolean)
     if (blockIds.length > 0) await supabase.from('blocks').delete().in('id', blockIds)
+
+    notifyCourtsFreed(event.club_event_courts, event.starts_at, event.ends_at)
 
     const { data: { user } } = await supabase.auth.getUser()
     await supabase.from('deletion_log').insert({
@@ -265,6 +282,7 @@ export default function AdminEventsPage() {
     for (const ev of seriesEvents) {
       const blockIds = (ev.club_event_courts || []).map(c => c.block_id).filter(Boolean)
       if (blockIds.length > 0) await supabase.from('blocks').delete().in('id', blockIds)
+      notifyCourtsFreed(ev.club_event_courts, ev.starts_at, ev.ends_at)
       await supabase.from('club_events').update({ status: 'cancelled' }).eq('id', ev.id)
     }
     await supabase.from('club_event_series').update({ status: 'cancelled' }).eq('id', seriesItem.id)
@@ -281,6 +299,7 @@ export default function AdminEventsPage() {
     for (const ev of seriesItem.occurrences) {
       const blockIds = (ev.club_event_courts || []).map(c => c.block_id).filter(Boolean)
       if (blockIds.length > 0) await supabase.from('blocks').delete().in('id', blockIds)
+      notifyCourtsFreed(ev.club_event_courts, ev.starts_at, ev.ends_at)
     }
 
     const { data: { user } } = await supabase.auth.getUser()
