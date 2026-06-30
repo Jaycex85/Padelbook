@@ -40,6 +40,7 @@ export default function ClubFeed({ isAdmin, userId }) {
     ;(postsData || []).forEach(p => {
       authorIds.add(p.author_id)
       ;(p.club_post_comments || []).forEach(c => authorIds.add(c.author_id))
+      ;(p.club_poll_options || []).forEach(o => (o.club_poll_votes || []).forEach(v => authorIds.add(v.voter_id)))
     })
     const ids = [...authorIds]
     if (ids.length > 0) {
@@ -229,14 +230,21 @@ export default function ClubFeed({ isAdmin, userId }) {
                         const pct = maxVotes > 0 ? Math.round((count / maxVotes) * 100) : 0
                         const userVoted = userId && optVoters.includes(userId)
                         return (
-                          <button key={opt.id} onClick={() => toggleVote(opt.id, userVoted)} disabled={voting === opt.id || !userId}
-                            style={{ position: 'relative', textAlign: 'left', background: 'var(--surface2)', border: '1px solid ' + (userVoted ? 'var(--brand)' : 'var(--border)'), borderRadius: '10px', padding: '9px 12px', cursor: userId ? 'pointer' : 'default', overflow: 'hidden', fontFamily: "'Inter',sans-serif" }}>
-                            <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: pct + '%', background: 'var(--brand-dim)', transition: 'width 0.3s', zIndex: 0 }} />
-                            <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                              <span style={{ color: 'var(--text)' }}>{userVoted ? '✓ ' : ''}{opt.label}</span>
-                              <span style={{ color: 'var(--muted)', fontWeight: 600, flexShrink: 0, marginLeft: '8px' }}>{count}</span>
-                            </div>
-                          </button>
+                          <div key={opt.id}>
+                            <button onClick={() => toggleVote(opt.id, userVoted)} disabled={voting === opt.id || !userId}
+                              style={{ width: '100%', position: 'relative', textAlign: 'left', background: 'var(--surface2)', border: '1px solid ' + (userVoted ? 'var(--brand)' : 'var(--border)'), borderRadius: '10px', padding: '9px 12px', cursor: userId ? 'pointer' : 'default', overflow: 'hidden', fontFamily: "'Inter',sans-serif" }}>
+                              <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: pct + '%', background: 'var(--brand-dim)', transition: 'width 0.3s', zIndex: 0 }} />
+                              <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
+                                <span style={{ color: 'var(--text)' }}>{userVoted ? '✓ ' : ''}{opt.label}</span>
+                                <span style={{ color: 'var(--muted)', fontWeight: 600, flexShrink: 0, marginLeft: '8px' }}>{count}</span>
+                              </div>
+                            </button>
+                            {optVoters.length > 0 && (
+                              <div style={{ fontSize: '11px', color: 'var(--muted)', padding: '4px 12px 0' }}>
+                                {optVoters.map(vid => displayName(vid)).join(', ')}
+                              </div>
+                            )}
+                          </div>
                         )
                       })
                     })()}
