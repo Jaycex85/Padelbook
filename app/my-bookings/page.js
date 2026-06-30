@@ -152,16 +152,18 @@ function MyBookingsList() {
     if (spotsLeft <= 0) { alert('Ce match est déjà complet.'); return }
 
     setInviting(true)
+    const isFull = inviteTarget.payment_mode === 'full'
     const profileRow = await supabase.from('profiles').select('discount_percent').eq('id', member.id).single()
-    const discount = profileRow.data?.discount_percent || 0
-    const basePrice = inviteTarget.price_per_player
-    const effectivePrice = calcEffectivePrice(basePrice, discount)
+    const discount = isFull ? 0 : (profileRow.data?.discount_percent || 0)
+    const basePrice = isFull ? 0 : inviteTarget.price_per_player
+    const effectivePrice = isFull ? 0 : calcEffectivePrice(basePrice, discount)
 
     await supabase.from('booking_players').insert({
       booking_id: inviteTarget.id,
       player_id: member.id,
       is_owner: false,
-      payment_status: 'pending',
+      payment_status: isFull ? 'paid' : 'pending',
+      paid_at: isFull ? new Date().toISOString() : null,
       base_price: basePrice,
       discount_percent: discount,
       effective_price: effectivePrice,
@@ -178,7 +180,28 @@ function MyBookingsList() {
     const spotsLeft = (inviteTarget.max_players || 4) - (inviteTarget.players || []).length
     if (spotsLeft <= 0) { alert('Ce match est déjà complet.'); return }
 
-    const basePrice = inviteTarget.price_per_player
+    const isFull = inviteTarget.payment_mode === 'full'
+    const basePrice = isFull ? 0 : inviteTarget.price_per_player
+
+    // Mode full : invité gratuit, ajout direct sans paiement
+    if (isFull) {
+      setInviting(true)
+      await supabase.from('booking_players').insert({
+        booking_id: inviteTarget.id,
+        guest_name: guestName.trim(),
+        guest_email: guestEmail.trim() || null,
+        is_owner: false,
+        payment_status: 'paid',
+        paid_at: new Date().toISOString(),
+        base_price: 0,
+        discount_percent: 0,
+        effective_price: 0,
+      })
+      setInviting(false)
+      setInviteTarget(null)
+      load()
+      return
+    }
 
     if (guestPayMethod === 'wallet') {
       const { data: ownerProfile } = await supabase.from('profiles').select('wallet_balance').eq('id', userId).single()
@@ -332,7 +355,7 @@ function MyBookingsList() {
                     </div>
 
                     {/* Joueurs présents (avatars/noms) */}
-                    {b.payment_mode !== 'full' && (b.players || []).length > 0 && (
+                    {(b.players || []).length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
                         {(b.players || []).map(p => (
                           <span key={p.id} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '99px', background: p.payment_status === 'paid' ? 'var(--brand-dim)' : 'var(--surface2)', color: p.payment_status === 'paid' ? 'var(--brand-light)' : 'var(--muted)' }}>
@@ -367,7 +390,7 @@ function MyBookingsList() {
                     )}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-end' }}>
-                    {isOwner && b.payment_mode !== 'full' && spotsLeft > 0 && ['pending', 'confirmed'].includes(b.status) && (
+                    {isOwner && spotsLeft > 0 && ['pending', 'confirmed'].includes(b.status) && (
                       <button onClick={() => openInvite(b)}
                         style={{ background: 'var(--brand-dim)', border: '1px solid var(--brand)', color: 'var(--brand-light)', borderRadius: '8px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
                         + Inviter
@@ -459,7 +482,12 @@ function MyBookingsList() {
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', width: '100%', maxWidth: 'min(420px, calc(100vw - 32px))', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '18px', fontWeight: 700 }}>Inviter un joueur</h2>
-              <button onClick={() => setInviteTarget(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {inviteTarget?.payment_mode === 'full' && (
+                  <span style={{ fontSize: '11px', background: 'var(--brand-dim)', color: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: '99px', padding: '3px 8px' }}>Gratuit pour les invités</span>
+                )}
+                <button onClick={() => setInviteTarget(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+              </div>
             </div>
 
             {/* Onglets */}
@@ -505,7 +533,9 @@ function MyBookingsList() {
                   ))}
                 </div>
                 <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '14px', textAlign: 'center' }}>
-                  Le membre paiera sa part lui-même. Sinon, elle sera couverte par votre wallet en fin de match.
+                  {inviteTarget?.payment_mode === 'full'
+                    ? 'Cet invité jouera gratuitement — vous avez déjà payé le terrain entier.'
+                    : 'Le membre paiera sa part lui-même. Sinon, elle sera couverte par votre wallet en fin de match.'}
                 </p>
               </>
             ) : (
@@ -521,13 +551,14 @@ function MyBookingsList() {
                     style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', color: 'var(--text)', fontSize: '14px' }} />
                 </div>
 
-                <div style={{ background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: 'var(--amber)' }}>
-                  Cet invité n'a pas de compte — c'est <strong>vous</strong> qui réglez sa part ({inviteTarget.price_per_player?.toFixed(2)} €) maintenant.
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Mode de paiement</label>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                {inviteTarget?.payment_mode !== 'full' && (
+                  <>
+                    <div style={{ background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: 'var(--amber)' }}>
+                      Cet invité n'a pas de compte — c'est <strong>vous</strong> qui réglez sa part ({inviteTarget?.price_per_player?.toFixed(2)} €) maintenant.
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Mode de paiement</label>
+                      <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={() => setGuestPayMethod('wallet')}
                       style={{ flex: 1, background: guestPayMethod === 'wallet' ? 'var(--brand-dim)' : 'var(--surface2)', border: '1.5px solid ' + (guestPayMethod === 'wallet' ? 'var(--brand)' : 'var(--border)'), color: guestPayMethod === 'wallet' ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
                       💳 Wallet
@@ -538,10 +569,12 @@ function MyBookingsList() {
                     </button>
                   </div>
                 </div>
+                  </>
+                )}
 
                 <button onClick={inviteGuest} disabled={inviting || !guestName.trim()}
                   style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: (inviting || !guestName.trim()) ? 0.5 : 1, marginTop: '4px' }}>
-                  {inviting ? 'Traitement...' : 'Ajouter et payer ' + (inviteTarget.price_per_player?.toFixed(2) || '') + ' €'}
+                  {inviting ? 'Traitement...' : inviteTarget?.payment_mode === 'full' ? 'Ajouter l\'invité' : 'Ajouter et payer ' + (inviteTarget?.price_per_player?.toFixed(2) || '') + ' €'}
                 </button>
               </div>
             )}
