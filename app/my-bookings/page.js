@@ -359,7 +359,11 @@ function MyBookingsList() {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
                         {(b.players || []).map(p => (
                           <span key={p.id} style={{ fontSize: '11px', padding: '3px 9px', borderRadius: '99px', background: p.payment_status === 'paid' ? 'var(--brand-dim)' : 'var(--surface2)', color: p.payment_status === 'paid' ? 'var(--brand-light)' : 'var(--muted)' }}>
-                            {memberName(p)} {p.payment_status === 'paid' ? '✓' : '⏳'}
+                            {memberName(p)} {p.payment_status === 'paid'
+                              ? (b.payment_mode === 'full' && !p.is_owner
+                                  ? (() => { const o = (b.players || []).find(pl => pl.is_owner); return '(payé par ' + (o?.profile?.first_name || 'le réservant') + ')' })()
+                                  : '✓')
+                              : '⏳'}
                           </span>
                         ))}
                         {Array.from({ length: spotsLeft }).map((_, i) => (
@@ -484,7 +488,9 @@ function MyBookingsList() {
               <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '18px', fontWeight: 700 }}>Inviter un joueur</h2>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {inviteTarget?.payment_mode === 'full' && (
-                  <span style={{ fontSize: '11px', background: 'var(--brand-dim)', color: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: '99px', padding: '3px 8px' }}>Gratuit pour les invités</span>
+                  <span style={{ fontSize: '11px', background: 'var(--brand-dim)', color: 'var(--brand-light)', border: '1px solid var(--brand)', borderRadius: '99px', padding: '3px 8px' }}>
+                    {(() => { const o = (inviteTarget.players || []).find(p => p.is_owner); return 'Terrain payé par ' + (o?.profile?.first_name || 'le réservant') + (o?.profile?.last_name ? ' ' + o.profile.last_name : '') })()}
+                  </span>
                 )}
                 <button onClick={() => setInviteTarget(null)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '18px', cursor: 'pointer' }}>✕</button>
               </div>
@@ -534,7 +540,7 @@ function MyBookingsList() {
                 </div>
                 <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '14px', textAlign: 'center' }}>
                   {inviteTarget?.payment_mode === 'full'
-                    ? 'Cet invité jouera gratuitement — vous avez déjà payé le terrain entier.'
+                    ? (() => { const o = (inviteTarget.players || []).find(p => p.is_owner); const name = (o?.profile?.first_name || 'Le réservant') + (o?.profile?.last_name ? ' ' + o.profile.last_name : ''); return 'Terrain payé par ' + name + '. Les arrangements se font entre joueurs.' })()
                     : 'Le membre paiera sa part lui-même. Sinon, elle sera couverte par votre wallet en fin de match.'}
                 </p>
               </>
