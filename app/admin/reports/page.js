@@ -118,13 +118,13 @@ export default function AdminReportsPage() {
       return { ...court, bookings: courtBookings.length, revenue: courtRevenue, occupancy: Math.min(occupancy, 100), bookedMinutes }
     })
 
-    // Heatmap jour de la semaine (0=Lun..6=Dim) x demi-heure (7h00-21h30)
+    // Heatmap jour de la semaine (0=Lun..6=Dim) x demi-heure (9h00-23h00)
     const HEATMAP_SLOTS = []
-    for (let h = 7; h <= 21; h++) {
-      HEATMAP_SLOTS.push(h * 60)        // heure pile
-      HEATMAP_SLOTS.push(h * 60 + 30)   // demi-heure
+    for (let h = 9; h <= 23; h++) {
+      HEATMAP_SLOTS.push(h * 60)
+      if (h < 23) HEATMAP_SLOTS.push(h * 60 + 30)
     }
-    // 7h00 → 21h30 = 30 slots de 30min
+    // 9h00 → 23h00 = 29 slots de 30min
     const heatmapGrid = Array.from({ length: 7 }, () => HEATMAP_SLOTS.map(() => 0))
     let weekdayMinutes = 0, weekendMinutes = 0
 
@@ -151,11 +151,17 @@ export default function AdminReportsPage() {
     const peakH = Math.floor(peakSlot.s / 60)
     const peakM = peakSlot.s % 60
 
+    function fmtMinutes(mins) {
+      const h = Math.floor(mins / 60)
+      const m = mins % 60
+      return m > 0 ? h + 'h' + String(m).padStart(2,'0') : h + 'h'
+    }
+
     const heatmap = {
       grid: heatmapGrid,
       slots: HEATMAP_SLOTS,
-      weekdayHours: Math.round(weekdayMinutes / 60),
-      weekendHours: Math.round(weekendMinutes / 60),
+      weekdayHours: fmtMinutes(weekdayMinutes),
+      weekendHours: fmtMinutes(weekendMinutes),
       peakHour: peakH + 'h' + (peakM > 0 ? String(peakM).padStart(2,'0') : ''),
     }
 
