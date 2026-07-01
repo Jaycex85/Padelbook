@@ -267,7 +267,7 @@ export default function AdminReportsPage() {
       if (v === 0) return 'rgba(255,255,255,0.04)'
       const intensity = v / maxVal
       const alpha = 0.15 + intensity * 0.85
-      return 'rgba(52, 211, 153, ' + alpha + ')'
+      return 'rgba(124, 58, 237, ' + alpha + ')'
     }
 
     const totalW = labelW + heatmap.slots.length * (cellSize + cellGap)
