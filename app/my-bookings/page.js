@@ -189,7 +189,7 @@ function MyBookingsList() {
       await supabase.from('booking_players').insert({
         booking_id: inviteTarget.id,
         guest_name: guestName.trim(),
-        guest_email: guestEmail.trim() || null,
+        ...(guestEmail.trim() && { guest_email: guestEmail.trim() }),
         is_owner: false,
         payment_status: 'paid',
         paid_at: new Date().toISOString(),
@@ -215,7 +215,7 @@ function MyBookingsList() {
       const { data: newPlayer } = await supabase.from('booking_players').insert({
         booking_id: inviteTarget.id,
         guest_name: guestName.trim(),
-        guest_email: guestEmail.trim() || null,
+        ...(guestEmail.trim() && { guest_email: guestEmail.trim() }),
         is_owner: false,
         payment_status: 'paid',
         paid_at: new Date().toISOString(),
@@ -241,7 +241,7 @@ function MyBookingsList() {
       const { data: newPlayer } = await supabase.from('booking_players').insert({
         booking_id: inviteTarget.id,
         guest_name: guestName.trim(),
-        guest_email: guestEmail.trim() || null,
+        ...(guestEmail.trim() && { guest_email: guestEmail.trim() }),
         is_owner: false,
         payment_status: 'pending',
         base_price: basePrice,
