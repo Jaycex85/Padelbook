@@ -57,8 +57,9 @@ export async function POST(req) {
     return windowCheck.allowed
   }).map(p => p.id)
 
-  const fmtDate = d => new Date(d).toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' })
-  const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+  const tz = { timeZone: 'Europe/Brussels' }
+  const fmtDate = d => new Date(d).toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long', ...tz })
+  const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit', ...tz })
   const body = (court_name || 'Un terrain') + ' libre le ' + fmtDate(starts_at) + ' de ' + fmtTime(starts_at) + ' - ' + fmtTime(ends_at)
 
   let sent = 0
