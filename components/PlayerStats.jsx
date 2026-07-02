@@ -5,6 +5,8 @@ import { createClient } from '../lib/supabase'
 export default function PlayerStats({ userId }) {
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState(null)
+  const [showAll, setShowAll] = useState(false)
+  const [expandedMatch, setExpandedMatch] = useState(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -79,8 +81,8 @@ export default function PlayerStats({ userId }) {
     load()
   }, [userId])
 
-  const [showAll, setShowAll] = useState(false)
-  const [expandedMatch, setExpandedMatch] = useState(null)
+  if (loading || !stats) return null
+
   if (stats.played === 0) {
     return (
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px', marginBottom: '20px' }}>
