@@ -41,21 +41,45 @@ export default function PlayerStats({ userId }) {
         .select('booking_id, sets, winning_team')
         .in('booking_id', bookingIds)
 
-      // Assembler
+      // 4. Tous les joueurs de ces bookings (pour afficher les noms)
+      const { data: allPlayers } = await supabase
+        .from('booking_players')
+        .select('booking_id, player_id, guest_name, team, profile:profiles(first_name, last_name)')
+        .in('booking_id', bookingIds)
+
+      // Index par booking_id
       const bookingMap = {}
       ;(bookings || []).forEach(b => { bookingMap[b.id] = b })
       const resultMap = {}
       ;(results || []).forEach(r => { resultMap[r.booking_id] = r })
+      const playersMap = {}
+      ;(allPlayers || []).forEach(p => {
+        if (!playersMap[p.booking_id]) playersMap[p.booking_id] = []
+        playersMap[p.booking_id].push(p)
+      })
+
+      function playerName(p) {
+        if (p.guest_name) return p.guest_name
+        return p.profile?.first_name ? p.profile.first_name + (p.profile.last_name ? ' ' + p.profile.last_name[0] + '.' : '') : 'Joueur'
+      }
 
       const matches = bpRows
         .filter(r => resultMap[r.booking_id])
-        .map(r => ({
-          team: r.team,
-          startsAt: bookingMap[r.booking_id]?.starts_at,
-          courtName: bookingMap[r.booking_id]?.court?.name,
-          sets: resultMap[r.booking_id].sets,
-          winning_team: resultMap[r.booking_id].winning_team,
-        }))
+        .map(r => {
+          const players = playersMap[r.booking_id] || []
+          const myTeam = r.team
+          const teammates = players.filter(p => p.team === myTeam && p.player_id !== userId)
+          const opponents = players.filter(p => p.team !== myTeam)
+          return {
+            team: myTeam,
+            startsAt: bookingMap[r.booking_id]?.starts_at,
+            courtName: bookingMap[r.booking_id]?.court?.name,
+            sets: resultMap[r.booking_id].sets,
+            winning_team: resultMap[r.booking_id].winning_team,
+            teammates: teammates.map(playerName),
+            opponents: opponents.map(playerName),
+          }
+        })
         .sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt))
 
       let wins = 0, losses = 0, setsWon = 0, setsLost = 0
@@ -151,9 +175,21 @@ export default function PlayerStats({ userId }) {
 
                   {isExpanded && (
                     <div style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '10px 12px', fontSize: '12px' }}>
-                      <div style={{ color: 'var(--muted)', marginBottom: '6px' }}>
+                      <div style={{ color: 'var(--muted)', marginBottom: '8px' }}>
                         🏟️ {m.courtName || 'Terrain'} · {new Date(m.startsAt).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' })}
                       </div>
+                      {m.teammates.length > 0 && (
+                        <div style={{ marginBottom: '4px' }}>
+                          <span style={{ color: 'var(--brand-light)', fontWeight: 600 }}>Avec : </span>
+                          <span style={{ color: 'var(--text)' }}>{m.teammates.join(', ')}</span>
+                        </div>
+                      )}
+                      {m.opponents.length > 0 && (
+                        <div style={{ marginBottom: '8px' }}>
+                          <span style={{ color: 'var(--muted)', fontWeight: 600 }}>Contre : </span>
+                          <span style={{ color: 'var(--text)' }}>{m.opponents.join(', ')}</span>
+                        </div>
+                      )}
                       <div style={{ display: 'flex', gap: '12px' }}>
                         {m.sets.map((s, j) => (
                           <div key={j} style={{ textAlign: 'center' }}>
