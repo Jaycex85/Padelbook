@@ -11,19 +11,48 @@ export default function PlayerStats({ userId }) {
     if (!userId) return
     async function load() {
       setLoading(true)
-      const { data } = await supabase
+
+      // 1. Mes lignes booking_players avec équipe assignée
+      const { data: bpRows } = await supabase
         .from('booking_players')
-        .select('team, booking:bookings(id, starts_at, court:courts(name), match_results(sets, winning_team))')
+        .select('id, team, booking_id')
         .eq('player_id', userId)
         .not('team', 'is', null)
 
-      const matches = (data || [])
-        .filter(r => r.booking?.match_results?.length > 0)
+      if (!bpRows || bpRows.length === 0) {
+        setStats({ played: 0, wins: 0, losses: 0, winRate: 0, setsWon: 0, setsLost: 0, recent: [] })
+        setLoading(false)
+        return
+      }
+
+      const bookingIds = bpRows.map(r => r.booking_id)
+
+      // 2. Les bookings correspondants
+      const { data: bookings } = await supabase
+        .from('bookings')
+        .select('id, starts_at, court:courts(name)')
+        .in('id', bookingIds)
+
+      // 3. Les résultats de match
+      const { data: results } = await supabase
+        .from('match_results')
+        .select('booking_id, sets, winning_team')
+        .in('booking_id', bookingIds)
+
+      // Assembler
+      const bookingMap = {}
+      ;(bookings || []).forEach(b => { bookingMap[b.id] = b })
+      const resultMap = {}
+      ;(results || []).forEach(r => { resultMap[r.booking_id] = r })
+
+      const matches = bpRows
+        .filter(r => resultMap[r.booking_id])
         .map(r => ({
           team: r.team,
-          startsAt: r.booking.starts_at,
-          courtName: r.booking.court?.name,
-          ...r.booking.match_results[0],
+          startsAt: bookingMap[r.booking_id]?.starts_at,
+          courtName: bookingMap[r.booking_id]?.court?.name,
+          sets: resultMap[r.booking_id].sets,
+          winning_team: resultMap[r.booking_id].winning_team,
         }))
         .sort((a, b) => new Date(b.startsAt) - new Date(a.startsAt))
 
