@@ -22,12 +22,18 @@ export async function GET(req) {
 
   const { sendPushToProfile } = await import('../../../../lib/pushServer')
 
+  // Toujours formater en heure belge (UTC+1/UTC+2 selon DST)
+  const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Brussels',
+  })
+
   let sent = 0
   for (const booking of (bookings || [])) {
-    const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
     const result = await sendPushToProfile(booking.owner.id, {
       title: 'Rappel - Demain vous jouez !',
-      body: (booking.court?.name || 'Terrain') + ' a ' + fmtTime(booking.starts_at),
+      body: (booking.court?.name || 'Terrain') + ' à ' + fmtTime(booking.starts_at),
       url: '/my-bookings',
       tag: 'booking-reminder',
     }, 'booking_reminder')
