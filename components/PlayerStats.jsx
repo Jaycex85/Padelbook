@@ -72,14 +72,15 @@ export default function PlayerStats({ userId }) {
         wins, losses,
         winRate: matches.length > 0 ? Math.round((wins / matches.length) * 100) : 0,
         setsWon, setsLost,
-        recent: matches.slice(0, 5),
+        recent: matches,
       })
       setLoading(false)
     }
     load()
   }, [userId])
 
-  if (loading || !stats) return null
+  const [showAll, setShowAll] = useState(false)
+  const [expandedMatch, setExpandedMatch] = useState(null)
   if (stats.played === 0) {
     return (
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px', marginBottom: '20px' }}>
@@ -124,21 +125,60 @@ export default function PlayerStats({ userId }) {
         <div>
           <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Derniers matchs</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {stats.recent.map((m, i) => {
+            {(showAll ? stats.recent : stats.recent.slice(0, 3)).map((m, i) => {
               const won = m.team === m.winning_team
+              const isExpanded = expandedMatch === i
               return (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', padding: '8px 10px', background: 'var(--surface2)', borderRadius: '8px' }}>
-                  <span style={{ color: won ? 'var(--brand-light)' : 'var(--red)', fontWeight: 600, flexShrink: 0 }}>{won ? 'V' : 'D'}</span>
-                  <span style={{ flex: 1, textAlign: 'center', color: 'var(--text)' }}>
-                    {m.sets.map((s, j) => <span key={j} style={{ marginRight: '6px' }}>{s.team1}-{s.team2}</span>)}
-                  </span>
-                  <span style={{ color: 'var(--muted)', fontSize: '11px', flexShrink: 0 }}>
-                    {new Date(m.startsAt).toLocaleDateString('fr-BE', { day: 'numeric', month: 'short' })}
-                  </span>
+                <div key={i}>
+                  <div onClick={() => setExpandedMatch(isExpanded ? null : i)}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', padding: '8px 10px', background: 'var(--surface2)', borderRadius: isExpanded ? '8px 8px 0 0' : '8px', cursor: 'pointer' }}>
+                    <span style={{ color: won ? 'var(--brand-light)' : 'var(--red)', fontWeight: 700, flexShrink: 0, width: '14px' }}>{won ? 'V' : 'D'}</span>
+                    <span style={{ flex: 1, textAlign: 'center', color: 'var(--text)' }}>
+                      {m.sets.map((s, j) => (
+                        <span key={j} style={{ marginRight: '6px' }}>
+                          {m.team === 1 ? s.team1 : s.team2}<span style={{ color: 'var(--muted)' }}>-</span>{m.team === 1 ? s.team2 : s.team1}
+                          {s.tiebreak && <sup style={{ fontSize: '8px', color: 'var(--muted)' }}>TB</sup>}
+                        </span>
+                      ))}
+                    </span>
+                    <span style={{ color: 'var(--muted)', fontSize: '11px', flexShrink: 0 }}>
+                      {new Date(m.startsAt).toLocaleDateString('fr-BE', { day: 'numeric', month: 'short', timeZone: 'Europe/Brussels' })}
+                    </span>
+                    <span style={{ color: 'var(--muted)', fontSize: '10px', marginLeft: '6px' }}>{isExpanded ? '▲' : '▼'}</span>
+                  </div>
+
+                  {isExpanded && (
+                    <div style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '10px 12px', fontSize: '12px' }}>
+                      <div style={{ color: 'var(--muted)', marginBottom: '6px' }}>
+                        🏟️ {m.courtName || 'Terrain'} · {new Date(m.startsAt).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' })}
+                      </div>
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        {m.sets.map((s, j) => (
+                          <div key={j} style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '10px', color: 'var(--muted)', marginBottom: '2px' }}>Set {j + 1}{s.tiebreak ? ' (TB)' : ''}</div>
+                            <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, color: 'var(--text)' }}>
+                              <span style={{ color: (m.team === 1 ? s.team1 : s.team2) > (m.team === 1 ? s.team2 : s.team1) ? 'var(--brand-light)' : 'var(--red)' }}>
+                                {m.team === 1 ? s.team1 : s.team2}
+                              </span>
+                              <span style={{ color: 'var(--muted)', margin: '0 3px' }}>-</span>
+                              <span>{m.team === 1 ? s.team2 : s.team1}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
           </div>
+
+          {stats.recent.length > 3 && (
+            <button onClick={() => { setShowAll(!showAll); setExpandedMatch(null) }}
+              style={{ marginTop: '8px', width: '100%', background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', fontSize: '12px', color: 'var(--muted)', cursor: 'pointer' }}>
+              {showAll ? 'Réduire' : 'Voir tout l\'historique (' + stats.recent.length + ' matchs)'}
+            </button>
+          )}
         </div>
       )}
     </div>
