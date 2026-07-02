@@ -431,7 +431,7 @@ function MyBookingsList() {
                   </div>
                 )}
 
-                {b.status === 'completed' && (b.players || []).length >= 2 && (
+                {(b.status === 'completed' || new Date(b.ends_at) < new Date()) && (b.players || []).length >= 2 && (
                   <MatchScore booking={b} userId={userId} isAdmin={false} onUpdate={load} />
                 )}
               </div>
