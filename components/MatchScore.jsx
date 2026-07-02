@@ -7,7 +7,7 @@ export default function MatchScore({ booking, userId, isAdmin, onUpdate }) {
   const [saving, setSaving] = useState(false)
   const [teams, setTeams] = useState(() => {
     const init = {}
-    ;(booking.players || []).forEach((p, i) => { init[p.player_id] = p.team || (i % 2 === 0 ? 1 : 2) })
+    ;(booking.players || []).forEach((p, i) => { init[p.id] = p.team || (i % 2 === 0 ? 1 : 2) })
     return init
   })
   const [sets, setSets] = useState(() => {
@@ -21,6 +21,7 @@ export default function MatchScore({ booking, userId, isAdmin, onUpdate }) {
   const canEdit = isAdmin || players.some(p => p.player_id === userId)
 
   function memberName(p) {
+    if (p.guest_name) return p.guest_name + ' (invité)'
     const prof = p.profile
     return prof?.first_name ? prof.first_name + (prof.last_name ? ' ' + prof.last_name[0] + '.' : '') : (prof?.email?.split('@')[0] || 'Joueur')
   }
@@ -52,7 +53,7 @@ export default function MatchScore({ booking, userId, isAdmin, onUpdate }) {
 
     // Sauver l'équipe de chaque joueur
     for (const p of players) {
-      await supabase.from('booking_players').update({ team: teams[p.player_id] }).eq('id', p.id)
+      await supabase.from('booking_players').update({ team: teams[p.id] }).eq('id', p.id)
     }
 
     const cleanSets = validSets.map(s => ({ team1: parseInt(s.team1), team2: parseInt(s.team2), tiebreak: !!s.tiebreak }))
@@ -69,8 +70,8 @@ export default function MatchScore({ booking, userId, isAdmin, onUpdate }) {
     onUpdate && onUpdate()
   }
 
-  const team1Players = players.filter(p => teams[p.player_id] === 1)
-  const team2Players = players.filter(p => teams[p.player_id] === 2)
+  const team1Players = players.filter(p => teams[p.id] === 1)
+  const team2Players = players.filter(p => teams[p.id] === 2)
 
   if (!canEdit && !result) return null
 
@@ -102,12 +103,12 @@ export default function MatchScore({ booking, userId, isAdmin, onUpdate }) {
             <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '6px' }}>Équipes</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {players.map(p => (
-                <div key={p.player_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '13px' }}>
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '13px' }}>
                   <span>{memberName(p)}</span>
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {[1, 2].map(t => (
-                      <button key={t} onClick={() => setTeams(prev => ({ ...prev, [p.player_id]: t }))}
-                        style={{ background: teams[p.player_id] === t ? 'var(--brand)' : 'var(--surface2)', color: teams[p.player_id] === t ? '#fff' : 'var(--muted)', border: 'none', borderRadius: '6px', padding: '4px 12px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                      <button key={t} onClick={() => setTeams(prev => ({ ...prev, [p.id]: t }))}
+                        style={{ background: teams[p.id] === t ? 'var(--brand)' : 'var(--surface2)', color: teams[p.id] === t ? '#fff' : 'var(--muted)', border: 'none', borderRadius: '6px', padding: '4px 12px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
                         Équipe {t}
                       </button>
                     ))}
