@@ -173,6 +173,7 @@ export default function AdminReportsPage() {
       revenueByDay,
       courtStats,
       heatmap,
+      allBookings: allBookings || [],
       rawBookings: bookings || [],
       rawPayments: payments || [],
       from, to,
@@ -254,6 +255,82 @@ export default function AdminReportsPage() {
         </svg>
       </div>
     )
+  }
+
+  const [heatmapWeekOffset, setHeatmapWeekOffset] = useState(0)
+
+  function getWeekBounds(offset) {
+    const now = new Date()
+    const day = now.getDay() === 0 ? 6 : now.getDay() - 1
+    const monday = new Date(now)
+    monday.setDate(now.getDate() - day + offset * 7)
+    monday.setHours(0, 0, 0, 0)
+    const sunday = new Date(monday)
+    sunday.setDate(monday.getDate() + 6)
+    sunday.setHours(23, 59, 59, 999)
+    return { monday, sunday }
+  }
+
+  function getWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+    const dayNum = d.getUTCDay() || 7
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+    return { week: Math.ceil((((d - yearStart) / 86400000) + 1) / 7), year: d.getUTCFullYear() }
+  }
+
+  function computeHeatmap(bookings, weekOffset) {
+    const { monday, sunday } = getWeekBounds(weekOffset)
+    const weekBookings = (bookings || []).filter(b => {
+      const s = new Date(b.starts_at)
+      return s >= monday && s <= sunday
+    })
+
+    const HEATMAP_SLOTS = []
+    for (let h = 9; h <= 23; h++) {
+      HEATMAP_SLOTS.push(h * 60)
+      if (h < 23) HEATMAP_SLOTS.push(h * 60 + 30)
+    }
+    const heatmapGrid = Array.from({ length: 7 }, () => HEATMAP_SLOTS.map(() => 0))
+    let weekdayMinutes = 0, weekendMinutes = 0
+
+    weekBookings.forEach(b => {
+      const start = new Date(b.starts_at)
+      const end = new Date(b.ends_at)
+      const jsDay = start.getDay()
+      const dayIdx = jsDay === 0 ? 6 : jsDay - 1
+      const isWeekend = jsDay === 0 || jsDay === 6
+      const durationMin = (end - start) / 60000
+      if (isWeekend) weekendMinutes += durationMin; else weekdayMinutes += durationMin
+
+      let cursor = new Date(start)
+      while (cursor < end) {
+        const slotMin = cursor.getHours() * 60 + cursor.getMinutes()
+        const sIdx = HEATMAP_SLOTS.indexOf(slotMin)
+        if (sIdx !== -1) heatmapGrid[dayIdx][sIdx]++
+        cursor = new Date(cursor.getTime() + 30 * 60000)
+      }
+    })
+
+    const slotTotals = HEATMAP_SLOTS.map((s, si) => ({ s, total: heatmapGrid.reduce((acc, day) => acc + day[si], 0) }))
+    const peakSlot = slotTotals.reduce((max, cur) => cur.total > max.total ? cur : max, slotTotals[0])
+    const peakH = Math.floor(peakSlot.s / 60)
+    const peakM = peakSlot.s % 60
+
+    function fmtMin(mins) {
+      const h = Math.floor(mins / 60), m = mins % 60
+      return m > 0 ? h + 'h' + String(m).padStart(2,'0') : h + 'h'
+    }
+
+    return {
+      grid: heatmapGrid,
+      slots: HEATMAP_SLOTS,
+      weekdayHours: fmtMin(weekdayMinutes),
+      weekendHours: fmtMin(weekendMinutes),
+      peakHour: peakH + 'h' + (peakM > 0 ? String(peakM).padStart(2,'0') : ''),
+      monday,
+      ...getWeekNumber(monday),
+    }
   }
 
   function HeatmapChart({ heatmap }) {
@@ -377,19 +454,32 @@ export default function AdminReportsPage() {
           </div>
 
           {/* Heatmap horaire */}
-          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-              <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700 }}>
-                Affluence — jour & heure
-              </h2>
-              <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--muted)' }}>
-                <span>🕐 Créneau de pointe : <strong style={{ color: 'var(--text)' }}>{data.heatmap.peakHour}</strong></span>
-                <span>Semaine : <strong style={{ color: 'var(--text)' }}>{data.heatmap.weekdayHours}h</strong></span>
-                <span>Week-end : <strong style={{ color: 'var(--text)' }}>{data.heatmap.weekendHours}h</strong></span>
+          {(() => {
+            const hm = computeHeatmap(data.allBookings, heatmapWeekOffset)
+            return (
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+                  <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700 }}>Affluence — jour & heure</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button onClick={() => setHeatmapWeekOffset(o => o - 1)}
+                      style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', color: 'var(--text)', fontSize: '14px' }}>‹</button>
+                    <span style={{ fontSize: '12px', color: 'var(--text)', fontWeight: 600, minWidth: '90px', textAlign: 'center' }}>
+                      S{hm.week} — {hm.year}
+                    </span>
+                    <button onClick={() => setHeatmapWeekOffset(o => Math.min(o + 1, 0))}
+                      disabled={heatmapWeekOffset >= 0}
+                      style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', cursor: heatmapWeekOffset >= 0 ? 'default' : 'pointer', color: heatmapWeekOffset >= 0 ? 'var(--muted)' : 'var(--text)', fontSize: '14px' }}>›</button>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--muted)', marginBottom: '12px', flexWrap: 'wrap' }}>
+                  <span>🕐 Créneau de pointe : <strong style={{ color: 'var(--text)' }}>{hm.peakHour}</strong></span>
+                  <span>Semaine : <strong style={{ color: 'var(--text)' }}>{hm.weekdayHours}</strong></span>
+                  <span>Week-end : <strong style={{ color: 'var(--text)' }}>{hm.weekendHours}</strong></span>
+                </div>
+                <HeatmapChart heatmap={hm} />
               </div>
-            </div>
-            <HeatmapChart heatmap={data.heatmap} />
-          </div>
+            )
+          })()}
 
           {/* Stats par terrain */}
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', overflow: 'hidden', marginBottom: '16px' }}>
