@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../lib/supabase'
+import { useSport } from '../lib/sportContext'
 
 export default function ClubFeed({ isAdmin, userId }) {
   const [posts, setPosts] = useState([])
@@ -10,6 +11,7 @@ export default function ClubFeed({ isAdmin, userId }) {
   const [posting, setPosting] = useState(false)
   const [isPollMode, setIsPollMode] = useState(false)
   const [pollOptions, setPollOptions] = useState(['', ''])
+  const [postSport, setPostSport] = useState('all') // 'all' | 'padel' | 'badminton'
   const [votes, setVotes] = useState({}) // option_id -> [voter_id, ...]
   const [voting, setVoting] = useState(null)
   const [expandedOptions, setExpandedOptions] = useState({})
@@ -17,6 +19,7 @@ export default function ClubFeed({ isAdmin, userId }) {
   const [commentDrafts, setCommentDrafts] = useState({})
   const [sendingComment, setSendingComment] = useState(null)
   const supabase = createClient()
+  const { activeSport } = useSport()
 
   async function load() {
     setLoading(true)
@@ -27,10 +30,12 @@ export default function ClubFeed({ isAdmin, userId }) {
       .order('created_at', { ascending: false })
       .limit(20)
 
-    setPosts(postsData || [])
+    // sport = null -> visible pour tout le monde ; sinon uniquement pour le sport actif de la session.
+    const visible = (postsData || []).filter(p => !p.sport || !activeSport || p.sport === activeSport)
+    setPosts(visible)
 
     const voteMap = {}
-    ;(postsData || []).forEach(p => {
+    ;(visible || []).forEach(p => {
       ;(p.club_poll_options || []).forEach(o => {
         voteMap[o.id] = (o.club_poll_votes || []).map(v => v.voter_id)
       })
@@ -38,7 +43,7 @@ export default function ClubFeed({ isAdmin, userId }) {
     setVotes(voteMap)
 
     const authorIds = new Set()
-    ;(postsData || []).forEach(p => {
+    ;(visible || []).forEach(p => {
       authorIds.add(p.author_id)
       ;(p.club_post_comments || []).forEach(c => authorIds.add(c.author_id))
       ;(p.club_poll_options || []).forEach(o => (o.club_poll_votes || []).forEach(v => authorIds.add(v.voter_id)))
@@ -53,7 +58,7 @@ export default function ClubFeed({ isAdmin, userId }) {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [activeSport])
 
   async function handlePublish() {
     if (!newPostText.trim() || posting) return
@@ -67,11 +72,13 @@ export default function ClubFeed({ isAdmin, userId }) {
         pinned: false,
         post_type: isPollMode ? 'poll' : 'text',
         options: isPollMode ? pollOptions.filter(o => o.trim()) : undefined,
+        sport: postSport === 'all' ? null : postSport,
       }),
     })
     setNewPostText('')
     setIsPollMode(false)
     setPollOptions(['', ''])
+    setPostSport('all')
     setPosting(false)
     load()
   }
@@ -187,6 +194,27 @@ export default function ClubFeed({ isAdmin, userId }) {
               {posting ? 'Publication...' : 'Publier'}
             </button>
           </div>
+
+          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+            {[
+              { key: 'all', label: 'Tous' },
+              { key: 'padel', label: 'Padel' },
+              { key: 'badminton', label: 'Badminton' },
+            ].map(opt => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setPostSport(opt.key)}
+                style={{
+                  background: postSport === opt.key ? 'var(--brand-dim)' : 'var(--surface2)',
+                  border: '1px solid ' + (postSport === opt.key ? 'var(--brand)' : 'var(--border)'),
+                  color: postSport === opt.key ? 'var(--brand-light)' : 'var(--muted)',
+                  borderRadius: '20px', padding: '4px 12px', fontSize: '11px', fontWeight: 600, cursor: 'pointer',
+                }}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -206,7 +234,10 @@ export default function ClubFeed({ isAdmin, userId }) {
                     </div>
                     <div>
                       <div style={{ fontSize: '13px', fontWeight: 600 }}>Mayfair Padel Club</div>
-                      <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{fmtDate(post.created_at)}{post.pinned ? ' · 📌 Épinglé' : ''}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                        {fmtDate(post.created_at)}{post.pinned ? ' · 📌 Épinglé' : ''}
+                        {post.sport && <> · <span style={{ color: post.sport === 'badminton' ? '#BEF264' : '#C084FC' }}>{post.sport === 'badminton' ? 'Badminton' : 'Padel'}</span></>}
+                      </div>
                     </div>
                   </div>
                   {isAdmin && (

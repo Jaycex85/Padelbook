@@ -6,7 +6,7 @@ export async function POST(req) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Response('Unauthorized', { status: 401 })
 
-  const { content, pinned, post_type, options } = await req.json()
+  const { content, pinned, post_type, options, sport } = await req.json()
   if (!content?.trim()) return new Response(JSON.stringify({ error: 'Contenu requis' }), { status: 400 })
 
   const isPoll = post_type === 'poll'
@@ -20,6 +20,7 @@ export async function POST(req) {
     content: content.trim(),
     pinned: pinned || false,
     post_type: isPoll ? 'poll' : 'text',
+    sport: (sport === 'padel' || sport === 'badminton') ? sport : null, // null = visible pour les deux sports
   }).select().single()
 
   if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500 })
