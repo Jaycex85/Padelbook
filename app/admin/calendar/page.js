@@ -257,9 +257,9 @@ export default function AdminCalendarPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', gap: '12px', flexWrap: 'wrap' }}>
         <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Calendrier</h1>
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {[['booking', 'Réservation'], ['event', 'Event'], ['block', 'Bloc']].map(([t, l]) => (
-            <div key={t} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--muted)' }}>
-              <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: COLORS[t].bg, border: '1.5px solid ' + COLORS[t].border }} />
+          {[['padel', 'Padel'], ['badminton', 'Badminton'], [null, 'Commun/Bloc']].map(([sport, l]) => (
+            <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--muted)' }}>
+              <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: sportColor(sport).bg, border: '1.5px solid ' + sportColor(sport).border }} />
               {l}
             </div>
           ))}

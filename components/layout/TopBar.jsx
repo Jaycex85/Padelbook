@@ -24,10 +24,31 @@ const PAGE_TITLES = {
 
 function SportSwitcher() {
   const { activeSport, setActiveSport } = useSport()
-  if (!activeSport) return null
+  const label = { [SPORTS.PADEL]: 'Padel', [SPORTS.BADMINTON]: 'Badminton' }
+
+  // Aucun sport choisi cette session : deux petits boutons pour choisir directement.
+  if (!activeSport) {
+    return (
+      <div style={{ display: 'flex', gap: '4px' }}>
+        {[SPORTS.PADEL, SPORTS.BADMINTON].map(s => (
+          <button
+            key={s}
+            onClick={() => setActiveSport(s)}
+            style={{
+              background: 'var(--surface2)', border: '1px solid var(--border)',
+              borderRadius: '8px', padding: '4px 10px',
+              color: 'var(--muted)', fontSize: '12px', fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            {label[s]}
+          </button>
+        ))}
+      </div>
+    )
+  }
 
   const other = activeSport === SPORTS.PADEL ? SPORTS.BADMINTON : SPORTS.PADEL
-  const label = { [SPORTS.PADEL]: 'Padel', [SPORTS.BADMINTON]: 'Badminton' }
 
   return (
     <button
