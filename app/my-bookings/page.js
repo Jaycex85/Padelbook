@@ -36,7 +36,6 @@ function MyBookingsList() {
   const [inviteTab, setInviteTab] = useState('member') // 'member' | 'guest'
   const [guestName, setGuestName] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
-  const [guestPayMethod, setGuestPayMethod] = useState('wallet') // 'wallet' | 'payconic'
   const [openChatId, setOpenChatId] = useState(null)
   const supabase = createClient()
   const { activeSport } = useSport()
@@ -209,62 +208,27 @@ function MyBookingsList() {
       return
     }
 
-    if (guestPayMethod === 'wallet') {
-      const { data: ownerProfile } = await supabase.from('profiles').select('wallet_balance').eq('id', userId).single()
-      const available = ownerProfile?.wallet_balance || 0
-      if (available < basePrice) {
-        alert('Solde wallet insuffisant pour couvrir cet invité (' + basePrice.toFixed(2) + ' € requis). Rechargez votre wallet ou choisissez le paiement par carte.')
-        return
-      }
+    // Mode split/wallet payant : on crée la place en attente, puis on ouvre
+    // le choix de paiement partagé (même modal que partout ailleurs).
+    setInviting(true)
+    const { data: newPlayer } = await supabase.from('booking_players').insert({
+      booking_id: inviteTarget.id,
+      guest_name: guestName.trim(),
+      ...(guestEmail.trim() && { guest_email: guestEmail.trim() }),
+      is_owner: false,
+      payment_status: 'pending',
+      base_price: basePrice,
+      discount_percent: 0,
+      effective_price: basePrice,
+    }).select().single()
+    setInviting(false)
 
-      setInviting(true)
-      const { data: newPlayer } = await supabase.from('booking_players').insert({
-        booking_id: inviteTarget.id,
-        guest_name: guestName.trim(),
-        ...(guestEmail.trim() && { guest_email: guestEmail.trim() }),
-        is_owner: false,
-        payment_status: 'paid',
-        paid_at: new Date().toISOString(),
-        base_price: basePrice,
-        discount_percent: 0,
-        effective_price: basePrice,
-      }).select().single()
-
-      await supabase.from('profiles').update({ wallet_balance: available - basePrice }).eq('id', userId)
-      await supabase.from('wallet_transactions').insert({
-        profile_id: userId, amount: -basePrice, type: 'debit',
-        description: 'Invité ' + guestName.trim() + ' - ' + (inviteTarget.court?.name || ''),
-        booking_id: inviteTarget.id,
-      })
-
-      setInviting(false)
+    if (newPlayer) {
+      const target = inviteTarget
       setInviteTarget(null)
-      load()
-    } else {
-      // Paiement carte (PayConic) — passe par le flow de paiement stub existant.
-      // On crée d'abord la place invité en pending, puis on redirige vers le paiement.
-      setInviting(true)
-      const { data: newPlayer } = await supabase.from('booking_players').insert({
-        booking_id: inviteTarget.id,
-        guest_name: guestName.trim(),
-        ...(guestEmail.trim() && { guest_email: guestEmail.trim() }),
-        is_owner: false,
-        payment_status: 'pending',
-        base_price: basePrice,
-        discount_percent: 0,
-        effective_price: basePrice,
-      }).select().single()
-
-      const res = await fetch('/api/payments/initiate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ booking_id: inviteTarget.id, booking_player_id: newPlayer.id }),
-      })
-      const payData = await res.json()
-      setInviting(false)
-      if (payData.payment_url) {
-        window.location.href = payData.payment_url
-      }
+      setGuestName('')
+      setGuestEmail('')
+      setPendingPayment({ bookingId: target.id, playerId: newPlayer.id, amount: basePrice })
     }
   }
 
@@ -619,29 +583,14 @@ function MyBookingsList() {
                 </div>
 
                 {inviteTarget?.payment_mode !== 'full' && (
-                  <>
-                    <div style={{ background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: 'var(--amber)' }}>
-                      Cet invité n'a pas de compte — c'est <strong>vous</strong> qui réglez sa part ({inviteTarget?.price_per_player?.toFixed(2)} €) maintenant.
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Mode de paiement</label>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                    <button onClick={() => setGuestPayMethod('wallet')}
-                      style={{ flex: 1, background: guestPayMethod === 'wallet' ? 'var(--brand-dim)' : 'var(--surface2)', border: '1.5px solid ' + (guestPayMethod === 'wallet' ? 'var(--brand)' : 'var(--border)'), color: guestPayMethod === 'wallet' ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
-                      💳 Wallet
-                    </button>
-                    <button onClick={() => setGuestPayMethod('payconic')}
-                      style={{ flex: 1, background: guestPayMethod === 'payconic' ? 'var(--brand-dim)' : 'var(--surface2)', border: '1.5px solid ' + (guestPayMethod === 'payconic' ? 'var(--brand)' : 'var(--border)'), color: guestPayMethod === 'payconic' ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '10px', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>
-                      💳 Carte (PayConic)
-                    </button>
+                  <div style={{ background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '8px', padding: '10px 12px', fontSize: '12px', color: 'var(--amber)' }}>
+                    Cet invité n'a pas de compte — c'est <strong>vous</strong> qui réglez sa part ({inviteTarget?.price_per_player?.toFixed(2)} €). Le choix du mode de paiement sera proposé juste après.
                   </div>
-                </div>
-                  </>
                 )}
 
                 <button onClick={inviteGuest} disabled={inviting || !guestName.trim()}
                   style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: (inviting || !guestName.trim()) ? 0.5 : 1, marginTop: '4px' }}>
-                  {inviting ? 'Traitement...' : inviteTarget?.payment_mode === 'full' ? 'Ajouter l\'invité' : 'Ajouter et payer ' + (inviteTarget?.price_per_player?.toFixed(2) || '') + ' €'}
+                  {inviting ? 'Traitement...' : inviteTarget?.payment_mode === 'full' ? 'Ajouter l\'invité' : 'Ajouter (' + (inviteTarget?.price_per_player?.toFixed(2) || '') + ' €)'}
                 </button>
               </div>
             )}

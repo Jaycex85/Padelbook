@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import Chat from '../../components/Chat'
 import { useSport } from '../../lib/sportContext'
+import PaymentMethodModal from '../../components/PaymentMethodModal'
 
 export default function EventsPage() {
   const [events, setEvents] = useState([])
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [registering, setRegistering] = useState(null)
+  const [pendingPayment, setPendingPayment] = useState(null) // { eventRegistrationId, amount }
   const [openChatId, setOpenChatId] = useState(null)
   const supabase = createClient()
   const { activeSport } = useSport()
@@ -58,15 +60,40 @@ export default function EventsPage() {
       price_paid: event.price_per_player,
     }).select().single()
 
-    if (error) { alert(error.message); setRegistering(null); return }
+    setRegistering(null)
+    if (error) { alert(error.message); return }
 
+    if (event.price_per_player > 0) {
+      setPendingPayment({ eventRegistrationId: reg.id, amount: event.price_per_player })
+    } else {
+      load()
+    }
+  }
+
+  async function payEventViaWallet() {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: prof } = await supabase.from('profiles').select('wallet_balance').eq('id', user.id).single()
+    const available = prof?.wallet_balance || 0
+    if (available >= pendingPayment.amount) {
+      await supabase.from('profiles').update({ wallet_balance: available - pendingPayment.amount }).eq('id', user.id)
+      await supabase.from('wallet_transactions').insert({
+        profile_id: user.id, amount: -pendingPayment.amount, type: 'debit',
+        description: 'Inscription Club Event',
+      })
+      await supabase.from('event_registrations').update({ payment_status: 'paid', status: 'confirmed' }).eq('id', pendingPayment.eventRegistrationId)
+    }
+    setPendingPayment(null)
+    load()
+  }
+
+  async function payEventViaCard() {
     const res = await fetch('/api/payments/initiate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ event_registration_id: reg.id, amount: event.price_per_player }),
+      body: JSON.stringify({ event_registration_id: pendingPayment.eventRegistrationId, amount: pendingPayment.amount }),
     })
-    const payData = await res.json()
-    setRegistering(null)
+    const payData = await res.json().catch(() => ({}))
+    setPendingPayment(null)
     if (payData.payment_url) window.location.href = payData.payment_url
     else load()
   }
@@ -168,6 +195,15 @@ export default function EventsPage() {
             )
           })}
         </div>
+      )}
+
+      {pendingPayment && (
+        <PaymentMethodModal
+          amount={pendingPayment.amount}
+          onChooseWallet={payEventViaWallet}
+          onChooseCard={payEventViaCard}
+          onClose={() => setPendingPayment(null)}
+        />
       )}
     </div>
   )
