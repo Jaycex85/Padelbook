@@ -34,15 +34,13 @@ function SportSwitcher() {
       onClick={() => setActiveSport(other)}
       title={`Passer en ${label[other]}`}
       style={{
-        display: 'flex', alignItems: 'center', gap: '6px',
         background: 'var(--brand-dim)', border: '1px solid var(--brand)',
-        borderRadius: '8px', padding: '5px 12px',
-        color: 'var(--brand-light)', fontSize: '13px', fontWeight: 600,
+        borderRadius: '8px', padding: '4px 10px',
+        color: 'var(--brand-light)', fontSize: '12px', fontWeight: 600,
         cursor: 'pointer',
       }}
     >
-      {label[activeSport]}
-      <span style={{ fontSize: '11px', color: 'var(--muted)' }}>⇄ {label[other]}</span>
+      {label[other]}
     </button>
   )
 }
