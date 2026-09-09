@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import Chat from '../../components/Chat'
+import { useSport } from '../../lib/sportContext'
+import SportGate from '../../components/layout/SportGate'
 
 export default function EventsPage() {
   const [events, setEvents] = useState([])
@@ -10,6 +12,7 @@ export default function EventsPage() {
   const [registering, setRegistering] = useState(null)
   const [openChatId, setOpenChatId] = useState(null)
   const supabase = createClient()
+  const { activeSport } = useSport()
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -30,6 +33,8 @@ export default function EventsPage() {
 
     const role = p?.role || 'public'
     const visible = (data || []).filter(ev => {
+      if (!activeSport && ev.sport) return false // pas encore de sport choisi -> événements communs uniquement
+      if (activeSport && ev.sport && ev.sport !== activeSport) return false
       if (ev.who === 'all') return true
       if (ev.who === 'member') return role === 'member' || role === 'admin'
       if (ev.who === 'public') return role === 'public'
@@ -40,7 +45,7 @@ export default function EventsPage() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [activeSport])
 
   async function handleRegister(event) {
     if (!profile) { window.location.href = '/login'; return }
@@ -76,6 +81,7 @@ export default function EventsPage() {
   const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
 
   if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
+  if (!activeSport) return <SportGate />
 
   return (
     <div>

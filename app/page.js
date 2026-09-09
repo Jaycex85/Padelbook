@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { createServerSupabase } from '../lib/supabaseServer'
 import ClubFeed from '../components/ClubFeed'
 import CourtsGrid from '../components/CourtsGrid'
+import NextEventBanner from '../components/NextEventBanner'
 
 export default async function HomePage() {
   const supabase = await createServerSupabase()
@@ -53,7 +54,8 @@ export default async function HomePage() {
     )
   }
 
-  // Prochain événement à venir (le plus proche dans le temps)
+  // Prochains événements à venir — on en récupère plusieurs pour pouvoir
+  // trouver le premier qui correspond au sport actif de la session (côté client).
   const now = new Date().toISOString()
   const { data: nextEvents } = await supabase
     .from('club_events')
@@ -61,7 +63,7 @@ export default async function HomePage() {
     .eq('status', 'active')
     .gte('ends_at', now)
     .order('starts_at')
-    .limit(1)
+    .limit(20)
 
   const nextEvent = nextEvents && nextEvents[0]
   const fmtEventDate = d => new Date(d).toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -76,23 +78,8 @@ export default async function HomePage() {
         </p>
       </div>
 
-      {/* Prochain Club Event en avant si présent */}
-      {nextEvent && (
-        <Link href="/events" style={{ display: 'block', textDecoration: 'none', marginBottom: '20px' }}>
-          <div style={{ background: 'linear-gradient(135deg, var(--brand-dark), var(--surface))', border: '1px solid var(--brand)', borderRadius: '16px', padding: '18px 20px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{ position: 'absolute', top: 0, right: 0, background: 'var(--brand)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '4px 14px', borderRadius: '0 0 0 10px', letterSpacing: '0.5px' }}>
-              PROCHAIN EVENT
-            </div>
-            <div style={{ fontSize: '13px', color: 'var(--brand-light)', marginBottom: '4px' }}>🏆 Club Event</div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '17px', fontWeight: 700, marginBottom: '6px', paddingRight: '60px' }}>
-              Mayfair Padel — {nextEvent.label}
-            </div>
-            <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
-              {fmtEventDate(nextEvent.starts_at)} · {fmtEventTime(nextEvent.starts_at)} · {nextEvent.price_per_player} €/pers
-            </div>
-          </div>
-        </Link>
-      )}
+      {/* Prochain Club Event en avant si présent, filtré par sport côté client */}
+      {nextEvents && nextEvents.length > 0 && <NextEventBanner events={nextEvents} />}
 
       <ClubFeed isAdmin={profile?.role === 'admin'} userId={user.id} />
 
