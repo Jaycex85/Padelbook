@@ -4,10 +4,13 @@ import { useState, useEffect } from 'react'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import BottomNav from './BottomNav'
+import SportGate from './SportGate'
+import { useSport } from '../../lib/sportContext'
 
 export default function AppShell({ children, user, profile }) {
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { activeSport } = useSport()
 
   useEffect(() => { setSidebarOpen(false) }, [pathname])
 
@@ -16,6 +19,10 @@ export default function AppShell({ children, user, profile }) {
 
   return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+
+      {/* Choix du sport : overlay demandé à chaque lancement/refresh, le contenu
+          derrière continue de charger normalement pendant ce temps. */}
+      {user && !activeSport && <SportGate />}
 
       {/* Sidebar desktop */}
       <div className="sidebar-desktop-wrapper">

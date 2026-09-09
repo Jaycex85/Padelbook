@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import Chat from '../../components/Chat'
 import { useSport } from '../../lib/sportContext'
-import SportGate from '../../components/layout/SportGate'
 
 export default function EventsPage() {
   const [events, setEvents] = useState([])
@@ -81,7 +80,6 @@ export default function EventsPage() {
   const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
 
   if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
-  if (!activeSport) return <SportGate />
 
   return (
     <div>

@@ -7,7 +7,6 @@ import { Suspense } from 'react'
 import Chat from '../../components/Chat'
 import MatchScore from '../../components/MatchScore'
 import { useSport } from '../../lib/sportContext'
-import SportGate from '../../components/layout/SportGate'
 
 const STATUS_STYLES = {
   confirmed: { bg: 'var(--brand-dim)', color: 'var(--brand-light)', label: 'Confirmé' },
@@ -307,7 +306,6 @@ function MyBookingsList() {
   const memberName = p => p.profile ? (p.profile.first_name || p.profile.email || 'Joueur') : (p.guest_name ? p.guest_name + ' (invité)' : 'Joueur')
 
   if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
-  if (!activeSport) return <SportGate />
 
   return (
     <div>
