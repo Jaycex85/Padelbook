@@ -5,6 +5,7 @@ import NotificationSettings from '../../components/NotificationSettings'
 import PlayerStats from '../../components/PlayerStats'
 import WalletHistory from '../../components/WalletHistory'
 import { useRouter } from 'next/navigation'
+import { goToPaymentUrl } from '../../lib/paymentNav'
 
 const MD_RANKS = ['MD50','MD100','MD200','MD300','MD400','MD500','MD700','MD1000']
 const WD_RANKS = ['WD50','WD100','WD200','WD300','WD400','WD500']
@@ -79,7 +80,7 @@ export default function ProfilePage() {
     const payData = await res.json().catch(() => ({}))
     setTopupLoading(false)
     if (payData.payment_url) {
-      window.location.href = payData.payment_url
+      goToPaymentUrl(router, payData.payment_url)
     } else {
       alert(payData.error || 'Impossible d\'initier la recharge pour le moment.')
     }

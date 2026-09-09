@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import { calcEffectivePrice } from '../../lib/bookingUtils'
 import { useSport } from '../../lib/sportContext'
 import PaymentMethodModal from '../../components/PaymentMethodModal'
+import { goToPaymentUrl } from '../../lib/paymentNav'
 
 export default function OpenMatchesPage() {
   const [matches, setMatches] = useState([])
@@ -13,6 +15,7 @@ export default function OpenMatchesPage() {
   const [pendingPayment, setPendingPayment] = useState(null) // { matchId, playerId, amount }
   const supabase = createClient()
   const { activeSport } = useSport()
+  const router = useRouter()
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -90,7 +93,7 @@ export default function OpenMatchesPage() {
     })
     const payData = await res.json().catch(() => ({}))
     if (payData.payment_url) {
-      window.location.href = payData.payment_url
+      goToPaymentUrl(router, payData.payment_url)
     }
   }
 

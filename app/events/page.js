@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import Chat from '../../components/Chat'
 import { useSport } from '../../lib/sportContext'
 import PaymentMethodModal from '../../components/PaymentMethodModal'
+import { goToPaymentUrl } from '../../lib/paymentNav'
 
 export default function EventsPage() {
   const [events, setEvents] = useState([])
@@ -14,6 +16,7 @@ export default function EventsPage() {
   const [openChatId, setOpenChatId] = useState(null)
   const supabase = createClient()
   const { activeSport } = useSport()
+  const router = useRouter()
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -94,7 +97,7 @@ export default function EventsPage() {
     })
     const payData = await res.json().catch(() => ({}))
     setPendingPayment(null)
-    if (payData.payment_url) window.location.href = payData.payment_url
+    if (payData.payment_url) goToPaymentUrl(router, payData.payment_url)
     else load()
   }
 

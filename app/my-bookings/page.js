@@ -2,12 +2,13 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { canCancelBooking, calcRefundAmount, calcEffectivePrice, calcOpenBalance } from '../../lib/bookingUtils'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Suspense } from 'react'
 import Chat from '../../components/Chat'
 import MatchScore from '../../components/MatchScore'
 import { useSport } from '../../lib/sportContext'
 import PaymentMethodModal from '../../components/PaymentMethodModal'
+import { goToPaymentUrl } from '../../lib/paymentNav'
 
 const STATUS_STYLES = {
   confirmed: { bg: 'var(--brand-dim)', color: 'var(--brand-light)', label: 'Confirmé' },
@@ -39,6 +40,7 @@ function MyBookingsList() {
   const [openChatId, setOpenChatId] = useState(null)
   const supabase = createClient()
   const { activeSport } = useSport()
+  const router = useRouter()
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -265,7 +267,7 @@ function MyBookingsList() {
     const payData = await res.json().catch(() => ({}))
     setPayingShare(null)
     if (payData.payment_url) {
-      window.location.href = payData.payment_url
+      goToPaymentUrl(router, payData.payment_url)
     } else {
       alert('Impossible d\'initier le paiement pour le moment.')
     }
