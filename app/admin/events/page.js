@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { generateSeriesDates, buildOccurrencePayload } from '../../../lib/eventSeriesUtils'
 import DeletionHistory from '../../../components/DeletionHistory'
+import { sportColor } from '../../../lib/sportColors'
 
 const WHO_LABELS = { all: 'Tout le monde', member: 'Joueurs (ancien rôle)', public: 'Joueurs enregistrés', cotisant: 'Membres du club' }
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
@@ -10,7 +11,7 @@ const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dima
 const EMPTY_FORM = {
   label: '', starts_at: '', ends_at: '', max_players: 8,
   price_per_player: 10, description: '', who: 'all',
-  cancellation_deadline_hours: 24, court_ids: [],
+  cancellation_deadline_hours: 24, court_ids: [], sport: null, // null = commun aux deux sports
   day_of_week: 4, start_time: '19:00', end_time: '21:00',
   series_starts_on: '', series_ends_on: '',
 }
@@ -34,7 +35,7 @@ export default function AdminEventsPage() {
     const [{ data: ev }, { data: sr }, { data: c }] = await Promise.all([
       supabase.from('club_events').select('*, club_event_courts(court_id, courts(name)), event_registrations(id, status, payment_status)').order('starts_at', { ascending: false }),
       supabase.from('club_event_series').select('*, club_event_series_courts(courts(name))').order('created_at', { ascending: false }),
-      supabase.from('courts').select('id, name').eq('status', 'active').order('sort_order'),
+      supabase.from('courts').select('id, name, sport').eq('status', 'active').order('sort_order'),
     ])
     setEvents(ev || [])
     setSeries(sr || [])
@@ -79,6 +80,7 @@ export default function AdminEventsPage() {
       who: ev.who,
       cancellation_deadline_hours: ev.cancellation_deadline_hours,
       court_ids: (ev.club_event_courts || []).map(c => c.court_id),
+      sport: ev.sport || null,
     })
     setShowForm(true)
   }
@@ -94,6 +96,7 @@ export default function AdminEventsPage() {
       description: form.description || null,
       who: form.who,
       cancellation_deadline_hours: parseInt(form.cancellation_deadline_hours),
+      sport: form.sport || null,
     }).select().single()
 
     if (evErr) { console.error(evErr); return }
@@ -121,6 +124,7 @@ export default function AdminEventsPage() {
       description: form.description || null,
       who: form.who,
       cancellation_deadline_hours: parseInt(form.cancellation_deadline_hours),
+      sport: form.sport || null,
     }).eq('id', eventId)
 
     // 2. Récupérer les liaisons terrain existantes (avec leur block)
@@ -171,6 +175,7 @@ export default function AdminEventsPage() {
       description: form.description || null,
       who: form.who,
       cancellation_deadline_hours: parseInt(form.cancellation_deadline_hours),
+      sport: form.sport || null,
     }).select().single()
 
     if (srErr) { console.error(srErr); return }
@@ -338,15 +343,17 @@ export default function AdminEventsPage() {
     const paidCount = regs.filter(r => r.payment_status === 'paid').length
     const courtsNames = (ev.club_event_courts || []).map(c => c.courts?.name).filter(Boolean).join(', ')
     const isCancelled = ev.status === 'cancelled'
+    const col = sportColor(ev.sport)
 
     return (
-      <div key={ev.id} style={{ background: compact ? 'var(--surface2)' : 'var(--surface)', border: '1px solid ' + (isCancelled ? 'var(--border)' : 'var(--brand)'), borderRadius: compact ? '10px' : '16px', padding: compact ? '12px 16px' : '16px 20px', opacity: isCancelled ? 0.5 : 1 }}>
+      <div key={ev.id} style={{ background: compact ? 'var(--surface2)' : 'var(--surface)', border: '1px solid ' + (isCancelled ? 'var(--border)' : col.border), borderLeft: isCancelled ? undefined : '3px solid ' + col.border, borderRadius: compact ? '10px' : '16px', padding: compact ? '12px 16px' : '16px 20px', opacity: isCancelled ? 0.5 : 1 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '180px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
               <span style={{ fontFamily: "'Syne',sans-serif", fontSize: compact ? '14px' : '16px', fontWeight: 700 }}>
                 {compact ? fmt(ev.starts_at) : 'Mayfair Padel — ' + ev.label}
               </span>
+              {ev.sport && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: col.dim, color: col.text }}>{ev.sport === 'badminton' ? 'Badminton' : 'Padel'}</span>}
               {isCancelled && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(248,113,113,0.1)', color: 'var(--red)' }}>Annulé</span>}
             </div>
             <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '8px' }}>
@@ -553,14 +560,38 @@ export default function AdminEventsPage() {
             )}
 
             <div style={{ marginBottom: '14px' }}>
+              <label style={labelStyle}>Sport concerné</label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                {[
+                  { key: null, label: 'Tous' },
+                  { key: 'padel', label: 'Padel' },
+                  { key: 'badminton', label: 'Badminton' },
+                ].map(opt => {
+                  const col = sportColor(opt.key)
+                  const active = form.sport === opt.key
+                  return (
+                    <button key={opt.label} onClick={() => setForm({ ...form, sport: opt.key })}
+                      style={{ background: active ? col.dim : 'var(--surface2)', border: '1px solid ' + (active ? col.border : 'var(--border)'), color: active ? col.text : 'var(--muted)', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '14px' }}>
               <label style={labelStyle}>Terrains concernés</label>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {courts.map(c => (
-                  <button key={c.id} onClick={() => toggleCourt(c.id)}
-                    style={{ background: form.court_ids.includes(c.id) ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (form.court_ids.includes(c.id) ? 'var(--brand)' : 'var(--border)'), color: form.court_ids.includes(c.id) ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
-                    {c.name}
-                  </button>
-                ))}
+                {courts.map(c => {
+                  const col = sportColor(c.sport)
+                  const active = form.court_ids.includes(c.id)
+                  return (
+                    <button key={c.id} onClick={() => toggleCourt(c.id)}
+                      style={{ background: active ? col.dim : 'var(--surface2)', border: '1px solid ' + (active ? col.border : 'var(--border)'), color: active ? col.text : 'var(--muted)', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
+                      {c.name}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

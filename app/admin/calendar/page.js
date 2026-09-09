@@ -1,16 +1,9 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '../../../lib/supabase'
+import { sportColor } from '../../../lib/sportColors'
 
 const DAYS_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-
-// 'booking' suit le thème du sport actif (--brand*), fixé via [data-sport] sur <html>.
-// 'event' et 'block' restent des couleurs fixes, communes aux deux sports.
-const COLORS = {
-  booking: { bg: 'var(--brand-dim)', border: 'var(--brand)', text: 'var(--brand-light)', badge: 'var(--brand)' },
-  event:   { bg: 'rgba(74,222,128,0.12)',  border: '#4ADE80', text: '#4ADE80', badge: '#4ADE80' },
-  block:   { bg: 'rgba(252,211,77,0.1)',   border: '#FCD34D', text: '#FCD34D', badge: '#FCD34D' },
-}
 const TYPE_LABELS = { booking: 'Réservation', event: 'Club Event', block: 'Bloc' }
 
 function startOfWeek(date) {
@@ -56,14 +49,14 @@ export default function AdminCalendarPage() {
 
     const [{ data: bookings }, { data: events }, { data: blocks }] = await Promise.all([
       supabase.from('bookings')
-        .select('id, starts_at, ends_at, status, total_price, court:courts(name), owner:profiles(first_name, last_name, email)')
+        .select('id, starts_at, ends_at, status, total_price, court:courts(name, sport), owner:profiles(first_name, last_name, email)')
         .in('status', ['confirmed', 'pending'])
         .gte('starts_at', f).lte('starts_at', t),
       supabase.from('club_events')
-        .select('id, label, starts_at, ends_at, club_event_courts(courts(name))')
+        .select('id, label, starts_at, ends_at, sport, club_event_courts(courts(name))')
         .eq('status', 'active').gte('starts_at', f).lte('starts_at', t),
       supabase.from('blocks')
-        .select('id, label, reason, starts_at, ends_at, all_courts, court:courts(name)')
+        .select('id, label, reason, starts_at, ends_at, all_courts, court:courts(name, sport)')
         .gte('starts_at', f).lte('ends_at', t),
     ])
 
@@ -74,21 +67,21 @@ export default function AdminCalendarPage() {
         sublabel: b.owner ? ((b.owner.first_name || '') + ' ' + (b.owner.last_name || '')).trim() || b.owner.email : '',
         starts_at: b.starts_at, ends_at: b.ends_at,
         status: b.status, price: b.total_price,
-        color: COLORS.booking,
+        color: sportColor(b.court?.sport),
       })),
       ...(events || []).map(e => ({
         type: 'event',
         label: 'Mayfair Padel — ' + e.label,
         sublabel: (e.club_event_courts || []).map(c => c.courts?.name).filter(Boolean).join(', '),
         starts_at: e.starts_at, ends_at: e.ends_at,
-        color: COLORS.event,
+        color: sportColor(e.sport), // null/absent = commun aux deux sports -> neutre
       })),
       ...(blocks || []).map(b => ({
         type: 'block',
         label: b.label || b.reason,
         sublabel: b.all_courts ? 'Tous terrains' : (b.court?.name || ''),
         starts_at: b.starts_at, ends_at: b.ends_at,
-        color: COLORS.block,
+        color: b.all_courts ? sportColor(null) : sportColor(b.court?.sport),
       })),
     ].sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at)))
 

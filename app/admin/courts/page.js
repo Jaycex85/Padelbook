@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
+import { sportColor } from '../../../lib/sportColors'
 
 const PAYMENT_MODE_LABELS = { full: 'Paiement complet', split: 'Split par joueur', wallet: 'Wallet' }
 const PAYMENT_MODE_DESC = {
@@ -144,7 +145,7 @@ export default function AdminCourtsPage() {
       ) : (
         <div className="courts-list">
           {courts.map(court => (
-            <div key={court.id} className="court-row">
+            <div key={court.id} className="court-row" style={{ borderLeft: '3px solid ' + sportColor(court.sport).border }}>
               <div className="court-row-info">
                 <div className="court-row-name">{court.name}</div>
                 <div className="court-row-meta">

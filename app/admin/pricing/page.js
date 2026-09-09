@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
+import { sportColor } from '../../../lib/sportColors'
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const WEEKDAYS = [0, 1, 2, 3, 4]
@@ -23,7 +24,7 @@ export default function AdminPricingPage() {
     setLoading(true)
     const [{ data: ps }, { data: c }] = await Promise.all([
       supabase.from('price_slots').select('*').order('sort_order').order('time_from'),
-      supabase.from('courts').select('id, name, price_per_slot').eq('status', 'active').order('sort_order'),
+      supabase.from('courts').select('id, name, price_per_slot, sport').eq('status', 'active').order('sort_order'),
     ])
     setSlots(ps || [])
     setCourts(c || [])
@@ -99,12 +100,15 @@ export default function AdminPricingPage() {
           Prix de base par terrain (fallback si aucune tranche ne matche)
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-          {courts.map(c => (
-            <div key={c.id} style={{ background: 'var(--surface2)', borderRadius: '8px', padding: '8px 14px', fontSize: '13px' }}>
-              <span style={{ color: 'var(--muted)' }}>{c.name}</span>
-              <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, color: 'var(--brand-light)', marginLeft: '8px' }}>{c.price_per_slot} €</span>
-            </div>
-          ))}
+          {courts.map(c => {
+            const col = sportColor(c.sport)
+            return (
+              <div key={c.id} style={{ background: col.dim, border: '1px solid ' + col.border, borderRadius: '8px', padding: '8px 14px', fontSize: '13px' }}>
+                <span style={{ color: col.text }}>{c.name}</span>
+                <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, color: col.text, marginLeft: '8px' }}>{c.price_per_slot} €</span>
+              </div>
+            )
+          })}
           {courts.length === 0 && <span style={{ fontSize: '13px', color: 'var(--muted)' }}>Aucun terrain actif.</span>}
         </div>
       </div>

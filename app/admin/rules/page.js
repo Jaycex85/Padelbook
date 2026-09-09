@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
+import { sportColor } from '../../../lib/sportColors'
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
@@ -65,8 +66,8 @@ export default function AdminRulesPage() {
   async function load() {
     setLoading(true)
     const [{ data: r }, { data: c }] = await Promise.all([
-      supabase.from('access_rules').select('*, court:courts(name)').order('priority', { ascending: false }),
-      supabase.from('courts').select('id, name').eq('status', 'active'),
+      supabase.from('access_rules').select('*, court:courts(name, sport)').order('priority', { ascending: false }),
+      supabase.from('courts').select('id, name, sport').eq('status', 'active'),
     ])
     setRules(r || [])
     setCourts(c || [])
@@ -167,7 +168,7 @@ export default function AdminRulesPage() {
               </span>
             )}
             {type === 'access' && !rule.all_courts && rule.court && (
-              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(139,148,158,0.1)', color: 'var(--muted)' }}>{rule.court.name}</span>
+              <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: sportColor(rule.court.sport).dim, color: sportColor(rule.court.sport).text }}>{rule.court.name}</span>
             )}
             {type === 'access' && rule.days_of_week && (
               <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(139,148,158,0.1)', color: 'var(--muted)' }}>{rule.days_of_week.map(d => DAYS[d]).join(', ')}</span>
@@ -261,12 +262,16 @@ export default function AdminRulesPage() {
               <label style={labelStyle}>Terrain (optionnel — tous par défaut)</label>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 <button onClick={() => setForm({...form, all_courts: true})} style={{ background: form.all_courts ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (form.all_courts ? 'var(--brand)' : 'var(--border)'), color: form.all_courts ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>Tous</button>
-                {courts.map(c => (
-                  <button key={c.id} onClick={() => setForm({...form, all_courts: false, court_id: c.id})}
-                    style={{ background: !form.all_courts && form.court_id === c.id ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (!form.all_courts && form.court_id === c.id ? 'var(--brand)' : 'var(--border)'), color: !form.all_courts && form.court_id === c.id ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
-                    {c.name}
-                  </button>
-                ))}
+                {courts.map(c => {
+                  const col = sportColor(c.sport)
+                  const active = !form.all_courts && form.court_id === c.id
+                  return (
+                    <button key={c.id} onClick={() => setForm({...form, all_courts: false, court_id: c.id})}
+                      style={{ background: active ? col.dim : 'var(--surface2)', border: '1px solid ' + (active ? col.border : 'var(--border)'), color: active ? col.text : 'var(--muted)', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
+                      {c.name}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 

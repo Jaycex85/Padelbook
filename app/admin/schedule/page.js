@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import DeletionHistory from '../../../components/DeletionHistory'
+import { sportColor } from '../../../lib/sportColors'
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 const DAYS_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -35,7 +36,7 @@ export default function AdminSchedulePage() {
   })
 
   async function loadCourts() {
-    const { data } = await supabase.from('courts').select('id, name').eq('status', 'active').order('sort_order')
+    const { data } = await supabase.from('courts').select('id, name, sport').eq('status', 'active').order('sort_order')
     setCourts(data || [])
     if (data && data.length > 0 && !selectedCourt) setSelectedCourt(data[0].id)
     setLoading(false)
@@ -47,7 +48,7 @@ export default function AdminSchedulePage() {
   }
 
   async function loadBlocks() {
-    const { data } = await supabase.from('blocks').select('*, court:courts(name)').gte('ends_at', new Date().toISOString()).order('starts_at')
+    const { data } = await supabase.from('blocks').select('*, court:courts(name, sport)').gte('ends_at', new Date().toISOString()).order('starts_at')
     setBlocks(data || [])
   }
 
@@ -227,11 +228,24 @@ export default function AdminSchedulePage() {
 
       {/* Sélecteur terrain */}
       <div className="court-tabs">
-        {courts.map(c => (
-          <button key={c.id} className={'court-tab' + (selectedCourt === c.id ? ' active' : '')} onClick={() => setSelectedCourt(c.id)}>
-            {c.name}
-          </button>
-        ))}
+        {courts.map(c => {
+          const col = sportColor(c.sport)
+          const active = selectedCourt === c.id
+          return (
+            <button
+              key={c.id}
+              className="court-tab"
+              onClick={() => setSelectedCourt(c.id)}
+              style={{
+                borderColor: active ? col.border : 'var(--border)',
+                color: active ? col.text : 'var(--muted)',
+                background: active ? col.dim : 'var(--surface)',
+              }}
+            >
+              {c.name}
+            </button>
+          )
+        })}
       </div>
 
       {/* Semaine type */}
@@ -274,18 +288,23 @@ export default function AdminSchedulePage() {
         <p className="text-muted" style={{fontSize:'14px'}}>Aucun bloc planifié.</p>
       ) : (
         <div className="blocks-list">
-          {blocks.map(block => (
-            <div key={block.id} className="block-row">
-              <div className="block-reason">{block.reason}</div>
-              <div className="block-label">{block.label || 'Sans titre'}</div>
-              <div className="block-dates">
-                {new Date(block.starts_at).toLocaleDateString('fr-BE')} {new Date(block.starts_at).toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'})} → {new Date(block.ends_at).toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'})}
+          {blocks.map(block => {
+            const col = block.all_courts ? sportColor(null) : sportColor(block.court?.sport)
+            return (
+              <div key={block.id} className="block-row" style={{ borderLeft: '3px solid ' + col.border }}>
+                <div className="block-reason">{block.reason}</div>
+                <div className="block-label">{block.label || 'Sans titre'}</div>
+                <div className="block-dates">
+                  {new Date(block.starts_at).toLocaleDateString('fr-BE')} {new Date(block.starts_at).toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'})} → {new Date(block.ends_at).toLocaleTimeString('fr-BE',{hour:'2-digit',minute:'2-digit'})}
+                </div>
+                {block.all_courts ? <span className="badge badge-amber">Tous terrains</span> : block.court?.name && (
+                  <span style={{ fontSize:'11px', padding:'2px 8px', borderRadius:'99px', fontWeight:500, background: col.dim, color: col.text }}>{block.court.name}</span>
+                )}
+                <button className="btn-icon" onClick={() => duplicateBlock(block)} title="Dupliquer">⎘</button>
+                <button className="btn-icon" onClick={() => removeBlock(block)} title="Supprimer">🗑</button>
               </div>
-              {block.all_courts ? <span className="badge badge-amber">Tous terrains</span> : block.court?.name && <span className="badge badge-muted">{block.court.name}</span>}
-              <button className="btn-icon" onClick={() => duplicateBlock(block)} title="Dupliquer">⎘</button>
-              <button className="btn-icon" onClick={() => removeBlock(block)} title="Supprimer">🗑</button>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -402,13 +421,17 @@ export default function AdminSchedulePage() {
                       style={{background: blockForm.all_courts ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (blockForm.all_courts ? 'var(--brand)' : 'var(--border)'), color: blockForm.all_courts ? 'var(--brand-light)' : 'var(--muted)', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor:'pointer'}}>
                       Tous les terrains
                     </button>
-                    {courts.map(c => (
-                      <button key={c.id}
-                        onClick={() => setBlockForm({...blockForm, all_courts: false, court_id: c.id})}
-                        style={{background: !blockForm.all_courts && blockForm.court_id === c.id ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (!blockForm.all_courts && blockForm.court_id === c.id ? 'var(--brand)' : 'var(--border)'), color: !blockForm.all_courts && blockForm.court_id === c.id ? 'var(--brand-light)' : 'var(--muted)', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor:'pointer'}}>
-                        {c.name}
-                      </button>
-                    ))}
+                    {courts.map(c => {
+                      const col = sportColor(c.sport)
+                      const active = !blockForm.all_courts && blockForm.court_id === c.id
+                      return (
+                        <button key={c.id}
+                          onClick={() => setBlockForm({...blockForm, all_courts: false, court_id: c.id})}
+                          style={{background: active ? col.dim : 'var(--surface2)', border: '1px solid ' + (active ? col.border : 'var(--border)'), color: active ? col.text : 'var(--muted)', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor:'pointer'}}>
+                          {c.name}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
                 <div className="modal-footer">
@@ -476,11 +499,16 @@ export default function AdminSchedulePage() {
                   </div>
                   {!recurringForm.all_courts && (
                     <div style={{display:'flex', gap:'6px', flexWrap:'wrap'}}>
-                      {courts.map(c => (
-                        <button key={c.id} className={'tag-btn' + (recurringForm.court_ids.includes(c.id) ? ' active' : '')} onClick={() => toggleRecurringCourt(c.id)}>
-                          {c.name}
-                        </button>
-                      ))}
+                      {courts.map(c => {
+                        const col = sportColor(c.sport)
+                        const active = recurringForm.court_ids.includes(c.id)
+                        return (
+                          <button key={c.id} onClick={() => toggleRecurringCourt(c.id)}
+                            style={{background: active ? col.dim : 'var(--surface2)', border: '1px solid ' + (active ? col.border : 'var(--border)'), color: active ? col.text : 'var(--muted)', borderRadius:'6px', padding:'5px 10px', fontSize:'12px', cursor:'pointer'}}>
+                            {c.name}
+                          </button>
+                        )
+                      })}
                     </div>
                   )}
                 </div>
