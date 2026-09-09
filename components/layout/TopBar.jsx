@@ -1,6 +1,7 @@
 'use client'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { useSport, SPORTS } from '../../lib/sportContext'
 
 const PAGE_TITLES = {
   '/': 'Accueil',
@@ -19,6 +20,31 @@ const PAGE_TITLES = {
   '/admin/membership': 'Membres du club',
   '/admin/reports': 'Rapport financier',
   '/admin/integrations': 'Intégrations',
+}
+
+function SportSwitcher() {
+  const { activeSport, setActiveSport } = useSport()
+  if (!activeSport) return null
+
+  const other = activeSport === SPORTS.PADEL ? SPORTS.BADMINTON : SPORTS.PADEL
+  const label = { [SPORTS.PADEL]: 'Padel', [SPORTS.BADMINTON]: 'Badminton' }
+
+  return (
+    <button
+      onClick={() => setActiveSport(other)}
+      title={`Passer en ${label[other]}`}
+      style={{
+        display: 'flex', alignItems: 'center', gap: '6px',
+        background: 'var(--brand-dim)', border: '1px solid var(--brand)',
+        borderRadius: '8px', padding: '5px 12px',
+        color: 'var(--brand-light)', fontSize: '13px', fontWeight: 600,
+        cursor: 'pointer',
+      }}
+    >
+      {label[activeSport]}
+      <span style={{ fontSize: '11px', color: 'var(--muted)' }}>⇄ {label[other]}</span>
+    </button>
+  )
 }
 
 export default function TopBar({ user, profile, onHamburger, sidebarOpen }) {
@@ -94,6 +120,7 @@ export default function TopBar({ user, profile, onHamburger, sidebarOpen }) {
       </div>
 
       <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {user && <SportSwitcher />}
         {user ? (
           <Link href="/profile" style={{
             display: 'flex', alignItems: 'center', gap: '7px',

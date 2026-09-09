@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { calcEffectivePrice } from '../../lib/bookingUtils'
+import { useSport } from '../../lib/sportContext'
 
 export default function OpenMatchesPage() {
   const [matches, setMatches] = useState([])
@@ -9,6 +10,7 @@ export default function OpenMatchesPage() {
   const [profile, setProfile] = useState(null)
   const [joining, setJoining] = useState(null)
   const supabase = createClient()
+  const { activeSport } = useSport()
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -19,16 +21,17 @@ export default function OpenMatchesPage() {
     const now = new Date().toISOString()
     const { data } = await supabase
       .from('bookings')
-      .select('*, court:courts(name, is_indoor, price_per_slot), owner:profiles(first_name, last_name, email), players:booking_players(id, player_id, payment_status)')
+      .select('*, court:courts(name, is_indoor, price_per_slot, sport), owner:profiles(first_name, last_name, email), players:booking_players(id, player_id, payment_status)')
       .eq('is_public', true)
       .in('status', ['pending', 'confirmed'])
       .gte('starts_at', now)
       .order('starts_at')
-    setMatches(data || [])
+    // Ne montrer que les matchs ouverts du sport actif de la session.
+    setMatches((data || []).filter(m => !activeSport || m.court?.sport === activeSport))
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [activeSport])
 
   async function handleJoin(match) {
     if (!profile) { window.location.href = '/login'; return }

@@ -15,7 +15,7 @@ export default function AdminCourtsPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [form, setForm] = useState({ name: '', description: '', is_indoor: true, payment_modes: ['full'], price_per_slot: 18, status: 'active', sort_order: 0 })
+  const [form, setForm] = useState({ name: '', description: '', is_indoor: true, payment_modes: ['full'], price_per_slot: 18, status: 'active', sort_order: 0, sport: 'padel' })
   const [saving, setSaving] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleteError, setDeleteError] = useState(null)
@@ -33,7 +33,7 @@ export default function AdminCourtsPage() {
 
   function openCreate() {
     setEditing(null)
-    setForm({ name: '', description: '', is_indoor: true, payment_modes: ['full'], price_per_slot: 18, status: 'active', sort_order: courts.length })
+    setForm({ name: '', description: '', is_indoor: true, payment_modes: ['full'], price_per_slot: 18, status: 'active', sort_order: courts.length, sport: 'padel' })
     setShowForm(true)
   }
 
@@ -47,6 +47,7 @@ export default function AdminCourtsPage() {
       price_per_slot: court.price_per_slot,
       status: court.status,
       sort_order: court.sort_order,
+      sport: court.sport || 'padel',
     })
     setShowForm(true)
   }
@@ -71,6 +72,7 @@ export default function AdminCourtsPage() {
       price_per_slot: form.price_per_slot,
       status: form.status,
       sort_order: form.sort_order,
+      sport: form.sport,
     }
     if (editing) {
       await supabase.from('courts').update(payload).eq('id', editing.id)
@@ -146,6 +148,8 @@ export default function AdminCourtsPage() {
               <div className="court-row-info">
                 <div className="court-row-name">{court.name}</div>
                 <div className="court-row-meta">
+                  <span className={'badge ' + (court.sport === 'badminton' ? 'badge-lime' : 'badge-purple')}>{court.sport === 'badminton' ? 'Badminton' : 'Padel'}</span>
+                  <span className="meta-sep">·</span>
                   <span className={'badge ' + (court.is_indoor ? 'badge-blue' : 'badge-green')}>{court.is_indoor ? 'Indoor' : 'Outdoor'}</span>
                   <span className="meta-sep">·</span>
                   <span>{displayModes(court)}</span>
@@ -196,6 +200,14 @@ export default function AdminCourtsPage() {
                 <label className="form-label">Ordre d'affichage</label>
                 <input className="form-input" type="number" value={form.sort_order} onChange={e => setForm({...form, sort_order: parseInt(e.target.value)})} />
               </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Sport</label>
+              <select className="form-input" value={form.sport} onChange={e => setForm({...form, sport: e.target.value})}>
+                <option value="padel">Padel</option>
+                <option value="badminton">Badminton</option>
+              </select>
             </div>
 
             <div className="form-group">
@@ -299,6 +311,8 @@ export default function AdminCourtsPage() {
         .badge { font-size:11px; padding:2px 8px; border-radius:99px; font-weight:500; }
         .badge-blue { background:rgba(96,165,250,0.12); color:#93C5FD; }
         .badge-green { background:var(--brand-dim); color:var(--brand-light); }
+        .badge-purple { background:rgba(124,58,237,0.14); color:#C084FC; }
+        .badge-lime { background:rgba(163,230,53,0.14); color:#BEF264; }
         .status-badge { font-size:11px; padding:3px 10px; border-radius:99px; }
         .status-active { background:var(--brand-dim); color:var(--brand-light); }
         .status-inactive { background:rgba(139,148,158,0.12); color:var(--muted); }

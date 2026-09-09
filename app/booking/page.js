@@ -4,6 +4,7 @@ import { createClient } from '../../lib/supabase'
 import { generateSlots, evaluateAccessRules, calcEffectivePrice, calcSlotPrice, shouldSkipPayment, isBookingFullyPaid, hasUnpaidBalance, calcOpenBalance, checkBookingWindow, checkMaxConcurrentBookings } from '../../lib/bookingUtils'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
+import { useSport } from '../../lib/sportContext'
 
 const PAYMENT_MODE_LABELS = { full: 'Paiement complet', split: 'Split par joueur', wallet: 'Wallet' }
 
@@ -27,6 +28,7 @@ function BookingForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createClient()
+  const { activeSport } = useSport()
 
   const [courts, setCourts] = useState([])
   const [selectedCourt, setSelectedCourt] = useState(null)
@@ -53,12 +55,13 @@ function BookingForm() {
 
   useEffect(() => {
     async function init() {
+      if (!activeSport) return
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
         setProfile(p)
       }
-      const { data: c } = await supabase.from('courts').select('*').eq('status', 'active').order('sort_order')
+      const { data: c } = await supabase.from('courts').select('*').eq('status', 'active').eq('sport', activeSport).order('sort_order')
       setCourts(c || [])
       const { data: r } = await supabase.from('access_rules').select('*').eq('is_active', true)
       setAccessRules(r || [])
@@ -98,7 +101,7 @@ function BookingForm() {
       setLoading(false)
     }
     init()
-  }, [])
+  }, [activeSport])
 
   useEffect(() => {
     if (!selectedCourt || !selectedDate) return

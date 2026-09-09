@@ -2,6 +2,7 @@ import './globals.css'
 import { createServerSupabase } from '../lib/supabaseServer'
 import AppShell from '../components/layout/AppShell'
 import ServiceWorkerInit from '../components/ServiceWorkerInit'
+import { SportProvider } from '../lib/sportContext'
 
 export const metadata = {
   title: 'Mayfair Padel Club',
@@ -31,9 +32,11 @@ export default async function RootLayout({ children }) {
     <html lang="fr">
       <body>
         <ServiceWorkerInit />
-        <AppShell user={user} profile={profile}>
-          {children}
-        </AppShell>
+        <SportProvider>
+          <AppShell user={user} profile={profile}>
+            {children}
+          </AppShell>
+        </SportProvider>
       </body>
     </html>
   )

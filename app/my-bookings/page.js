@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import Chat from '../../components/Chat'
 import MatchScore from '../../components/MatchScore'
+import { useSport } from '../../lib/sportContext'
 
 const STATUS_STYLES = {
   confirmed: { bg: 'var(--brand-dim)', color: 'var(--brand-light)', label: 'Confirmé' },
@@ -35,6 +36,7 @@ function MyBookingsList() {
   const [guestPayMethod, setGuestPayMethod] = useState('wallet') // 'wallet' | 'payconic'
   const [openChatId, setOpenChatId] = useState(null)
   const supabase = createClient()
+  const { activeSport } = useSport()
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -43,7 +45,7 @@ function MyBookingsList() {
 
     const { data: asOwner } = await supabase
       .from('bookings')
-      .select('*, court:courts(name, is_indoor), players:booking_players(id, player_id, guest_name, guest_email, is_owner, payment_status, effective_price, team, profile:profiles(first_name, last_name, email)), match_results(id, sets, winning_team, recorded_by)')
+      .select('*, court:courts(name, is_indoor, sport), players:booking_players(id, player_id, guest_name, guest_email, is_owner, payment_status, effective_price, team, profile:profiles(first_name, last_name, email)), match_results(id, sets, winning_team, recorded_by)')
       .eq('owner_id', user.id)
 
     const { data: myPlayerRows } = await supabase
@@ -57,18 +59,19 @@ function MyBookingsList() {
     if (otherBookingIds.length > 0) {
       const { data } = await supabase
         .from('bookings')
-        .select('*, court:courts(name, is_indoor), players:booking_players(id, player_id, guest_name, guest_email, is_owner, payment_status, effective_price, team, profile:profiles(first_name, last_name, email)), match_results(id, sets, winning_team, recorded_by)')
+        .select('*, court:courts(name, is_indoor, sport), players:booking_players(id, player_id, guest_name, guest_email, is_owner, payment_status, effective_price, team, profile:profiles(first_name, last_name, email)), match_results(id, sets, winning_team, recorded_by)')
         .in('id', otherBookingIds)
       asPlayer = data || []
     }
 
-    const merged = [...(asOwner || []), ...asPlayer]
+    // Historique affiché = uniquement le sport actif de la session.
+    const merged = [...(asOwner || []), ...asPlayer].filter(b => !activeSport || b.court?.sport === activeSport)
     merged.sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at))
     setBookings(merged)
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { load() }, [activeSport])
 
   async function refundPlayers(bookingId, players) {
     for (const p of players) {

@@ -24,6 +24,16 @@
   --sidebar-w: 240px;
 }
 
+/* Thème badminton : lime + anthracite, en remplacement du violet padel.
+   Appliqué via [data-sport="badminton"] sur <html>, piloté par SportContext. */
+[data-sport="badminton"] {
+  --brand: #A3E635;
+  --brand-light: #D9F99D;
+  --brand-dark: #3F3F46;
+  --brand-dim: rgba(163,230,53,0.10);
+  --brand-dim2: rgba(163,230,53,0.06);
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {

@@ -4,8 +4,10 @@ import { createClient } from '../../../lib/supabase'
 
 const DAYS_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
+// 'booking' suit le thème du sport actif (--brand*), fixé via [data-sport] sur <html>.
+// 'event' et 'block' restent des couleurs fixes, communes aux deux sports.
 const COLORS = {
-  booking: { bg: 'rgba(124,58,237,0.18)', border: '#7C3AED', text: '#C084FC', badge: '#7C3AED' },
+  booking: { bg: 'var(--brand-dim)', border: 'var(--brand)', text: 'var(--brand-light)', badge: 'var(--brand)' },
   event:   { bg: 'rgba(74,222,128,0.12)',  border: '#4ADE80', text: '#4ADE80', badge: '#4ADE80' },
   block:   { bg: 'rgba(252,211,77,0.1)',   border: '#FCD34D', text: '#FCD34D', badge: '#FCD34D' },
 }
