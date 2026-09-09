@@ -30,6 +30,7 @@ function MyBookingsList() {
   const [searching, setSearching] = useState(false)
   const [inviting, setInviting] = useState(false)
   const [settling, setSettling] = useState(null)
+  const [payingShare, setPayingShare] = useState(null)
   const [inviteTab, setInviteTab] = useState('member') // 'member' | 'guest'
   const [guestName, setGuestName] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
@@ -265,6 +266,23 @@ function MyBookingsList() {
     }
   }
 
+  // ─── Paiement de sa propre part (joueur non-owner ou owner en split) ───
+  async function payMyShare(booking, myPlayerRow) {
+    setPayingShare(myPlayerRow.id)
+    const res = await fetch('/api/payments/initiate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ booking_id: booking.id, booking_player_id: myPlayerRow.id }),
+    })
+    const payData = await res.json().catch(() => ({}))
+    setPayingShare(null)
+    if (payData.payment_url) {
+      window.location.href = payData.payment_url
+    } else {
+      alert('Impossible d\'initier le paiement pour le moment.')
+    }
+  }
+
   // ─── Règlement manuel du solde dû (depuis le wallet du owner) ───
   async function settleBalance(booking) {
     const openBalance = calcOpenBalance(booking, booking.players || [])
@@ -376,6 +394,22 @@ function MyBookingsList() {
                         ))}
                       </div>
                     )}
+
+                    {(() => {
+                      const myRow = (b.players || []).find(p => p.player_id === userId)
+                      if (!myRow || myRow.payment_status === 'paid' || !myRow.effective_price) return null
+                      return (
+                        <div style={{ marginTop: '10px', background: 'var(--brand-dim)', border: '1px solid var(--brand)', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', color: 'var(--brand-light)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
+                            <span>Votre part : <strong>{myRow.effective_price.toFixed(2)} €</strong></span>
+                            <button onClick={() => payMyShare(b, myRow)} disabled={payingShare === myRow.id}
+                              style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                              {payingShare === myRow.id ? '...' : 'Payer ma part'}
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })()}
 
                     {openBalance > 0 && isOwner && (
                       <div style={{ marginTop: '10px', background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', color: 'var(--amber)' }}>

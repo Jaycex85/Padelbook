@@ -45,15 +45,30 @@ export default function OpenMatchesPage() {
     const basePrice = match.price_per_player
     const effectivePrice = calcEffectivePrice(basePrice, discount)
 
-    await supabase.from('booking_players').insert({
+    const { data: newPlayer } = await supabase.from('booking_players').insert({
       booking_id: match.id,
       player_id: profile.id,
       is_owner: false,
-      payment_status: 'pending',
+      payment_status: effectivePrice > 0 ? 'pending' : 'paid', // 100% remise = considéré payé d'office
       base_price: basePrice,
       discount_percent: discount,
       effective_price: effectivePrice,
-    })
+    }).select().single()
+
+    // Split billing : on initie tout de suite le paiement de sa propre part.
+    if (newPlayer && effectivePrice > 0) {
+      const res = await fetch('/api/payments/initiate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: match.id, booking_player_id: newPlayer.id }),
+      })
+      const payData = await res.json().catch(() => ({}))
+      if (payData.payment_url) {
+        window.location.href = payData.payment_url
+        return
+      }
+    }
+
     setJoining(null)
     load()
   }
