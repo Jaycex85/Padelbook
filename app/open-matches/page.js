@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { calcEffectivePrice } from '../../lib/bookingUtils'
 import { useSport } from '../../lib/sportContext'
+import PaymentMethodModal from '../../components/PaymentMethodModal'
 
 export default function OpenMatchesPage() {
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState(null)
   const [joining, setJoining] = useState(null)
+  const [pendingPayment, setPendingPayment] = useState(null) // { matchId, playerId, amount }
   const supabase = createClient()
   const { activeSport } = useSport()
 
@@ -55,22 +57,41 @@ export default function OpenMatchesPage() {
       effective_price: effectivePrice,
     }).select().single()
 
-    // Split billing : on initie tout de suite le paiement de sa propre part.
-    if (newPlayer && effectivePrice > 0) {
-      const res = await fetch('/api/payments/initiate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ booking_id: match.id, booking_player_id: newPlayer.id }),
-      })
-      const payData = await res.json().catch(() => ({}))
-      if (payData.payment_url) {
-        window.location.href = payData.payment_url
-        return
-      }
-    }
-
     setJoining(null)
     load()
+
+    // Split billing : on propose tout de suite le choix du mode de paiement pour sa propre part.
+    if (newPlayer && effectivePrice > 0) {
+      setPendingPayment({ matchId: match.id, playerId: newPlayer.id, amount: effectivePrice })
+    }
+  }
+
+  async function payViaWallet() {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: prof } = await supabase.from('profiles').select('wallet_balance').eq('id', user.id).single()
+    const available = prof?.wallet_balance || 0
+    if (available < pendingPayment.amount) return // le modal désactive déjà ce cas, garde-fou
+
+    await supabase.from('profiles').update({ wallet_balance: available - pendingPayment.amount }).eq('id', user.id)
+    await supabase.from('wallet_transactions').insert({
+      profile_id: user.id, amount: -pendingPayment.amount, type: 'debit',
+      description: 'Part match ouvert', booking_id: pendingPayment.matchId,
+    })
+    await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', pendingPayment.playerId)
+    setPendingPayment(null)
+    load()
+  }
+
+  async function payViaCard() {
+    const res = await fetch('/api/payments/initiate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ booking_id: pendingPayment.matchId, booking_player_id: pendingPayment.playerId }),
+    })
+    const payData = await res.json().catch(() => ({}))
+    if (payData.payment_url) {
+      window.location.href = payData.payment_url
+    }
   }
 
   async function handleLeave(match) {
@@ -172,6 +193,15 @@ export default function OpenMatchesPage() {
             )
           })}
         </div>
+      )}
+
+      {pendingPayment && (
+        <PaymentMethodModal
+          amount={pendingPayment.amount}
+          onChooseWallet={payViaWallet}
+          onChooseCard={payViaCard}
+          onClose={() => setPendingPayment(null)}
+        />
       )}
     </div>
   )

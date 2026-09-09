@@ -7,6 +7,7 @@ import { Suspense } from 'react'
 import Chat from '../../components/Chat'
 import MatchScore from '../../components/MatchScore'
 import { useSport } from '../../lib/sportContext'
+import PaymentMethodModal from '../../components/PaymentMethodModal'
 
 const STATUS_STYLES = {
   confirmed: { bg: 'var(--brand-dim)', color: 'var(--brand-light)', label: 'Confirmé' },
@@ -31,6 +32,7 @@ function MyBookingsList() {
   const [inviting, setInviting] = useState(false)
   const [settling, setSettling] = useState(null)
   const [payingShare, setPayingShare] = useState(null)
+  const [pendingPayment, setPendingPayment] = useState(null) // { bookingId, playerId, amount }
   const [inviteTab, setInviteTab] = useState('member') // 'member' | 'guest'
   const [guestName, setGuestName] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
@@ -267,12 +269,34 @@ function MyBookingsList() {
   }
 
   // ─── Paiement de sa propre part (joueur non-owner ou owner en split) ───
-  async function payMyShare(booking, myPlayerRow) {
-    setPayingShare(myPlayerRow.id)
+  function payMyShare(booking, myPlayerRow) {
+    setPendingPayment({ bookingId: booking.id, playerId: myPlayerRow.id, amount: myPlayerRow.effective_price })
+  }
+
+  async function payShareViaWallet() {
+    setPayingShare(pendingPayment.playerId)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: prof } = await supabase.from('profiles').select('wallet_balance').eq('id', user.id).single()
+    const available = prof?.wallet_balance || 0
+    if (available >= pendingPayment.amount) {
+      await supabase.from('profiles').update({ wallet_balance: available - pendingPayment.amount }).eq('id', user.id)
+      await supabase.from('wallet_transactions').insert({
+        profile_id: user.id, amount: -pendingPayment.amount, type: 'debit',
+        description: 'Part réservation', booking_id: pendingPayment.bookingId,
+      })
+      await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', pendingPayment.playerId)
+    }
+    setPayingShare(null)
+    setPendingPayment(null)
+    load()
+  }
+
+  async function payShareViaCard() {
+    setPayingShare(pendingPayment.playerId)
     const res = await fetch('/api/payments/initiate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ booking_id: booking.id, booking_player_id: myPlayerRow.id }),
+      body: JSON.stringify({ booking_id: pendingPayment.bookingId, booking_player_id: pendingPayment.playerId }),
     })
     const payData = await res.json().catch(() => ({}))
     setPayingShare(null)
@@ -623,6 +647,15 @@ function MyBookingsList() {
             )}
           </div>
         </div>
+      )}
+
+      {pendingPayment && (
+        <PaymentMethodModal
+          amount={pendingPayment.amount}
+          onChooseWallet={payShareViaWallet}
+          onChooseCard={payShareViaCard}
+          onClose={() => setPendingPayment(null)}
+        />
       )}
     </div>
   )
