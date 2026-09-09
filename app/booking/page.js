@@ -5,6 +5,7 @@ import { generateSlots, evaluateAccessRules, calcEffectivePrice, calcSlotPrice, 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { useSport } from '../../lib/sportContext'
+import SportGate from '../../components/layout/SportGate'
 
 const PAYMENT_MODE_LABELS = { full: 'Paiement complet', split: 'Split par joueur', wallet: 'Wallet' }
 
@@ -221,6 +222,8 @@ function BookingForm() {
   const pricePerPlayerDisplay = selectedCourt ? (selectedCourt.price_per_slot / 4) : 0
   const myPrice = selectedCourt ? calcEffectivePrice(pricePerPlayerDisplay, profile?.discount_percent || 0) : 0
   const filteredSlots = slots.filter(s => isInPeriod(s.start, periodFilter))
+
+  if (!activeSport) return <SportGate />
 
   return (
     <div>

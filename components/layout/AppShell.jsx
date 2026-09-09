@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import BottomNav from './BottomNav'
-import SportGate from './SportGate'
 
 export default function AppShell({ children, user, profile }) {
   const pathname = usePathname()
@@ -40,7 +39,7 @@ export default function AppShell({ children, user, profile }) {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh', overflow: 'hidden' }}>
         <TopBar user={user} profile={profile} onHamburger={() => setSidebarOpen(o => !o)} sidebarOpen={sidebarOpen} />
         <main style={{ flex: 1, padding: '24px', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }} className="app-main-content">
-          {user ? <SportGate>{children}</SportGate> : children}
+          {children}
         </main>
       </div>
 

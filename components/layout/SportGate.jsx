@@ -1,12 +1,13 @@
 'use client'
 import { useSport, SPORTS } from '../../lib/sportContext'
 
-// Affiché une fois par session (après connexion) tant que l'utilisateur
-// n'a pas choisi son sport. Rien n'est persisté au-delà de l'onglet.
-export default function SportGate({ children }) {
-  const { activeSport, setActiveSport } = useSport()
-
-  if (activeSport) return children
+// À utiliser dans une page qui a besoin d'un sport actif :
+//   const { activeSport } = useSport()
+//   if (!activeSport) return <SportGate />
+// N'affecte pas les pages communes (accueil, fil du club) qui n'ont pas
+// besoin de connaître le sport pour s'afficher.
+export default function SportGate() {
+  const { setActiveSport } = useSport()
 
   return (
     <div style={{

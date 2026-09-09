@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../lib/supabase'
 import { calcEffectivePrice } from '../../lib/bookingUtils'
 import { useSport } from '../../lib/sportContext'
+import SportGate from '../../components/layout/SportGate'
 
 export default function OpenMatchesPage() {
   const [matches, setMatches] = useState([])
@@ -79,6 +80,7 @@ export default function OpenMatchesPage() {
   const ownerName = m => m.owner ? (m.owner.first_name || m.owner.email) : '—'
 
   if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
+  if (!activeSport) return <SportGate />
 
   return (
     <div>
