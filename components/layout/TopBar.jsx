@@ -40,7 +40,7 @@ function SportSwitcher() {
         cursor: 'pointer',
       }}
     >
-      {label[other]}
+      {label[activeSport]}
     </button>
   )
 }
