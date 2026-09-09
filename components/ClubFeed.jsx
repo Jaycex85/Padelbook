@@ -23,12 +23,14 @@ export default function ClubFeed({ isAdmin, userId }) {
 
   async function load() {
     setLoading(true)
-    const { data: postsData } = await supabase
+    const { data: postsData, error: loadErr } = await supabase
       .from('club_posts')
       .select('*, club_post_comments(id, author_id, content, created_at), club_poll_options(id, label, sort_order, club_poll_votes(id, voter_id))')
       .order('pinned', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(20)
+
+    if (loadErr) console.error('club_posts load failed:', loadErr)
 
     // sport = null -> visible pour tout le monde ; sinon uniquement pour le sport actif de la session.
     const visible = (postsData || []).filter(p => !p.sport || !activeSport || p.sport === activeSport)
@@ -64,7 +66,7 @@ export default function ClubFeed({ isAdmin, userId }) {
     if (!newPostText.trim() || posting) return
     if (isPollMode && pollOptions.filter(o => o.trim()).length < 2) return
     setPosting(true)
-    await fetch('/api/club-posts', {
+    const res = await fetch('/api/club-posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -75,6 +77,13 @@ export default function ClubFeed({ isAdmin, userId }) {
         sport: postSport === 'all' ? null : postSport,
       }),
     })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      console.error('club-posts create failed:', res.status, err)
+      alert('Erreur lors de la publication : ' + (err.error || res.status))
+      setPosting(false)
+      return
+    }
     setNewPostText('')
     setIsPollMode(false)
     setPollOptions(['', ''])
