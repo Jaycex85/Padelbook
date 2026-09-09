@@ -22,6 +22,9 @@ export default function ProfilePage() {
   const [saved, setSaved] = useState(false)
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarError, setAvatarError] = useState(null)
+  const [showTopup, setShowTopup] = useState(false)
+  const [topupAmount, setTopupAmount] = useState(20)
+  const [topupLoading, setTopupLoading] = useState(false)
   const fileInputRef = useRef(null)
   const supabase = createClient()
   const router = useRouter()
@@ -63,6 +66,23 @@ export default function ProfilePage() {
       membership_requested_at: new Date().toISOString(),
     }).eq('id', profile.id)
     setProfile(p => ({ ...p, membership_status: 'pending', membership_requested_at: new Date().toISOString() }))
+  }
+
+  async function handleTopup() {
+    if (!topupAmount || topupAmount <= 0) return
+    setTopupLoading(true)
+    const res = await fetch('/api/payments/initiate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wallet_topup: true, amount: topupAmount, profile_id: profile.id }),
+    })
+    const payData = await res.json().catch(() => ({}))
+    setTopupLoading(false)
+    if (payData.payment_url) {
+      window.location.href = payData.payment_url
+    } else {
+      alert(payData.error || 'Impossible d\'initier la recharge pour le moment.')
+    }
   }
 
   async function handleAvatarChange(e) {
@@ -165,19 +185,43 @@ export default function ProfilePage() {
       )}
 
       {/* Wallet */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div>
-          <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Solde wallet</div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '24px', fontWeight: 700, color: (profile?.wallet_balance || 0) < 0 ? 'var(--red)' : 'var(--brand-light)' }}>
-            {formatMoney(profile?.wallet_balance)} €
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Solde wallet</div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '24px', fontWeight: 700, color: (profile?.wallet_balance || 0) < 0 ? 'var(--red)' : 'var(--brand-light)' }}>
+              {formatMoney(profile?.wallet_balance)} €
+            </div>
+            {(profile?.wallet_balance || 0) < 0 && (
+              <p style={{ fontSize: '11px', color: 'var(--red)', marginTop: '4px' }}>
+                Solde négatif — rechargez avant de pouvoir réserver à nouveau.
+              </p>
+            )}
           </div>
-          {(profile?.wallet_balance || 0) < 0 && (
-            <p style={{ fontSize: '11px', color: 'var(--red)', marginTop: '4px' }}>
-              Solde négatif — rechargez avant de pouvoir réserver à nouveau.
-            </p>
-          )}
+          <button onClick={() => setShowTopup(v => !v)}
+            style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
+            Recharger
+          </button>
         </div>
-        <div style={{ fontSize: '28px' }}>💳</div>
+
+        {showTopup && (
+          <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+              {[10, 20, 50, 100].map(v => (
+                <button key={v} onClick={() => setTopupAmount(v)}
+                  style={{ background: topupAmount === v ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (topupAmount === v ? 'var(--brand)' : 'var(--border)'), color: topupAmount === v ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '8px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                  {v} €
+                </button>
+              ))}
+              <input type="number" min="1" step="1" value={topupAmount} onChange={e => setTopupAmount(parseFloat(e.target.value) || 0)}
+                style={{ width: '90px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px', color: 'var(--text)', fontSize: '13px' }} />
+            </div>
+            <button onClick={handleTopup} disabled={topupLoading || !topupAmount || topupAmount <= 0}
+              style={{ width: '100%', background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '11px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: (topupLoading || !topupAmount || topupAmount <= 0) ? 0.5 : 1 }}>
+              {topupLoading ? 'Redirection...' : 'Recharger ' + (topupAmount || 0) + ' € par carte'}
+            </button>
+          </div>
+        )}
       </div>
 
       <WalletHistory userId={profile?.id} />

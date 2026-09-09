@@ -10,6 +10,8 @@ function StubPaymentContent() {
   const ref = searchParams.get('ref')
   const bookingId = searchParams.get('booking')
   const eventRegistrationId = searchParams.get('event_registration')
+  const isWalletTopup = searchParams.get('wallet_topup') === '1'
+  const topupAmount = parseFloat(searchParams.get('amount') || '0')
   const [processing, setProcessing] = useState(false)
   const [done, setDone] = useState(false)
   const supabase = createClient()
@@ -26,9 +28,22 @@ function StubPaymentContent() {
       await supabase.from('event_registrations').update({ status: 'confirmed', payment_status: 'paid' }).eq('id', eventRegistrationId)
     }
 
+    if (isWalletTopup && topupAmount > 0) {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: prof } = await supabase.from('profiles').select('wallet_balance').eq('id', user.id).single()
+        const available = prof?.wallet_balance || 0
+        await supabase.from('profiles').update({ wallet_balance: available + topupAmount }).eq('id', user.id)
+        await supabase.from('wallet_transactions').insert({
+          profile_id: user.id, amount: topupAmount, type: 'credit',
+          description: 'Recharge wallet par carte',
+        })
+      }
+    }
+
     setDone(true)
     setProcessing(false)
-    setTimeout(() => router.push(eventRegistrationId ? '/events' : '/my-bookings'), 2000)
+    setTimeout(() => router.push(eventRegistrationId ? '/events' : isWalletTopup ? '/profile' : '/my-bookings'), 2000)
   }
 
   return (
@@ -45,8 +60,11 @@ function StubPaymentContent() {
             <div style={{ background: 'var(--brand-dim)', border: '1px solid var(--brand)', borderRadius: '8px', padding: '8px 14px', display: 'inline-block', marginBottom: '20px' }}>
               <span style={{ fontSize: '12px', color: 'var(--brand-light)', fontWeight: 500 }}>⚠️ Mode STUB — PayConic non connecté</span>
             </div>
-            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Simulation de paiement</h2>
+            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>
+              {isWalletTopup ? 'Recharge du wallet' : 'Simulation de paiement'}
+            </h2>
             <p style={{ color: 'var(--muted)', fontSize: '14px', marginBottom: '24px' }}>
+              {isWalletTopup && <>Montant : <strong style={{ color: 'var(--brand-light)' }}>{topupAmount.toFixed(2)} €</strong><br /></>}
               Référence : <code style={{ fontFamily: 'monospace', color: 'var(--brand-light)' }}>{ref}</code>
             </p>
             <button onClick={confirmPayment} disabled={processing}
