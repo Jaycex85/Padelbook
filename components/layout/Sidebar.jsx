@@ -8,6 +8,7 @@ const playerLinks = [
   { href: '/events', icon: '🏆', label: 'Club Events' },
   { href: '/my-bookings', icon: '🎾', label: 'Mes réservations' },
   { href: '/open-matches', icon: '👥', label: 'Matchs ouverts' },
+  { href: '/membership', icon: '🎖️', label: 'Adhésions et cotisations' },
   { href: '/profile', icon: '👤', label: 'Mon profil' },
 ]
 
@@ -20,7 +21,8 @@ const adminLinks = [
   { href: '/admin/events', icon: '🏆', label: 'Club Events' },
   { href: '/admin/rules', icon: '⚙', label: "Règles d'accès" },
   { href: '/admin/members', icon: '👥', label: 'Membres' },
-  { href: '/admin/membership', icon: '🎖️', label: 'Membres du club' },
+  { href: '/admin/membership', icon: '🎖️', label: "Demandes d'adhésion" },
+  { href: '/admin/membership-types', icon: '💶', label: 'Tarifs adhésions' },
   { href: '/admin/bookings', icon: '📋', label: 'Réservations' },
   { href: '/admin/reports', icon: '📊', label: 'Rapports' },
   { href: '/admin/integrations', icon: '🔌', label: 'Intégrations' },

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { createClient } from '../../lib/supabase'
 import NotificationSettings from '../../components/NotificationSettings'
 import PlayerStats from '../../components/PlayerStats'
@@ -59,14 +60,6 @@ export default function ProfilePage() {
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 3000)
-  }
-
-  async function requestMembership() {
-    await supabase.from('profiles').update({
-      membership_status: 'pending',
-      membership_requested_at: new Date().toISOString(),
-    }).eq('id', profile.id)
-    setProfile(p => ({ ...p, membership_status: 'pending', membership_requested_at: new Date().toISOString() }))
   }
 
   async function handleTopup() {
@@ -229,39 +222,16 @@ export default function ProfilePage() {
 
       <PlayerStats userId={profile?.id} />
 
-      {/* Statut membre cotisant */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: profile?.membership_status === 'active' ? '4px' : '0' }}>
+      {/* Adhésions et cotisations : licences, statuts compétiteur (padel/badminton) */}
+      <Link href="/membership" style={{ display: 'block', textDecoration: 'none', marginBottom: '20px' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Statut membre du club</div>
-            {profile?.membership_status === 'none' || !profile?.membership_status ? (
-              <div style={{ fontSize: '14px', color: 'var(--muted)' }}>Vous n'êtes pas encore membre du club</div>
-            ) : profile?.membership_status === 'pending' ? (
-              <div style={{ fontSize: '14px', color: 'var(--amber)', fontWeight: 500 }}>⏳ Demande en attente de validation</div>
-            ) : profile?.membership_status === 'active' && (!profile?.membership_valid_until || profile.membership_valid_until >= new Date().toISOString().split('T')[0]) ? (
-              <div style={{ fontSize: '14px', color: '#4ADE80', fontWeight: 500 }}>✓ Membre du club</div>
-            ) : (
-              <div style={{ fontSize: '14px', color: 'var(--red)', fontWeight: 500 }}>Cotisation expirée</div>
-            )}
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Adhésions et cotisations</div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>Licences AFP, badminton, statuts compétiteur InterClubs/InterEquipes</div>
           </div>
-          <div style={{ fontSize: '28px' }}>🎖️</div>
+          <div style={{ fontSize: '20px', color: 'var(--muted)' }}>→</div>
         </div>
-        {profile?.membership_status === 'active' && profile?.membership_valid_until && (
-          <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>
-            Valide jusqu'au {new Date(profile.membership_valid_until).toLocaleDateString('fr-BE')}
-          </div>
-        )}
-        {(!profile?.membership_status || profile.membership_status === 'none' || profile.membership_status === 'expired') && (
-          <button onClick={requestMembership} style={{ marginTop: '10px', background: 'var(--brand-dim)', border: '1px solid var(--brand)', color: 'var(--brand-light)', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif" }}>
-            {profile?.membership_status === 'expired' ? 'Renouveler mon adhésion' : 'Devenir membre du club'}
-          </button>
-        )}
-        {(!profile?.membership_status || profile.membership_status === 'none') && (
-          <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
-            L'adhésion se règle directement au club (hors application). Votre demande sera validée par un administrateur.
-          </p>
-        )}
-      </div>
+      </Link>
 
       {/* Formulaire infos perso */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '20px', marginBottom: '16px' }}>

@@ -1,95 +1,120 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
+import { sportColor } from '../../../lib/sportColors'
 
-const STATUS_LABELS = { none: 'Aucune demande', pending: 'Demande en cours', active: 'Membre du club', expired: 'Adhésion expirée' }
-const STATUS_COLORS = {
-  none: { bg: 'rgba(139,148,158,0.1)', color: 'var(--muted)' },
-  pending: { bg: 'rgba(252,211,77,0.1)', color: 'var(--amber)' },
-  active: { bg: 'rgba(74,222,128,0.1)', color: '#4ADE80' },
-  expired: { bg: 'rgba(248,113,113,0.1)', color: 'var(--red)' },
+const STATUS_LABELS = {
+  awaiting_payment: 'En attente de paiement',
+  awaiting_validation: 'À valider',
+  active: 'Actif',
+  rejected: 'Refusé',
+  expired: 'Expiré',
 }
 
 export default function AdminMembershipPage() {
-  const [profiles, setProfiles] = useState([])
+  const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('pending')
+  const [filter, setFilter] = useState('awaiting_validation')
   const [validating, setValidating] = useState(null)
+  const [validFrom, setValidFrom] = useState('')
   const [validUntil, setValidUntil] = useState('')
   const supabase = createClient()
 
   async function load() {
     setLoading(true)
     const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .neq('membership_status', 'none')
-      .order('membership_requested_at', { ascending: false })
-    setProfiles(data || [])
+      .from('membership_requests')
+      .select('*, membership_type:membership_types(*), profile:profiles(first_name, last_name, email)')
+      .order('requested_at', { ascending: false })
+    setRequests(data || [])
     setLoading(false)
   }
 
   useEffect(() => { load() }, [])
 
-  // Recalcule expired à la volée à l'affichage (pas de cron nécessaire)
-  function effectiveStatus(p) {
-    if (p.membership_status === 'active' && p.membership_valid_until) {
+  function effectiveStatus(r) {
+    if (r.status === 'active' && r.valid_until) {
       const today = new Date().toISOString().split('T')[0]
-      if (p.membership_valid_until < today) return 'expired'
+      if (r.valid_until < today) return 'expired'
     }
-    return p.membership_status
+    if (r.status === 'pending' && r.payment_status !== 'paid') return 'awaiting_payment'
+    if (r.status === 'pending' && r.payment_status === 'paid') return 'awaiting_validation'
+    return r.status
   }
 
-  function openValidate(profileId) {
-    setValidating(profileId)
+  function openValidate(request) {
+    setValidating(request)
+    const today = new Date()
     const nextYear = new Date()
     nextYear.setFullYear(nextYear.getFullYear() + 1)
+    setValidFrom(today.toISOString().split('T')[0])
     setValidUntil(nextYear.toISOString().split('T')[0])
+  }
+
+  async function syncProfileMembershipStatus(profileId) {
+    const today = new Date().toISOString().split('T')[0]
+    const { data: active } = await supabase
+      .from('membership_requests')
+      .select('valid_until')
+      .eq('profile_id', profileId)
+      .eq('status', 'active')
+
+    const stillValid = (active || []).filter(r => !r.valid_until || r.valid_until >= today)
+    if (stillValid.length > 0) {
+      const hasIndefinite = stillValid.some(r => !r.valid_until)
+      const maxValidUntil = hasIndefinite ? null : stillValid.reduce((max, r) => (!max || r.valid_until > max) ? r.valid_until : max, null)
+      await supabase.from('profiles').update({ membership_status: 'active', membership_valid_until: maxValidUntil }).eq('id', profileId)
+    } else {
+      await supabase.from('profiles').update({ membership_status: 'none', membership_valid_until: null }).eq('id', profileId)
+    }
   }
 
   async function confirmValidate() {
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('profiles').update({
-      membership_status: 'active',
-      membership_valid_until: validUntil,
-      membership_validated_at: new Date().toISOString(),
-      membership_validated_by: user.id,
-    }).eq('id', validating)
+    await supabase.from('membership_requests').update({
+      status: 'active',
+      valid_from: validFrom,
+      valid_until: validUntil,
+      validated_at: new Date().toISOString(),
+      validated_by: user.id,
+    }).eq('id', validating.id)
+    await syncProfileMembershipStatus(validating.profile_id)
     setValidating(null)
     load()
   }
 
-  async function rejectRequest(profileId) {
-    if (!confirm('Refuser cette demande de cotisation ?')) return
-    await supabase.from('profiles').update({ membership_status: 'none', membership_valid_until: null }).eq('id', profileId)
+  async function rejectRequest(request) {
+    if (!confirm('Refuser cette demande ?')) return
+    await supabase.from('membership_requests').update({ status: 'rejected' }).eq('id', request.id)
     load()
   }
 
-  async function revokeMembership(profileId) {
-    if (!confirm('Révoquer le statut cotisant de ce membre ?')) return
-    await supabase.from('profiles').update({ membership_status: 'expired' }).eq('id', profileId)
+  async function revoke(request) {
+    if (!confirm('Révoquer ce statut ?')) return
+    await supabase.from('membership_requests').update({ status: 'expired' }).eq('id', request.id)
+    await syncProfileMembershipStatus(request.profile_id)
     load()
   }
 
-  const displayName = p => (p.first_name || p.last_name) ? ((p.first_name || '') + ' ' + (p.last_name || '')).trim() : p.email
+  const displayName = p => p ? ((p.first_name || p.last_name) ? ((p.first_name || '') + ' ' + (p.last_name || '')).trim() : p.email) : '—'
 
-  const filtered = profiles.filter(p => filter === 'all' || effectiveStatus(p) === filter)
-  const pendingCount = profiles.filter(p => effectiveStatus(p) === 'pending').length
+  const filtered = requests.filter(r => filter === 'all' || effectiveStatus(r) === filter)
+  const awaitingCount = requests.filter(r => effectiveStatus(r) === 'awaiting_validation').length
 
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Membres du club</h1>
+        <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Demandes d'adhésion</h1>
         <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>
-          Valide les demandes d'adhésion annuelle (paiement géré hors application).
+          Licences et statuts compétiteur demandés par les joueurs, par sport.
         </p>
       </div>
 
       <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        {['pending', 'active', 'expired', 'all'].map(f => (
+        {['awaiting_validation', 'active', 'awaiting_payment', 'rejected', 'expired', 'all'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
             style={{ background: filter === f ? 'var(--brand-dim)' : 'var(--surface)', border: '1px solid ' + (filter === f ? 'var(--brand)' : 'var(--border)'), color: filter === f ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', cursor: 'pointer' }}>
-            {f === 'all' ? 'Tout' : STATUS_LABELS[f]}{f === 'pending' && pendingCount > 0 ? ' (' + pendingCount + ')' : ''}
+            {f === 'all' ? 'Tout' : STATUS_LABELS[f]}{f === 'awaiting_validation' && awaitingCount > 0 ? ' (' + awaitingCount + ')' : ''}
           </button>
         ))}
       </div>
@@ -100,46 +125,49 @@ export default function AdminMembershipPage() {
         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)', fontSize: '14px' }}>Aucun résultat.</div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {filtered.map(p => {
-            const status = effectiveStatus(p)
-            const sc = STATUS_COLORS[status]
+          {filtered.map(r => {
+            const status = effectiveStatus(r)
+            const col = sportColor(r.membership_type?.sport)
             return (
-              <div key={p.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--brand-dim)', border: '1px solid var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 600, color: 'var(--brand-light)', flexShrink: 0 }}>
-                    {(p.first_name || p.email || '?')[0].toUpperCase()}
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '14px', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(p)}</div>
-                    <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{p.email}</div>
+              <div key={r.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: '3px solid ' + col.border, borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600 }}>{displayName(r.profile)}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{r.profile?.email}</div>
+                  <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                    <span style={{ color: col.text, fontWeight: 600 }}>{r.membership_type?.sport === 'badminton' ? 'Badminton' : 'Padel'}</span>
+                    {' · '}{r.membership_type?.label}{' · '}{(r.price ?? 0).toFixed(2)} €
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '99px', background: sc.bg, color: sc.color, fontWeight: 500 }}>
+                  <span style={{
+                    fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: 500,
+                    background: status === 'active' ? 'rgba(74,222,128,0.1)' : status === 'rejected' ? 'rgba(248,113,113,0.1)' : status === 'expired' ? 'rgba(139,148,158,0.12)' : 'rgba(252,211,77,0.1)',
+                    color: status === 'active' ? '#4ADE80' : status === 'rejected' ? 'var(--red)' : status === 'expired' ? 'var(--muted)' : 'var(--amber)',
+                  }}>
                     {STATUS_LABELS[status]}
                   </span>
-                  {p.membership_valid_until && (
-                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>jusqu'au {new Date(p.membership_valid_until).toLocaleDateString('fr-BE')}</span>
+                  {r.valid_until && status === 'active' && (
+                    <span style={{ fontSize: '11px', color: 'var(--muted)' }}>jusqu'au {new Date(r.valid_until).toLocaleDateString('fr-BE')}</span>
                   )}
 
-                  {status === 'pending' && (
+                  {status === 'awaiting_validation' && (
                     <>
-                      <button onClick={() => openValidate(p.id)} style={{ background: 'var(--brand-dim)', border: '1px solid var(--brand)', color: 'var(--brand-light)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                      <button onClick={() => openValidate(r)} style={{ background: col.dim, border: '1px solid ' + col.border, color: col.text, borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
                         Valider
                       </button>
-                      <button onClick={() => rejectRequest(p.id)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer' }}>
+                      <button onClick={() => rejectRequest(r)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer' }}>
                         Refuser
                       </button>
                     </>
                   )}
                   {status === 'active' && (
-                    <button onClick={() => revokeMembership(p.id)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer' }}>
+                    <button onClick={() => revoke(r)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer' }}>
                       Révoquer
                     </button>
                   )}
                   {status === 'expired' && (
-                    <button onClick={() => openValidate(p.id)} style={{ background: 'var(--brand-dim)', border: '1px solid var(--brand)', color: 'var(--brand-light)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                    <button onClick={() => openValidate(r)} style={{ background: col.dim, border: '1px solid ' + col.border, color: col.text, borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
                       Renouveler
                     </button>
                   )}
@@ -154,13 +182,20 @@ export default function AdminMembershipPage() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '16px' }}
           onClick={e => e.target === e.currentTarget && setValidating(null)}>
           <div className="modal-responsive" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '24px', maxWidth: 'min(380px, calc(100vw - 32px))' }}>
-            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '17px', fontWeight: 700, marginBottom: '16px' }}>Valider l'adhésion</h2>
-            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Valide jusqu'au</label>
+            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '17px', fontWeight: 700, marginBottom: '4px' }}>Valider la demande</h2>
+            <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '16px' }}>{validating.membership_type?.label} — {displayName(validating.profile)}</p>
+
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Valide à partir du</label>
+            <input type="date" value={validFrom} onChange={e => setValidFrom(e.target.value)}
+              style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', color: 'var(--text)', fontSize: '14px', marginBottom: '14px' }} />
+
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '6px', textTransform: 'uppercase' }}>Jusqu'au</label>
             <input type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)}
               style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', color: 'var(--text)', fontSize: '14px', marginBottom: '20px' }} />
+
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={() => setValidating(null)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '9px 18px', fontSize: '14px', cursor: 'pointer' }}>Annuler</button>
-              <button onClick={confirmValidate} disabled={!validUntil} style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
+              <button onClick={confirmValidate} disabled={!validFrom || !validUntil} style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
                 Confirmer
               </button>
             </div>

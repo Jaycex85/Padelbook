@@ -10,6 +10,7 @@ function StubPaymentContent() {
   const ref = searchParams.get('ref')
   const bookingId = searchParams.get('booking')
   const eventRegistrationId = searchParams.get('event_registration')
+  const membershipRequestId = searchParams.get('membership_request')
   const isWalletTopup = searchParams.get('wallet_topup') === '1'
   const topupAmount = parseFloat(searchParams.get('amount') || '0')
   const [processing, setProcessing] = useState(false)
@@ -28,6 +29,12 @@ function StubPaymentContent() {
       await supabase.from('event_registrations').update({ status: 'confirmed', payment_status: 'paid' }).eq('id', eventRegistrationId)
     }
 
+    if (membershipRequestId) {
+      // Le paiement est fait, mais la demande reste "pending" (statut métier) tant
+      // que l'admin ne l'a pas validée avec une période de validité.
+      await supabase.from('membership_requests').update({ payment_status: 'paid' }).eq('id', membershipRequestId)
+    }
+
     if (isWalletTopup && topupAmount > 0) {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
@@ -43,7 +50,7 @@ function StubPaymentContent() {
 
     setDone(true)
     setProcessing(false)
-    setTimeout(() => router.push(eventRegistrationId ? '/events' : isWalletTopup ? '/profile' : '/my-bookings'), 2000)
+    setTimeout(() => router.push(eventRegistrationId ? '/events' : membershipRequestId ? '/membership' : isWalletTopup ? '/profile' : '/my-bookings'), 2000)
   }
 
   return (

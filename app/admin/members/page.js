@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
+import { sportColor } from '../../../lib/sportColors'
 
 const ROLE_LABELS = { admin: 'Admin', member: 'Joueur (ancien)', public: 'Joueur' }
 const ROLE_COLORS = {
@@ -11,8 +12,11 @@ const ROLE_COLORS = {
 
 export default function AdminMembersPage() {
   const [profiles, setProfiles] = useState([])
+  const [activeMemberships, setActiveMemberships] = useState([]) // membership_requests status='active', avec type
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [sportFilter, setSportFilter] = useState('all') // 'all' | 'padel' | 'badminton'
+  const [padelSubFilter, setPadelSubFilter] = useState('all') // 'all' | 'interclubs' | 'interequipes'
   const [editing, setEditing] = useState(null)
   const [editForm, setEditForm] = useState({ role: 'public', discount_percent: 0 })
   const [saving, setSaving] = useState(false)
@@ -25,12 +29,24 @@ export default function AdminMembersPage() {
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
-    setProfiles(data || [])
+    const today = new Date().toISOString().split('T')[0]
+    const [{ data: p }, { data: m }] = await Promise.all([
+      supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+      supabase.from('membership_requests')
+        .select('profile_id, valid_until, membership_type:membership_types(sport, key, label)')
+        .eq('status', 'active'),
+    ])
+    setProfiles(p || [])
+    // Ne garder que les statuts réellement encore valides (pas expirés à la volée)
+    setActiveMemberships((m || []).filter(r => !r.valid_until || r.valid_until >= today))
     setLoading(false)
   }
 
   useEffect(() => { load() }, [])
+
+  function membershipsFor(profileId) {
+    return activeMemberships.filter(m => m.profile_id === profileId)
+  }
 
   function openEdit(profile) {
     setEditing(profile)
@@ -93,7 +109,19 @@ export default function AdminMembersPage() {
 
   const filtered = profiles.filter(p => {
     const q = search.toLowerCase()
-    return !q || (p.email || '').toLowerCase().includes(q) || (p.first_name || '').toLowerCase().includes(q) || (p.last_name || '').toLowerCase().includes(q)
+    const matchesSearch = !q || (p.email || '').toLowerCase().includes(q) || (p.first_name || '').toLowerCase().includes(q) || (p.last_name || '').toLowerCase().includes(q)
+    if (!matchesSearch) return false
+
+    if (sportFilter === 'all') return true
+
+    const memberships = membershipsFor(p.id)
+    const matchesSport = memberships.some(m => m.membership_type?.sport === sportFilter)
+    if (!matchesSport) return false
+
+    if (sportFilter === 'padel' && padelSubFilter !== 'all') {
+      return memberships.some(m => m.membership_type?.sport === 'padel' && m.membership_type?.key === padelSubFilter)
+    }
+    return true
   })
 
   const displayName = p => (p.first_name || p.last_name) ? ((p.first_name || '') + ' ' + (p.last_name || '')).trim() : p.email
@@ -103,10 +131,10 @@ export default function AdminMembersPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '24px', gap: '12px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px', gap: '12px', flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Membres</h1>
-          <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>{profiles.length} utilisateur{profiles.length !== 1 ? 's' : ''}</p>
+          <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>{filtered.length} sur {profiles.length} utilisateur{profiles.length !== 1 ? 's' : ''}</p>
         </div>
         <input
           type="text"
@@ -116,6 +144,48 @@ export default function AdminMembersPage() {
           style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '9px 14px', color: 'var(--text)', fontSize: '14px', width: '100%', maxWidth: '220px', fontFamily: "'Inter',sans-serif" }}
         />
       </div>
+
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
+        {[
+          { key: 'all', label: 'Tous les utilisateurs (loisirs inclus)' },
+          { key: 'padel', label: 'Padel — licenciés' },
+          { key: 'badminton', label: 'Badminton — licenciés' },
+        ].map(f => {
+          const col = f.key === 'all' ? null : sportColor(f.key)
+          const active = sportFilter === f.key
+          return (
+            <button key={f.key} onClick={() => { setSportFilter(f.key); setPadelSubFilter('all') }}
+              style={{
+                background: active ? (col ? col.dim : 'var(--brand-dim)') : 'var(--surface)',
+                border: '1px solid ' + (active ? (col ? col.border : 'var(--brand)') : 'var(--border)'),
+                color: active ? (col ? col.text : 'var(--brand-light)') : 'var(--muted)',
+                borderRadius: '8px', padding: '7px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: 500,
+              }}>
+              {f.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {sportFilter === 'padel' && (
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>
+          {[
+            { key: 'all', label: 'Tous licenciés padel' },
+            { key: 'interclubs', label: 'Compétiteur InterClubs' },
+            { key: 'interequipes', label: 'Compétiteur InterEquipes' },
+          ].map(f => (
+            <button key={f.key} onClick={() => setPadelSubFilter(f.key)}
+              style={{
+                background: padelSubFilter === f.key ? sportColor('padel').dim : 'var(--surface2)',
+                border: '1px solid ' + (padelSubFilter === f.key ? sportColor('padel').border : 'var(--border)'),
+                color: padelSubFilter === f.key ? sportColor('padel').text : 'var(--muted)',
+                borderRadius: '20px', padding: '5px 12px', fontSize: '11px', cursor: 'pointer', fontWeight: 500,
+              }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
@@ -129,7 +199,7 @@ export default function AdminMembersPage() {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
-                    {['Utilisateur', 'Rôle', 'Remise', 'Wallet', 'Inscrit le', ''].map(h => (
+                    {['Utilisateur', 'Adhésions', 'Rôle', 'Remise', 'Wallet', 'Inscrit le', ''].map(h => (
                       <th key={h} style={{ padding: '10px 20px', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
                     ))}
                   </tr>
@@ -148,6 +218,20 @@ export default function AdminMembersPage() {
                               <div style={{ fontSize: '14px', fontWeight: 500 }}>{displayName(p)}</div>
                               <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{p.email}</div>
                             </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '13px 20px' }}>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', maxWidth: '220px' }}>
+                            {membershipsFor(p.id).length === 0 ? (
+                              <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Loisirs</span>
+                            ) : membershipsFor(p.id).map((m, i) => {
+                              const col = sportColor(m.membership_type?.sport)
+                              return (
+                                <span key={i} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '99px', background: col.dim, color: col.text, whiteSpace: 'nowrap' }}>
+                                  {m.membership_type?.label}
+                                </span>
+                              )
+                            })}
                           </div>
                         </td>
                         <td style={{ padding: '13px 20px' }}>
@@ -203,6 +287,14 @@ export default function AdminMembersPage() {
                     <span style={{ background: 'var(--surface2)', color: 'var(--brand-light)', fontSize: '11px', padding: '3px 10px', borderRadius: '99px', fontWeight: 500, fontFamily: "'Syne',sans-serif" }}>
                       {(p.wallet_balance || 0).toFixed(2)} €
                     </span>
+                    {membershipsFor(p.id).map((m, i) => {
+                      const col = sportColor(m.membership_type?.sport)
+                      return (
+                        <span key={i} style={{ fontSize: '11px', padding: '3px 10px', borderRadius: '99px', background: col.dim, color: col.text, fontWeight: 500 }}>
+                          {m.membership_type?.label}
+                        </span>
+                      )
+                    })}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                     <span style={{ fontSize: '11px', color: 'var(--muted)' }}>Inscrit le {new Date(p.created_at).toLocaleDateString('fr-BE')}</span>
