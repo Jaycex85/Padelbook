@@ -22,10 +22,11 @@ export default function AdminMembershipPage() {
 
   async function load() {
     setLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('membership_requests')
       .select('*, membership_type:membership_types(*), profile:profiles(first_name, last_name, email)')
       .order('requested_at', { ascending: false })
+    if (error) console.error('membership_requests load failed:', error)
     setRequests(data || [])
     setLoading(false)
   }
