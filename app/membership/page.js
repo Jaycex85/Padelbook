@@ -5,6 +5,7 @@ import { createClient } from '../../lib/supabase'
 import PaymentMethodModal from '../../components/PaymentMethodModal'
 import { goToPaymentUrl } from '../../lib/paymentNav'
 import { sportColor } from '../../lib/sportColors'
+import { useSport } from '../../lib/sportContext'
 
 const STATUS_LABELS = {
   none: 'Aucune demande',
@@ -23,6 +24,7 @@ export default function MembershipPage() {
   const [pendingPayment, setPendingPayment] = useState(null) // { requestId, amount }
   const supabase = createClient()
   const router = useRouter()
+  const { activeSport } = useSport()
 
   async function load() {
     setLoading(true)
@@ -103,17 +105,18 @@ export default function MembershipPage() {
   if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
 
   const bySport = { padel: types.filter(t => t.sport === 'padel'), badminton: types.filter(t => t.sport === 'badminton') }
+  const sportsToShow = activeSport ? [activeSport] : ['padel', 'badminton']
 
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 700 }}>Adhésions et cotisations</h1>
         <p style={{ color: 'var(--muted)', fontSize: '14px', marginTop: '4px' }}>
-          Licences et statuts compétiteur, par sport. Chaque demande est validée par le club après paiement.
+          Licences et statuts compétiteur pour le {activeSport === 'badminton' ? 'badminton' : 'padel'}. Chaque demande est validée par le club après paiement.
         </p>
       </div>
 
-      {['padel', 'badminton'].map(sport => {
+      {sportsToShow.map(sport => {
         if (bySport[sport].length === 0) return null
         const col = sportColor(sport)
         return (
