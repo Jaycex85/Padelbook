@@ -24,7 +24,7 @@ export default function AdminMembershipPage() {
     setLoading(true)
     const { data, error } = await supabase
       .from('membership_requests')
-      .select('*, membership_type:membership_types(*), profile:profiles(first_name, last_name, email)')
+      .select('*, membership_type:membership_types(*), profile:profiles!membership_requests_profile_id_fkey(first_name, last_name, email)')
       .order('requested_at', { ascending: false })
     if (error) console.error('membership_requests load failed:', error)
     setRequests(data || [])
