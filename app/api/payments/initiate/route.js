@@ -100,7 +100,13 @@ export async function POST(req) {
   }
 
   return new Response(JSON.stringify({
-    payment_url: process.env.NEXT_PUBLIC_APP_URL + '/payment/stub?ref=' + stubPayconicRef +
+    // Chemin relatif volontairement (pas de process.env.NEXT_PUBLIC_APP_URL) :
+    // le stub est sur notre propre domaine, et goToPaymentUrl() côté client
+    // résout déjà correctement les chemins relatifs vers l'origine courante.
+    // Le jour où un vrai provider externe est branché, cette valeur deviendra
+    // une URL absolue sur un autre domaine, et goToPaymentUrl() basculera
+    // automatiquement sur une redirection classique.
+    payment_url: '/payment/stub?ref=' + stubPayconicRef +
       (booking_id ? '&booking=' + booking_id : '') +
       (event_registration_id ? '&event_registration=' + event_registration_id : '') +
       (membership_request_id ? '&membership_request=' + membership_request_id : '') +
