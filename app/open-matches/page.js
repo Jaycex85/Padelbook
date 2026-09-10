@@ -6,6 +6,7 @@ import { calcEffectivePrice } from '../../lib/bookingUtils'
 import { useSport } from '../../lib/sportContext'
 import PaymentMethodModal from '../../components/PaymentMethodModal'
 import { goToPaymentUrl } from '../../lib/paymentNav'
+import { logBillableEvent } from '../../lib/billing'
 
 export default function OpenMatchesPage() {
   const [matches, setMatches] = useState([])
@@ -81,6 +82,14 @@ export default function OpenMatchesPage() {
       description: 'Part match ouvert', booking_id: pendingPayment.matchId,
     })
     await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', pendingPayment.playerId)
+
+    const match = matches.find(m => m.id === pendingPayment.matchId)
+    await logBillableEvent(supabase, {
+      profileId: user.id, category: 'booking', sport: match?.court?.sport,
+      amount: pendingPayment.amount, paymentMethod: 'wallet', description: 'Match ouvert',
+      bookingId: pendingPayment.matchId, bookingPlayerId: pendingPayment.playerId,
+    })
+
     setPendingPayment(null)
     load()
   }

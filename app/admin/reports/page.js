@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '../../../lib/supabase'
+import { sportColor } from '../../../lib/sportColors'
 
 const PERIODS = [
   { key: 'week', label: 'Cette semaine' },
@@ -55,8 +56,8 @@ export default function AdminReportsPage() {
     const [
       { data: bookings },
       { data: prevBookings },
-      { data: payments },
-      { data: prevPayments },
+      { data: billableEvents },
+      { data: prevBillableEvents },
       { data: members },
       { data: prevMembers },
       { data: courts },
@@ -66,10 +67,10 @@ export default function AdminReportsPage() {
         .gte('created_at', fromISO).lte('created_at', toISO),
       supabase.from('bookings').select('id, status, total_price, court_id, starts_at, ends_at, created_at')
         .gte('created_at', prevFromISO).lte('created_at', prevToISO),
-      supabase.from('payments').select('amount, status, created_at, booking_id')
-        .eq('status', 'paid').gte('created_at', fromISO).lte('created_at', toISO),
-      supabase.from('payments').select('amount, status, created_at, booking_id')
-        .eq('status', 'paid').gte('created_at', prevFromISO).lte('created_at', prevToISO),
+      supabase.from('billable_events').select('amount, category, sport, payment_method, created_at, booking_id')
+        .gte('created_at', fromISO).lte('created_at', toISO),
+      supabase.from('billable_events').select('amount, category, sport, payment_method, created_at, booking_id')
+        .gte('created_at', prevFromISO).lte('created_at', prevToISO),
       supabase.from('profiles').select('id, membership_status, membership_validated_at')
         .eq('membership_status', 'active').gte('membership_validated_at', fromISO).lte('membership_validated_at', toISO),
       supabase.from('profiles').select('id, membership_status, membership_validated_at')
@@ -83,29 +84,49 @@ export default function AdminReportsPage() {
     const cancelled = (bookings || []).filter(b => b.status === 'cancelled')
     const prevConfirmed = (prevBookings || []).filter(b => ['confirmed', 'completed'].includes(b.status))
 
-    const revenue = (payments || []).reduce((s, p) => s + parseFloat(p.amount || 0), 0)
-    const prevRevenue = (prevPayments || []).reduce((s, p) => s + parseFloat(p.amount || 0), 0)
+    // "Facturable" = tout ce qui a réellement été encaissé (wallet ou carte) :
+    // réservations, adhésions/licences, club events. La recharge wallet est
+    // exclue du chiffre d'affaires (ce n'est qu'un dépôt, pas un revenu tant
+    // qu'il n'est pas dépensé — auquel cas il est déjà compté ailleurs).
+    const billable = (billableEvents || []).filter(e => e.category !== 'wallet_topup')
+    const prevBillable = (prevBillableEvents || []).filter(e => e.category !== 'wallet_topup')
+
+    const revenue = billable.reduce((s, e) => s + parseFloat(e.amount || 0), 0)
+    const prevRevenue = prevBillable.reduce((s, e) => s + parseFloat(e.amount || 0), 0)
+
+    // Revenus par sport (padel / badminton / commun — ex: annonce ou event sans sport dédié)
+    const revenueBySport = { padel: 0, badminton: 0, commun: 0 }
+    billable.forEach(e => {
+      const key = e.sport === 'padel' ? 'padel' : e.sport === 'badminton' ? 'badminton' : 'commun'
+      revenueBySport[key] += parseFloat(e.amount || 0)
+    })
+
+    // Revenus par catégorie
+    const CATEGORY_LABELS = { booking: 'Réservations', membership: 'Adhésions & licences', event: 'Club Events' }
+    const revenueByCategory = {}
+    billable.forEach(e => {
+      const label = CATEGORY_LABELS[e.category] || e.category
+      revenueByCategory[label] = (revenueByCategory[label] || 0) + parseFloat(e.amount || 0)
+    })
 
     // Revenus par jour (pour graphique)
     const revenueByDay = {}
-    ;(payments || []).forEach(p => {
-      const day = p.created_at.substring(0, 10)
-      revenueByDay[day] = (revenueByDay[day] || 0) + parseFloat(p.amount || 0)
+    billable.forEach(e => {
+      const day = e.created_at.substring(0, 10)
+      revenueByDay[day] = (revenueByDay[day] || 0) + parseFloat(e.amount || 0)
     })
 
     // Stats par terrain
-    // Construire un index paiements par booking_id pour revenus réels
-    const paymentsByBooking = {}
-    ;(payments || []).forEach(p => {
-      if (p.booking_id) {
-        paymentsByBooking[p.booking_id] = (paymentsByBooking[p.booking_id] || 0) + parseFloat(p.amount || 0)
-      }
+    // Construire un index revenus par booking_id (wallet + carte, via le registre unifié)
+    const revenueByBooking = {}
+    billable.filter(e => e.category === 'booking' && e.booking_id).forEach(e => {
+      revenueByBooking[e.booking_id] = (revenueByBooking[e.booking_id] || 0) + parseFloat(e.amount || 0)
     })
 
     const courtStats = (courts || []).map(court => {
       const courtBookings = (allBookings || []).filter(b => b.court_id === court.id)
       // Revenus réels = somme des paiements effectivement encaissés pour ce terrain
-      const courtRevenue = courtBookings.reduce((s, b) => s + (paymentsByBooking[b.id] || 0), 0)
+      const courtRevenue = courtBookings.reduce((s, b) => s + (revenueByBooking[b.id] || 0), 0)
       // Taux occupation : heures réservées / heures disponibles dans la période
       const periodDays = (to - from) / (24 * 3600 * 1000)
       const openHoursPerDay = 15 // 7h-22h
@@ -167,6 +188,7 @@ export default function AdminReportsPage() {
 
     setData({
       revenue, prevRevenue,
+      revenueBySport, revenueByCategory,
       confirmed: confirmed.length, prevConfirmed: prevConfirmed.length,
       cancelled: cancelled.length,
       newMembers: (members || []).length, prevMembers: (prevMembers || []).length,
@@ -175,7 +197,7 @@ export default function AdminReportsPage() {
       heatmap,
       allBookings: allBookings || [],
       rawBookings: bookings || [],
-      rawPayments: payments || [],
+      rawBillable: billable,
       from, to,
     })
     setLoading(false)
@@ -197,12 +219,13 @@ export default function AdminReportsPage() {
   function exportCSV() {
     if (!data) return
     const rows = [
-      ['Date', 'Terrain', 'Statut', 'Montant'],
-      ...data.rawBookings.map(b => [
-        b.starts_at?.substring(0, 10) || '',
-        data.courtStats.find(c => c.id === b.court_id)?.name || b.court_id,
-        b.status,
-        b.total_price,
+      ['Date', 'Catégorie', 'Sport', 'Mode de paiement', 'Montant'],
+      ...data.rawBillable.map(e => [
+        e.created_at?.substring(0, 10) || '',
+        e.category === 'booking' ? 'Réservation' : e.category === 'membership' ? 'Adhésion/licence' : e.category === 'event' ? 'Club Event' : e.category,
+        e.sport === 'badminton' ? 'Badminton' : e.sport === 'padel' ? 'Padel' : 'Commun',
+        e.payment_method === 'wallet' ? 'Wallet' : 'Carte',
+        e.amount,
       ])
     ]
     const csv = rows.map(r => r.join(';')).join('\n')
@@ -443,6 +466,53 @@ export default function AdminReportsPage() {
                 )}
               </div>
             ))}
+          </div>
+
+          {/* Revenus par sport + par catégorie */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+              <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700, marginBottom: '14px' }}>Revenus par sport</h2>
+              {[
+                { key: 'padel', label: 'Padel', col: sportColor('padel') },
+                { key: 'badminton', label: 'Badminton', col: sportColor('badminton') },
+                { key: 'commun', label: 'Commun / non lié', col: sportColor(null) },
+              ].map(row => {
+                const val = data.revenueBySport[row.key] || 0
+                const pct = data.revenue > 0 ? Math.round((val / data.revenue) * 100) : 0
+                if (val === 0) return null
+                return (
+                  <div key={row.key} style={{ marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                      <span style={{ color: row.col.text, fontWeight: 600 }}>{row.label}</span>
+                      <span style={{ color: 'var(--muted)' }}>{fmt(val)} · {pct}%</span>
+                    </div>
+                    <div style={{ background: 'var(--surface2)', borderRadius: '4px', height: '6px', overflow: 'hidden' }}>
+                      <div style={{ background: row.col.border, width: pct + '%', height: '100%' }} />
+                    </div>
+                  </div>
+                )
+              })}
+              {data.revenue === 0 && <div style={{ fontSize: '13px', color: 'var(--muted)' }}>Aucun revenu sur la période.</div>}
+            </div>
+
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
+              <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700, marginBottom: '14px' }}>Revenus par catégorie</h2>
+              {Object.entries(data.revenueByCategory).sort((a, b) => b[1] - a[1]).map(([label, val]) => {
+                const pct = data.revenue > 0 ? Math.round((val / data.revenue) * 100) : 0
+                return (
+                  <div key={label} style={{ marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                      <span style={{ color: 'var(--text)', fontWeight: 600 }}>{label}</span>
+                      <span style={{ color: 'var(--muted)' }}>{fmt(val)} · {pct}%</span>
+                    </div>
+                    <div style={{ background: 'var(--surface2)', borderRadius: '4px', height: '6px', overflow: 'hidden' }}>
+                      <div style={{ background: 'var(--brand)', width: pct + '%', height: '100%' }} />
+                    </div>
+                  </div>
+                )
+              })}
+              {Object.keys(data.revenueByCategory).length === 0 && <div style={{ fontSize: '13px', color: 'var(--muted)' }}>Aucun revenu sur la période.</div>}
+            </div>
           </div>
 
           {/* Graphique revenus */}

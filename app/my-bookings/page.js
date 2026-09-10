@@ -9,6 +9,7 @@ import MatchScore from '../../components/MatchScore'
 import { useSport } from '../../lib/sportContext'
 import PaymentMethodModal from '../../components/PaymentMethodModal'
 import { goToPaymentUrl } from '../../lib/paymentNav'
+import { logBillableEvent } from '../../lib/billing'
 
 const STATUS_STYLES = {
   confirmed: { bg: 'var(--brand-dim)', color: 'var(--brand-light)', label: 'Confirmé' },
@@ -251,6 +252,13 @@ function MyBookingsList() {
         description: 'Part réservation', booking_id: pendingPayment.bookingId,
       })
       await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', pendingPayment.playerId)
+
+      const booking = bookings.find(b => b.id === pendingPayment.bookingId)
+      await logBillableEvent(supabase, {
+        profileId: user.id, category: 'booking', sport: booking?.court?.sport,
+        amount: pendingPayment.amount, paymentMethod: 'wallet', description: 'Réservation',
+        bookingId: pendingPayment.bookingId, bookingPlayerId: pendingPayment.playerId,
+      })
     }
     setPayingShare(null)
     setPendingPayment(null)

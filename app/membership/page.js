@@ -5,6 +5,7 @@ import { createClient } from '../../lib/supabase'
 import PaymentMethodModal from '../../components/PaymentMethodModal'
 import { goToPaymentUrl } from '../../lib/paymentNav'
 import { sportColor } from '../../lib/sportColors'
+import { logBillableEvent } from '../../lib/billing'
 import { useSport } from '../../lib/sportContext'
 
 const STATUS_LABELS = {
@@ -69,7 +70,7 @@ export default function MembershipPage() {
 
     if (newRequest) {
       if (type.price > 0) {
-        setPendingPayment({ requestId: newRequest.id, amount: type.price })
+        setPendingPayment({ requestId: newRequest.id, amount: type.price, sport: type.sport })
       } else {
         load()
       }
@@ -87,6 +88,11 @@ export default function MembershipPage() {
         description: 'Adhésion / licence',
       })
       await supabase.from('membership_requests').update({ payment_status: 'paid' }).eq('id', pendingPayment.requestId)
+      await logBillableEvent(supabase, {
+        profileId: user.id, category: 'membership', sport: pendingPayment.sport,
+        amount: pendingPayment.amount, paymentMethod: 'wallet', description: 'Adhésion / licence',
+        membershipRequestId: pendingPayment.requestId,
+      })
     }
     setPendingPayment(null)
     load()
@@ -157,7 +163,7 @@ export default function MembershipPage() {
                         </button>
                       )}
                       {status.key === 'awaiting_payment' && (
-                        <button onClick={() => setPendingPayment({ requestId: status.request.id, amount: status.request.price })}
+                        <button onClick={() => setPendingPayment({ requestId: status.request.id, amount: status.request.price, sport: type.sport })}
                           style={{ background: col.dim, border: '1px solid ' + col.border, color: col.text, borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
                           Payer
                         </button>

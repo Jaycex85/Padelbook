@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../lib/supabase'
+import { logBillableEvent } from '../../../lib/billing'
 import { Suspense } from 'react'
 
 function StubPaymentContent() {
@@ -19,24 +20,46 @@ function StubPaymentContent() {
 
   async function confirmPayment() {
     setProcessing(true)
+    const { data: { user } } = await supabase.auth.getUser()
 
     if (bookingId) {
+      const { data: payment } = await supabase.from('payments').select('*').eq('payconic_ref', ref).single()
       await supabase.from('payments').update({ status: 'paid' }).eq('payconic_ref', ref)
       await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', bookingId)
+      if (payment?.booking_player_id) {
+        await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', payment.booking_player_id)
+      }
+      const { data: booking } = await supabase.from('bookings').select('court:courts(sport)').eq('id', bookingId).single()
+      await logBillableEvent(supabase, {
+        profileId: user?.id, category: 'booking', sport: booking?.court?.sport,
+        amount: payment?.amount, paymentMethod: 'card', description: 'Réservation',
+        bookingId, bookingPlayerId: payment?.booking_player_id,
+      })
     }
 
     if (eventRegistrationId) {
       await supabase.from('event_registrations').update({ status: 'confirmed', payment_status: 'paid' }).eq('id', eventRegistrationId)
+      const { data: registration } = await supabase.from('event_registrations').select('price_paid, event:club_events(sport)').eq('id', eventRegistrationId).single()
+      await logBillableEvent(supabase, {
+        profileId: user?.id, category: 'event', sport: registration?.event?.sport,
+        amount: registration?.price_paid, paymentMethod: 'card', description: 'Inscription Club Event',
+        eventRegistrationId,
+      })
     }
 
     if (membershipRequestId) {
       // Le paiement est fait, mais la demande reste "pending" (statut métier) tant
       // que l'admin ne l'a pas validée avec une période de validité.
       await supabase.from('membership_requests').update({ payment_status: 'paid' }).eq('id', membershipRequestId)
+      const { data: request } = await supabase.from('membership_requests').select('price, membership_type:membership_types(sport)').eq('id', membershipRequestId).single()
+      await logBillableEvent(supabase, {
+        profileId: user?.id, category: 'membership', sport: request?.membership_type?.sport,
+        amount: request?.price, paymentMethod: 'card', description: 'Adhésion / licence',
+        membershipRequestId,
+      })
     }
 
     if (isWalletTopup && topupAmount > 0) {
-      const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: prof } = await supabase.from('profiles').select('wallet_balance').eq('id', user.id).single()
         const available = prof?.wallet_balance || 0
@@ -44,6 +67,10 @@ function StubPaymentContent() {
         await supabase.from('wallet_transactions').insert({
           profile_id: user.id, amount: topupAmount, type: 'credit',
           description: 'Recharge wallet par carte',
+        })
+        await logBillableEvent(supabase, {
+          profileId: user.id, category: 'wallet_topup', sport: null,
+          amount: topupAmount, paymentMethod: 'card', description: 'Recharge wallet',
         })
       }
     }

@@ -6,6 +6,7 @@ import Chat from '../../components/Chat'
 import { useSport } from '../../lib/sportContext'
 import PaymentMethodModal from '../../components/PaymentMethodModal'
 import { goToPaymentUrl } from '../../lib/paymentNav'
+import { logBillableEvent } from '../../lib/billing'
 
 export default function EventsPage() {
   const [events, setEvents] = useState([])
@@ -67,7 +68,7 @@ export default function EventsPage() {
     if (error) { alert(error.message); return }
 
     if (event.price_per_player > 0) {
-      setPendingPayment({ eventRegistrationId: reg.id, amount: event.price_per_player })
+      setPendingPayment({ eventRegistrationId: reg.id, amount: event.price_per_player, sport: event.sport })
     } else {
       load()
     }
@@ -84,6 +85,12 @@ export default function EventsPage() {
         description: 'Inscription Club Event',
       })
       await supabase.from('event_registrations').update({ payment_status: 'paid', status: 'confirmed' }).eq('id', pendingPayment.eventRegistrationId)
+
+      await logBillableEvent(supabase, {
+        profileId: user.id, category: 'event', sport: pendingPayment.sport,
+        amount: pendingPayment.amount, paymentMethod: 'wallet', description: 'Inscription Club Event',
+        eventRegistrationId: pendingPayment.eventRegistrationId,
+      })
     }
     setPendingPayment(null)
     load()
