@@ -29,8 +29,8 @@ function LoginForm() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#0D1117' }}>
       <div style={{ width: '100%', maxWidth: '380px' }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <img src="/logo.png" alt="Mayfair Padel Club" style={{ width: '80px', height: '80px', borderRadius: '16px', objectFit: 'cover', marginBottom: '12px' }} />
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '18px', fontWeight: 800, color: '#C084FC', letterSpacing: '2px' }}>MAYFAIR</div>
+          <img src="/logo.png" alt="Brussels Badminton & Padel Club" style={{ width: '80px', height: '80px', borderRadius: '16px', objectFit: 'cover', marginBottom: '12px' }} />
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '16px', fontWeight: 800, color: '#C084FC', letterSpacing: '1px' }}>BRUSSELS B&amp;P CLUB</div>
           <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 600, color: '#8B949E', letterSpacing: '4px' }}>PADEL CLUB</div>
         </div>
         <div style={{ background: '#161B22', border: '1px solid #30363D', borderRadius: '16px', padding: '28px' }}>

@@ -106,7 +106,7 @@ export default function AdminEventsPage() {
     for (const courtId of form.court_ids) {
       const { data: block } = await supabase.from('blocks').insert({
         court_id: courtId, reason: 'event',
-        label: 'Mayfair Padel — ' + form.label,
+        label: 'Brussels B&P — ' + form.label,
         starts_at: form.starts_at, ends_at: form.ends_at, all_courts: false,
       }).select().single()
 
@@ -145,7 +145,7 @@ export default function AdminEventsPage() {
       if (link.block_id) {
         await supabase.from('blocks').update({
           starts_at: form.starts_at, ends_at: form.ends_at,
-          label: 'Mayfair Padel — ' + form.label,
+          label: 'Brussels B&P — ' + form.label,
         }).eq('id', link.block_id)
       }
     }
@@ -156,7 +156,7 @@ export default function AdminEventsPage() {
     for (const courtId of newCourtIds) {
       const { data: block } = await supabase.from('blocks').insert({
         court_id: courtId, reason: 'event',
-        label: 'Mayfair Padel — ' + form.label,
+        label: 'Brussels B&P — ' + form.label,
         starts_at: form.starts_at, ends_at: form.ends_at, all_courts: false,
       }).select().single()
       await supabase.from('club_event_courts').insert({ event_id: eventId, court_id: courtId, block_id: block?.id || null })
@@ -196,7 +196,7 @@ export default function AdminEventsPage() {
       for (const courtId of form.court_ids) {
         const { data: block } = await supabase.from('blocks').insert({
           court_id: courtId, reason: 'event',
-          label: 'Mayfair Padel — ' + form.label,
+          label: 'Brussels B&P — ' + form.label,
           starts_at: payload.starts_at, ends_at: payload.ends_at, all_courts: false,
         }).select().single()
 
@@ -355,7 +355,7 @@ export default function AdminEventsPage() {
           <div style={{ flex: 1, minWidth: '180px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
               <span style={{ fontFamily: "'Syne',sans-serif", fontSize: compact ? '14px' : '16px', fontWeight: 700 }}>
-                {compact ? fmt(ev.starts_at) : 'Mayfair Padel — ' + ev.label}
+                {compact ? fmt(ev.starts_at) : 'Brussels B&P — ' + ev.label}
               </span>
               {ev.sport && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: col.dim, color: col.text }}>{ev.sport === 'badminton' ? 'Badminton' : 'Padel'}</span>}
               {isCancelled && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(248,113,113,0.1)', color: 'var(--red)' }}>Annulé</span>}
@@ -422,7 +422,7 @@ export default function AdminEventsPage() {
                         <div style={{ flex: 1, minWidth: '200px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'var(--brand-dim)', color: 'var(--brand-light)', fontWeight: 600 }}>🔁 SÉRIE</span>
-                            <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '16px', fontWeight: 700 }}>Mayfair Padel — {s.label}</span>
+                            <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '16px', fontWeight: 700 }}>Brussels B&P — {s.label}</span>
                             {isCancelled && <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(248,113,113,0.1)', color: 'var(--red)' }}>Annulée</span>}
                           </div>
                           <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '8px' }}>
@@ -513,7 +513,7 @@ export default function AdminEventsPage() {
             <div style={{ marginBottom: '14px' }}>
               <label style={labelStyle}>Libellé</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '14px', color: 'var(--muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>Mayfair Padel —</span>
+                <span style={{ fontSize: '14px', color: 'var(--muted)', whiteSpace: 'nowrap', flexShrink: 0 }}>Brussels B&P —</span>
                 <input style={fieldStyle} value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} placeholder={mode === 'series' ? 'Open du vendredi' : 'Tournoi de printemps'} />
               </div>
             </div>

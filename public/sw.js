@@ -1,4 +1,4 @@
-// Mayfair Padel Club — Service Worker
+// Brussels B&P Club — Service Worker
 const CACHE_NAME = 'mayfair-v1'
 
 self.addEventListener('install', e => {
@@ -22,7 +22,7 @@ self.addEventListener('push', e => {
     data: { url: data.url || '/' },
     actions: data.actions || [],
   }
-  e.waitUntil(self.registration.showNotification(data.title || 'Mayfair Padel Club', options))
+  e.waitUntil(self.registration.showNotification(data.title || 'Brussels B&P Club', options))
 })
 
 // Clic sur la notification → ouvrir l'URL

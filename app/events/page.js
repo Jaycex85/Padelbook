@@ -147,7 +147,7 @@ export default function EventsPage() {
                 </div>
 
                 <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '18px', fontWeight: 700, marginBottom: '6px', paddingRight: '70px' }}>
-                  Mayfair Padel — {ev.label}
+                  Brussels B&P — {ev.label}
                 </div>
 
                 <div style={{ fontSize: '14px', color: 'var(--muted)', marginBottom: '4px' }}>

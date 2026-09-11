@@ -74,7 +74,7 @@ export default function AdminCalendarPage() {
       })),
       ...(events || []).map(e => ({
         type: 'event',
-        label: 'Mayfair Padel — ' + e.label,
+        label: 'Brussels B&P — ' + e.label,
         sublabel: (e.club_event_courts || []).map(c => c.courts?.name).filter(Boolean).join(', '),
         starts_at: e.starts_at, ends_at: e.ends_at,
         sport: e.sport || null,

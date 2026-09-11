@@ -5,8 +5,8 @@ import ServiceWorkerInit from '../components/ServiceWorkerInit'
 import { SportProvider } from '../lib/sportContext'
 
 export const metadata = {
-  title: 'Mayfair Padel Club',
-  description: 'Réservez votre terrain de padel — Mayfair Padel Club',
+  title: 'Brussels Badminton & Padel Club',
+  description: 'Réservez votre terrain — Brussels Badminton & Padel Club',
   manifest: '/manifest.json',
   icons: {
     icon: '/favicon.png',

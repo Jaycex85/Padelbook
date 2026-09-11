@@ -22,10 +22,10 @@ export default async function HomePage() {
     return (
       <div>
         <div style={{ padding: '64px 0 48px', textAlign: 'center' }}>
-          <img src="/logo.png" alt="Mayfair Padel Club" style={{ width: '90px', height: '90px', borderRadius: '18px', objectFit: 'cover', marginBottom: '20px' }} />
+          <img src="/logo.png" alt="Brussels Badminton & Padel Club" style={{ width: '90px', height: '90px', borderRadius: '18px', objectFit: 'cover', marginBottom: '20px' }} />
           <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 'clamp(28px, 5vw, 46px)', fontWeight: 800, lineHeight: 1.1, letterSpacing: '-0.5px', marginBottom: '14px' }}>
             Bienvenue au{' '}
-            <span style={{ color: 'var(--brand-light)' }}>Mayfair Padel Club</span>
+            <span style={{ color: 'var(--brand-light)' }}>Brussels Badminton &amp; Padel Club</span>
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: '16px', maxWidth: '420px', margin: '0 auto 32px' }}>
             Réservez votre terrain en ligne, paiement sécurisé, confirmation instantanée.
