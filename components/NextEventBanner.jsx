@@ -19,7 +19,7 @@ export default function NextEventBanner({ events }) {
         </div>
         <div style={{ fontSize: '13px', color: 'var(--brand-light)', marginBottom: '4px' }}>🏆 Club Event</div>
         <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '17px', fontWeight: 700, marginBottom: '6px', paddingRight: '60px' }}>
-          Mayfair Padel — {nextEvent.label}
+          Brussels B&P — {nextEvent.label}
         </div>
         <div style={{ fontSize: '13px', color: 'var(--muted)' }}>
           {fmtEventDate(nextEvent.starts_at)} · {fmtEventTime(nextEvent.starts_at)} · {nextEvent.price_per_player} €/pers

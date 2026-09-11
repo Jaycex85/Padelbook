@@ -44,10 +44,10 @@ export default function Sidebar({ profile, onClose }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-          <img src="/logo.png" alt="Mayfair Padel Club" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
+          <img src="/logo.png" alt="Brussels Badminton & Padel Club" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
           <div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '13px', fontWeight: 800, color: 'var(--brand-light)', lineHeight: 1.1 }}>MAYFAIR</div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '10px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '1px' }}>PADEL CLUB</div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '13px', fontWeight: 800, color: 'var(--brand-light)', lineHeight: 1.1 }}>BRUSSELS B&amp;P</div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '10px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '1px' }}>CLUB</div>
           </div>
         </Link>
         {onClose && (

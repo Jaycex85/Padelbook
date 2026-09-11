@@ -1,5 +1,5 @@
 // Brussels B&P Club — Service Worker
-const CACHE_NAME = 'mayfair-v1'
+const CACHE_NAME = 'brussels-bp-v1'
 
 self.addEventListener('install', e => {
   self.skipWaiting()
@@ -17,7 +17,7 @@ self.addEventListener('push', e => {
     body: data.body || '',
     icon: '/icons/icon-192.png',
     badge: '/icons/badge-96.png',
-    tag: data.tag || 'mayfair',
+    tag: data.tag || 'brussels-bp',
     renotify: true,
     data: { url: data.url || '/' },
     actions: data.actions || [],

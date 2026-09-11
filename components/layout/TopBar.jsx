@@ -47,7 +47,7 @@ function SportSwitcher() {
 
 export default function TopBar({ user, profile, onHamburger, sidebarOpen }) {
   const pathname = usePathname()
-  const title = PAGE_TITLES[pathname] || 'Mayfair Padel Club'
+  const title = PAGE_TITLES[pathname] || 'Brussels B&P Club'
 
   return (
     <header style={{
@@ -105,9 +105,9 @@ export default function TopBar({ user, profile, onHamburger, sidebarOpen }) {
 
       {/* Logo mobile */}
       <Link href="/" className="topbar-logo-mobile" style={{ display: 'none', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-        <img src="/logo.png" alt="Mayfair Padel Club" style={{ width: '30px', height: '30px', borderRadius: '6px', objectFit: 'cover' }} />
+        <img src="/logo.png" alt="Brussels Badminton & Padel Club" style={{ width: '30px', height: '30px', borderRadius: '6px', objectFit: 'cover' }} />
         <div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 800, color: 'var(--brand-light)', lineHeight: 1 }}>MAYFAIR</div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 800, color: 'var(--brand-light)', lineHeight: 1 }}>BRUSSELS B&amp;P</div>
           <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '9px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '1px' }}>PADEL CLUB</div>
         </div>
       </Link>

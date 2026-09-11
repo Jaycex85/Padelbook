@@ -244,7 +244,7 @@ export default function AdminReportsPage() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'rapport_mayfair_' + data.from.toISOString().substring(0, 10) + '_' + data.to.toISOString().substring(0, 10) + '.csv'
+    a.download = 'rapport_brussels_bp_' + data.from.toISOString().substring(0, 10) + '_' + data.to.toISOString().substring(0, 10) + '.csv'
     a.click()
     URL.revokeObjectURL(url)
   }

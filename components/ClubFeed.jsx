@@ -242,7 +242,7 @@ export default function ClubFeed({ isAdmin, userId }) {
                       🎾
                     </div>
                     <div>
-                      <div style={{ fontSize: '13px', fontWeight: 600 }}>Mayfair Padel Club</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600 }}>Brussels B&P Club</div>
                       <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
                         {fmtDate(post.created_at)}{post.pinned ? ' · 📌 Épinglé' : ''}
                         {post.sport && <> · <span style={{ color: post.sport === 'badminton' ? '#BEF264' : '#C084FC' }}>{post.sport === 'badminton' ? 'Badminton' : 'Padel'}</span></>}
