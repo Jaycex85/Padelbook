@@ -287,7 +287,8 @@ function MyBookingsList() {
     if (openBalance <= 0) return
 
     setSettling(booking.id)
-    const { data: ownerProfile } = await supabase.from('profiles').select('wallet_balance').eq('id', userId).single()
+    const { data: ownerProfile, error: profErr } = await supabase.from('profiles').select('wallet_balance').eq('id', userId).single()
+    if (profErr) { console.error('settleBalance: lecture profil échouée', profErr); alert('Erreur : ' + profErr.message); setSettling(null); return }
     const available = ownerProfile?.wallet_balance || 0
 
     if (available < openBalance) {
@@ -296,21 +297,32 @@ function MyBookingsList() {
       return
     }
 
-    await supabase.from('profiles').update({ wallet_balance: available - openBalance }).eq('id', userId)
-    await supabase.from('wallet_transactions').insert({
+    const { data: walletUpdated, error: walletErr } = await supabase.from('profiles').update({ wallet_balance: available - openBalance }).eq('id', userId).select('id')
+    if (walletErr) { console.error('settleBalance: débit wallet échoué', walletErr); alert('Erreur lors du débit : ' + walletErr.message); setSettling(null); return }
+    if (!walletUpdated || walletUpdated.length === 0) {
+      console.error('settleBalance: débit wallet bloqué silencieusement (0 ligne affectée, probable RLS)')
+      alert('Le débit du wallet a été bloqué par les droits d\'accès (RLS). Rien n\'a été modifié — voir la console pour les détails techniques.')
+      setSettling(null)
+      return
+    }
+
+    const { error: txErr } = await supabase.from('wallet_transactions').insert({
       profile_id: userId, amount: -openBalance, type: 'debit',
       description: 'Règlement solde réservation ' + (booking.court?.name || ''), booking_id: booking.id,
     })
+    if (txErr) console.error('settleBalance: insertion wallet_transactions échouée (non bloquant)', txErr)
 
     // Marquer tous les joueurs assignés impayés comme payés (le owner a couvert pour eux)
     const unpaidAssigned = (booking.players || []).filter(p => p.payment_status !== 'paid')
     for (const p of unpaidAssigned) {
-      await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', p.id)
+      const { error: playerErr } = await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', p.id)
+      if (playerErr) console.error('settleBalance: mise à jour booking_players échouée pour', p.id, playerErr)
     }
 
     // Si la résa était pending, elle est maintenant entièrement couverte -> confirmer
     if (booking.status === 'pending') {
-      await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', booking.id)
+      const { error: bookingErr } = await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', booking.id)
+      if (bookingErr) console.error('settleBalance: confirmation booking échouée', bookingErr)
     }
 
     setSettling(null)
