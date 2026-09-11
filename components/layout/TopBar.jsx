@@ -108,13 +108,13 @@ export default function TopBar({ user, profile, onHamburger, sidebarOpen }) {
       <Link href="/" className="topbar-logo-mobile" style={{ display: 'none', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
         <img src="/logo.png" alt="Brussels Badminton & Padel Club" style={{ width: '30px', height: '30px', borderRadius: '6px', objectFit: 'cover' }} />
         <div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 800, lineHeight: 1, whiteSpace: 'nowrap' }}>
-            <span style={{ color: '#fff' }}>Brussels</span>{' '}
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '10px', fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>Brussels</div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '10px', fontWeight: 800, lineHeight: 1.2, whiteSpace: 'nowrap' }}>
             <span style={{ color: sportColor('badminton').text }}>Badminton</span>{' '}
             <span style={{ color: '#fff' }}>&amp;</span>{' '}
             <span style={{ color: sportColor('padel').text }}>Padel</span>
           </div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '9px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '1px' }}>CLUB</div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '8px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '1px', lineHeight: 1.2 }}>CLUB</div>
         </div>
       </Link>
 
