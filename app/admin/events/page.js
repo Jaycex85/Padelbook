@@ -4,6 +4,7 @@ import { createClient } from '../../../lib/supabase'
 import { generateSeriesDates, buildOccurrencePayload } from '../../../lib/eventSeriesUtils'
 import DeletionHistory from '../../../components/DeletionHistory'
 import { sportColor } from '../../../lib/sportColors'
+import SportFilterBar from '../../../components/admin/SportFilterBar'
 
 const WHO_LABELS = { all: 'Tout le monde', member: 'Joueurs (ancien rôle)', public: 'Joueurs enregistrés', cotisant: 'Membres du club' }
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
@@ -18,6 +19,7 @@ const EMPTY_FORM = {
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState([])
+  const [sportFilter, setSportFilter] = useState('all')
   const [series, setSeries] = useState([])
   const [courts, setCourts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -330,12 +332,14 @@ export default function AdminEventsPage() {
   const fieldStyle = { width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '9px 12px', color: 'var(--text)', fontSize: '14px', fontFamily: "'Inter',sans-serif" }
   const labelStyle = { display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.3px' }
 
-  const singleEvents = events.filter(e => !e.series_id)
-  const seriesWithCounts = series.map(s => {
-    const occ = events.filter(e => e.series_id === s.id)
-    const upcoming = occ.filter(e => e.status === 'active' && new Date(e.starts_at) > new Date())
-    return { ...s, occurrences: occ, upcomingCount: upcoming.length }
-  })
+  const singleEvents = events.filter(e => !e.series_id && (sportFilter === 'all' || !e.sport || e.sport === sportFilter))
+  const seriesWithCounts = series
+    .filter(s => sportFilter === 'all' || !s.sport || s.sport === sportFilter)
+    .map(s => {
+      const occ = events.filter(e => e.series_id === s.id)
+      const upcoming = occ.filter(e => e.status === 'active' && new Date(e.starts_at) > new Date())
+      return { ...s, occurrences: occ, upcomingCount: upcoming.length }
+    })
 
   function renderEventCard(ev, compact) {
     const regs = ev.event_registrations || []
@@ -396,6 +400,8 @@ export default function AdminEventsPage() {
           + Créer un event
         </button>
       </div>
+
+      <SportFilterBar value={sportFilter} onChange={setSportFilter} />
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>

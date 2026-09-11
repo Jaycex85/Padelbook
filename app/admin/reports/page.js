@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { sportColor } from '../../../lib/sportColors'
+import SportFilterBar from '../../../components/admin/SportFilterBar'
 
 const PERIODS = [
   { key: 'week', label: 'Cette semaine' },
@@ -41,6 +42,7 @@ export default function AdminReportsPage() {
   const [customTo, setCustomTo] = useState('')
   const [loading, setLoading] = useState(true)
   const [data, setData] = useState(null)
+  const [sportFilter, setSportFilter] = useState('all')
   const supabase = createClient()
 
   const load = useCallback(async () => {
@@ -54,18 +56,18 @@ export default function AdminReportsPage() {
     const prevToISO = prevTo.toISOString()
 
     const [
-      { data: bookings },
-      { data: prevBookings },
+      { data: bookingsRaw },
+      { data: prevBookingsRaw },
       { data: billableEvents },
       { data: prevBillableEvents },
       { data: members },
       { data: prevMembers },
-      { data: courts },
-      { data: allBookings },
+      { data: courtsRaw },
+      { data: allBookingsRaw },
     ] = await Promise.all([
-      supabase.from('bookings').select('id, status, total_price, court_id, starts_at, ends_at, created_at')
+      supabase.from('bookings').select('id, status, total_price, court_id, starts_at, ends_at, created_at, court:courts(sport)')
         .gte('created_at', fromISO).lte('created_at', toISO),
-      supabase.from('bookings').select('id, status, total_price, court_id, starts_at, ends_at, created_at')
+      supabase.from('bookings').select('id, status, total_price, court_id, starts_at, ends_at, created_at, court:courts(sport)')
         .gte('created_at', prevFromISO).lte('created_at', prevToISO),
       supabase.from('billable_events').select('amount, category, sport, payment_method, created_at, booking_id')
         .gte('created_at', fromISO).lte('created_at', toISO),
@@ -75,10 +77,17 @@ export default function AdminReportsPage() {
         .eq('membership_status', 'active').gte('membership_validated_at', fromISO).lte('membership_validated_at', toISO),
       supabase.from('profiles').select('id, membership_status, membership_validated_at')
         .eq('membership_status', 'active').gte('membership_validated_at', prevFromISO).lte('membership_validated_at', prevToISO),
-      supabase.from('courts').select('id, name').eq('status', 'active'),
-      supabase.from('bookings').select('id, court_id, starts_at, ends_at, status, total_price')
+      supabase.from('courts').select('id, name, sport').eq('status', 'active'),
+      supabase.from('bookings').select('id, court_id, starts_at, ends_at, status, total_price, court:courts(sport)')
         .in('status', ['confirmed', 'completed']).gte('starts_at', fromISO).lte('starts_at', toISO),
     ])
+
+    // Filtre sport, appliqué à toutes les sources avant calcul des stats.
+    const bySport = arr => sportFilter === 'all' ? arr : (arr || []).filter(x => x.court?.sport === sportFilter || x.sport === sportFilter)
+    const bookings = bySport(bookingsRaw)
+    const prevBookings = bySport(prevBookingsRaw)
+    const allBookings = bySport(allBookingsRaw)
+    const courts = sportFilter === 'all' ? (courtsRaw || []) : (courtsRaw || []).filter(c => c.sport === sportFilter)
 
     const confirmed = (bookings || []).filter(b => ['confirmed', 'completed'].includes(b.status))
     const cancelled = (bookings || []).filter(b => b.status === 'cancelled')
@@ -88,8 +97,10 @@ export default function AdminReportsPage() {
     // réservations, adhésions/licences, club events. La recharge wallet est
     // exclue du chiffre d'affaires (ce n'est qu'un dépôt, pas un revenu tant
     // qu'il n'est pas dépensé — auquel cas il est déjà compté ailleurs).
-    const billable = (billableEvents || []).filter(e => e.category !== 'wallet_topup')
-    const prevBillable = (prevBillableEvents || []).filter(e => e.category !== 'wallet_topup')
+    // Quand un sport précis est filtré, les éléments "communs" (sport=null,
+    // ex: annonce/event partagé) sont exclus — ils ne relèvent d'aucun sport en particulier.
+    const billable = bySport((billableEvents || []).filter(e => e.category !== 'wallet_topup'))
+    const prevBillable = bySport((prevBillableEvents || []).filter(e => e.category !== 'wallet_topup'))
 
     const revenue = billable.reduce((s, e) => s + parseFloat(e.amount || 0), 0)
     const prevRevenue = prevBillable.reduce((s, e) => s + parseFloat(e.amount || 0), 0)
@@ -201,7 +212,7 @@ export default function AdminReportsPage() {
       from, to,
     })
     setLoading(false)
-  }, [period, customFrom, customTo])
+  }, [period, customFrom, customTo, sportFilter])
 
   useEffect(() => { load() }, [load])
 
@@ -425,7 +436,7 @@ export default function AdminReportsPage() {
       </div>
 
       {/* Sélecteur période */}
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
         {PERIODS.map(p => (
           <button key={p.key} onClick={() => setPeriod(p.key)}
             style={{ background: period === p.key ? 'var(--brand-dim)' : 'var(--surface)', border: '1px solid ' + (period === p.key ? 'var(--brand)' : 'var(--border)'), color: period === p.key ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: period === p.key ? 600 : 400 }}>
@@ -442,6 +453,8 @@ export default function AdminReportsPage() {
           </div>
         )}
       </div>
+
+      <SportFilterBar value={sportFilter} onChange={setSportFilter} style={{ marginBottom: '20px' }} />
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '64px', color: 'var(--muted)' }}>Chargement...</div>

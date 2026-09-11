@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import DeletionHistory from '../../../components/DeletionHistory'
 import { sportColor } from '../../../lib/sportColors'
+import SportFilterBar from '../../../components/admin/SportFilterBar'
 
 const DAYS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche']
 const DAYS_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
@@ -10,6 +11,7 @@ const DURATIONS = [60, 90, 120]
 
 export default function AdminSchedulePage() {
   const [courts, setCourts] = useState([])
+  const [sportFilter, setSportFilter] = useState('all')
   const [selectedCourt, setSelectedCourt] = useState(null)
   const [schedule, setSchedule] = useState([])
   const [blocks, setBlocks] = useState([])
@@ -226,9 +228,15 @@ export default function AdminSchedulePage() {
         </div>
       </div>
 
+      <SportFilterBar value={sportFilter} onChange={s => {
+        setSportFilter(s)
+        const visible = courts.filter(c => s === 'all' || c.sport === s)
+        if (visible.length > 0 && !visible.some(c => c.id === selectedCourt)) setSelectedCourt(visible[0].id)
+      }} />
+
       {/* Sélecteur terrain */}
       <div className="court-tabs">
-        {courts.map(c => {
+        {courts.filter(c => sportFilter === 'all' || c.sport === sportFilter).map(c => {
           const col = sportColor(c.sport)
           const active = selectedCourt === c.id
           return (
@@ -288,7 +296,7 @@ export default function AdminSchedulePage() {
         <p className="text-muted" style={{fontSize:'14px'}}>Aucun bloc planifié.</p>
       ) : (
         <div className="blocks-list">
-          {blocks.map(block => {
+          {blocks.filter(b => sportFilter === 'all' || b.all_courts || b.court?.sport === sportFilter).map(block => {
             const col = block.all_courts ? sportColor(null) : sportColor(block.court?.sport)
             return (
               <div key={block.id} className="block-row" style={{ borderLeft: '3px solid ' + col.border }}>

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { sportColor } from '../../../lib/sportColors'
+import SportFilterBar from '../../../components/admin/SportFilterBar'
 
 const STATUS_LABELS = {
   awaiting_payment: 'En attente de paiement',
@@ -15,6 +16,7 @@ export default function AdminMembershipPage() {
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('awaiting_validation')
+  const [sportFilter, setSportFilter] = useState('all')
   const [validating, setValidating] = useState(null)
   const [validFrom, setValidFrom] = useState('')
   const [validUntil, setValidUntil] = useState('')
@@ -99,8 +101,11 @@ export default function AdminMembershipPage() {
 
   const displayName = p => p ? ((p.first_name || p.last_name) ? ((p.first_name || '') + ' ' + (p.last_name || '')).trim() : p.email) : '—'
 
-  const filtered = requests.filter(r => filter === 'all' || effectiveStatus(r) === filter)
-  const awaitingCount = requests.filter(r => effectiveStatus(r) === 'awaiting_validation').length
+  const filtered = requests.filter(r =>
+    (filter === 'all' || effectiveStatus(r) === filter) &&
+    (sportFilter === 'all' || r.membership_type?.sport === sportFilter)
+  )
+  const awaitingCount = requests.filter(r => effectiveStatus(r) === 'awaiting_validation' && (sportFilter === 'all' || r.membership_type?.sport === sportFilter)).length
 
   return (
     <div>
@@ -110,6 +115,8 @@ export default function AdminMembershipPage() {
           Licences et statuts compétiteur demandés par les joueurs, par sport.
         </p>
       </div>
+
+      <SportFilterBar value={sportFilter} onChange={setSportFilter} style={{ marginBottom: '10px' }} />
 
       <div style={{ display: 'flex', gap: '6px', marginBottom: '20px', flexWrap: 'wrap' }}>
         {['awaiting_validation', 'active', 'awaiting_payment', 'rejected', 'expired', 'all'].map(f => (

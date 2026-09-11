@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import DeletionHistory from '../../../components/DeletionHistory'
+import SportFilterBar from '../../../components/admin/SportFilterBar'
 
 const STATUS_STYLES = {
   confirmed: { bg: 'var(--brand-dim)', color: 'var(--brand-light)', label: 'Confirmé' },
@@ -15,13 +16,14 @@ export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('all')
+  const [sportFilter, setSportFilter] = useState('all')
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const supabase = createClient()
 
   async function load() {
     setLoading(true)
-    let q = supabase.from('bookings').select('*, court:courts(name), owner:profiles(first_name, last_name, email), players:booking_players(id, payment_status, effective_price)').order('starts_at', { ascending: false })
+    let q = supabase.from('bookings').select('*, court:courts(name, sport), owner:profiles(first_name, last_name, email), players:booking_players(id, payment_status, effective_price)').order('starts_at', { ascending: false })
     if (filter !== 'all') q = q.eq('status', filter)
     const { data } = await q
     setBookings(data || [])
@@ -70,15 +72,18 @@ export default function AdminBookingsPage() {
   const fmt = d => new Date(d).toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: '2-digit' })
   const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
   const ownerName = b => b.owner ? ((b.owner.first_name || '') + ' ' + (b.owner.last_name || '')).trim() || b.owner.email : '—'
+  const filteredBookings = bookings.filter(b => sportFilter === 'all' || b.court?.sport === sportFilter)
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Réservations</h1>
-          <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>{bookings.length} résultat{bookings.length !== 1 ? 's' : ''}</p>
+          <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>{filteredBookings.length} résultat{filteredBookings.length !== 1 ? 's' : ''}</p>
         </div>
       </div>
+
+      <SportFilterBar value={sportFilter} onChange={setSportFilter} />
 
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px', overflowX: 'auto' }}>
         {['all', 'pending', 'confirmed', 'cancelled', 'completed'].map(f => (
@@ -91,7 +96,7 @@ export default function AdminBookingsPage() {
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
-      ) : bookings.length === 0 ? (
+      ) : filteredBookings.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '32px', color: 'var(--muted)', fontSize: '14px' }}>Aucune réservation.</div>
       ) : (
         <>
@@ -107,7 +112,7 @@ export default function AdminBookingsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map(b => {
+                  {filteredBookings.map(b => {
                     const s = STATUS_STYLES[b.status] || STATUS_STYLES.pending
                     const paidCount = (b.players || []).filter(p => p.payment_status === 'paid').length
                     return (
@@ -142,7 +147,7 @@ export default function AdminBookingsPage() {
 
           {/* ─── MOBILE : cards ─── */}
           <div className="cards-mobile-only">
-            {bookings.map(b => {
+            {filteredBookings.map(b => {
               const s = STATUS_STYLES[b.status] || STATUS_STYLES.pending
               const paidCount = (b.players || []).filter(p => p.payment_status === 'paid').length
               return (

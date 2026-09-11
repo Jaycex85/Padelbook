@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { sportColor } from '../../../lib/sportColors'
+import SportFilterBar from '../../../components/admin/SportFilterBar'
 
 const PAYMENT_MODE_LABELS = { full: 'Paiement complet', split: 'Split par joueur', wallet: 'Wallet' }
 const PAYMENT_MODE_DESC = {
@@ -13,6 +14,7 @@ const STATUS_LABELS = { active: 'Actif', inactive: 'Inactif', maintenance: 'Main
 
 export default function AdminCourtsPage() {
   const [courts, setCourts] = useState([])
+  const [sportFilter, setSportFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -135,6 +137,8 @@ export default function AdminCourtsPage() {
         </div>
       )}
 
+      <SportFilterBar value={sportFilter} onChange={setSportFilter} />
+
       {loading ? (
         <div className="loading">Chargement...</div>
       ) : courts.length === 0 ? (
@@ -144,7 +148,7 @@ export default function AdminCourtsPage() {
         </div>
       ) : (
         <div className="courts-list">
-          {courts.map(court => (
+          {courts.filter(c => sportFilter === 'all' || c.sport === sportFilter).map(court => (
             <div key={court.id} className="court-row" style={{ borderLeft: '3px solid ' + sportColor(court.sport).border }}>
               <div className="court-row-info">
                 <div className="court-row-name">{court.name}</div>

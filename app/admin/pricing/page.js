@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { sportColor } from '../../../lib/sportColors'
+import SportFilterBar from '../../../components/admin/SportFilterBar'
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const WEEKDAYS = [0, 1, 2, 3, 4]
@@ -14,6 +15,7 @@ const EMPTY_FORM = {
 export default function AdminPricingPage() {
   const [slots, setSlots] = useState([])
   const [courts, setCourts] = useState([])
+  const [sportFilter, setSportFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -94,13 +96,15 @@ export default function AdminPricingPage() {
         </button>
       </div>
 
+      <SportFilterBar value={sportFilter} onChange={setSportFilter} />
+
       {/* Prix de base des terrains */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px 20px', marginBottom: '20px' }}>
         <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '11px' }}>
           Prix de base par terrain (fallback si aucune tranche ne matche)
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-          {courts.map(c => {
+          {courts.filter(c => sportFilter === 'all' || c.sport === sportFilter).map(c => {
             const col = sportColor(c.sport)
             return (
               <div key={c.id} style={{ background: col.dim, border: '1px solid ' + col.border, borderRadius: '8px', padding: '8px 14px', fontSize: '13px' }}>

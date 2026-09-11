@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { sportColor } from '../../../lib/sportColors'
+import SportFilterBar from '../../../components/admin/SportFilterBar'
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 
@@ -55,6 +56,7 @@ const EMPTY_FORM = {
 
 export default function AdminRulesPage() {
   const [rules, setRules] = useState([])
+  const [sportFilter, setSportFilter] = useState('all')
   const [courts, setCourts] = useState([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -144,7 +146,7 @@ export default function AdminRulesPage() {
     return 'access'
   }
 
-  const accessRules = rules.filter(r => detectType(r) === 'access')
+  const accessRules = rules.filter(r => detectType(r) === 'access' && (sportFilter === 'all' || r.all_courts || r.court?.sport === sportFilter))
   const quotaRules = rules.filter(r => detectType(r) === 'quota')
   const windowRules = rules.filter(r => detectType(r) === 'window')
 
@@ -359,6 +361,8 @@ export default function AdminRulesPage() {
           Trois types de règles indépendantes — chacune évaluée par priorité croissante (la plus haute l'emporte).
         </p>
       </div>
+
+      <SportFilterBar value={sportFilter} onChange={setSportFilter} />
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>

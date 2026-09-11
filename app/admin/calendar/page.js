@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '../../../lib/supabase'
 import { sportColor } from '../../../lib/sportColors'
+import SportFilterBar from '../../../components/admin/SportFilterBar'
 
 const DAYS_SHORT = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const TYPE_LABELS = { booking: 'Réservation', event: 'Club Event', block: 'Bloc' }
@@ -22,6 +23,7 @@ export default function AdminCalendarPage() {
   const [view, setView] = useState('week')
   const [current, setCurrent] = useState(new Date())
   const [entries, setEntries] = useState([])
+  const [sportFilter, setSportFilter] = useState('all')
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const supabase = createClient()
@@ -67,6 +69,7 @@ export default function AdminCalendarPage() {
         sublabel: b.owner ? ((b.owner.first_name || '') + ' ' + (b.owner.last_name || '')).trim() || b.owner.email : '',
         starts_at: b.starts_at, ends_at: b.ends_at,
         status: b.status, price: b.total_price,
+        sport: b.court?.sport || null,
         color: sportColor(b.court?.sport),
       })),
       ...(events || []).map(e => ({
@@ -74,6 +77,7 @@ export default function AdminCalendarPage() {
         label: 'Mayfair Padel — ' + e.label,
         sublabel: (e.club_event_courts || []).map(c => c.courts?.name).filter(Boolean).join(', '),
         starts_at: e.starts_at, ends_at: e.ends_at,
+        sport: e.sport || null,
         color: sportColor(e.sport), // null/absent = commun aux deux sports -> neutre
       })),
       ...(blocks || []).map(b => ({
@@ -81,6 +85,7 @@ export default function AdminCalendarPage() {
         label: b.label || b.reason,
         sublabel: b.all_courts ? 'Tous terrains' : (b.court?.name || ''),
         starts_at: b.starts_at, ends_at: b.ends_at,
+        sport: b.all_courts ? null : (b.court?.sport || null),
         color: b.all_courts ? sportColor(null) : sportColor(b.court?.sport),
       })),
     ].sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at)))
@@ -112,7 +117,7 @@ export default function AdminCalendarPage() {
   const fmtDate = iso => new Date(iso).toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
 
   function entriesForDay(day) {
-    return entries.filter(e => isSameDay(new Date(e.starts_at), day))
+    return entries.filter(e => isSameDay(new Date(e.starts_at), day) && (sportFilter === 'all' || !e.sport || e.sport === sportFilter))
   }
 
   // ── Chip entrée ─────────────────────────────────────────────
@@ -265,6 +270,8 @@ export default function AdminCalendarPage() {
           ))}
         </div>
       </div>
+
+      <SportFilterBar value={sportFilter} onChange={setSportFilter} style={{ marginBottom: '14px' }} />
 
       {/* Nav */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
