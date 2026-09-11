@@ -47,13 +47,10 @@ export default function Sidebar({ profile, onClose }) {
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
           <img src="/logo.png" alt="Brussels Badminton & Padel Club" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
           <div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 800, color: '#fff', lineHeight: 1.25 }}>Brussels</div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 800, lineHeight: 1.25, whiteSpace: 'nowrap' }}>
-              <span style={{ color: sportColor('badminton').text }}>Badminton</span>{' '}
-              <span style={{ color: '#fff' }}>&amp;</span>{' '}
-              <span style={{ color: sportColor('padel').text }}>Padel</span>
-            </div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '9px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '1px', lineHeight: 1.25 }}>CLUB</div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 800, color: '#fff', lineHeight: 1.2 }}>Brussels</div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 800, color: sportColor('badminton').text, lineHeight: 1.2 }}>Badminton</div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 800, color: sportColor('padel').text, lineHeight: 1.2 }}>Padel</div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '9px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '1px', lineHeight: 1.2 }}>CLUB</div>
           </div>
         </Link>
         {onClose && (

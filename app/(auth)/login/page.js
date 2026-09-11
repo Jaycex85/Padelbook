@@ -32,11 +32,8 @@ function LoginForm() {
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <img src="/logo.png" alt="Brussels Badminton & Padel Club" style={{ width: '80px', height: '80px', borderRadius: '16px', objectFit: 'cover', marginBottom: '12px' }} />
           <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '15px', fontWeight: 800, color: '#fff', lineHeight: 1.3 }}>Brussels</div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '15px', fontWeight: 800, lineHeight: 1.3 }}>
-            <span style={{ color: sportColor('badminton').text }}>Badminton</span>{' '}
-            <span style={{ color: '#fff' }}>&amp;</span>{' '}
-            <span style={{ color: sportColor('padel').text }}>Padel</span>
-          </div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '15px', fontWeight: 800, color: sportColor('badminton').text, lineHeight: 1.3 }}>Badminton</div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '15px', fontWeight: 800, color: sportColor('padel').text, lineHeight: 1.3 }}>Padel</div>
           <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 600, color: '#8B949E', letterSpacing: '4px', lineHeight: 1.3 }}>CLUB</div>
         </div>
         <div style={{ background: '#161B22', border: '1px solid #30363D', borderRadius: '16px', padding: '28px' }}>
