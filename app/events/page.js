@@ -79,12 +79,34 @@ export default function EventsPage() {
     const { data: prof } = await supabase.from('profiles').select('wallet_balance').eq('id', user.id).single()
     const available = prof?.wallet_balance || 0
     if (available >= pendingPayment.amount) {
-      await supabase.from('profiles').update({ wallet_balance: available - pendingPayment.amount }).eq('id', user.id)
+      // On marque d'abord l'inscription comme payée et on VÉRIFIE avant de débiter le wallet.
+      const { data: regUpd, error: regErr } = await supabase.from('event_registrations')
+        .update({ payment_status: 'paid', status: 'confirmed' }).eq('id', pendingPayment.eventRegistrationId).select('id')
+
+      if (regErr || !regUpd || regUpd.length === 0) {
+        console.error('payEventViaWallet: mise à jour bloquée', regErr)
+        alert('Le paiement a été bloqué par un problème de droits d\'accès — aucun montant n\'a été débité.')
+        setPendingPayment(null)
+        load()
+        return
+      }
+
+      const { data: walletUpd, error: walletErr } = await supabase.from('profiles')
+        .update({ wallet_balance: available - pendingPayment.amount }).eq('id', user.id).select('id')
+
+      if (walletErr || !walletUpd || walletUpd.length === 0) {
+        await supabase.from('event_registrations').update({ payment_status: 'pending', status: 'pending' }).eq('id', pendingPayment.eventRegistrationId)
+        console.error('payEventViaWallet: débit wallet bloqué', walletErr)
+        alert('Le débit du wallet a échoué — rien n\'a été modifié.')
+        setPendingPayment(null)
+        load()
+        return
+      }
+
       await supabase.from('wallet_transactions').insert({
         profile_id: user.id, amount: -pendingPayment.amount, type: 'debit',
         description: 'Inscription Club Event',
       })
-      await supabase.from('event_registrations').update({ payment_status: 'paid', status: 'confirmed' }).eq('id', pendingPayment.eventRegistrationId)
 
       await logBillableEvent(supabase, {
         profileId: user.id, category: 'event', sport: pendingPayment.sport,

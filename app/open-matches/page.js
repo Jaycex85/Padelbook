@@ -76,12 +76,31 @@ export default function OpenMatchesPage() {
     const available = prof?.wallet_balance || 0
     if (available < pendingPayment.amount) return // le modal désactive déjà ce cas, garde-fou
 
-    await supabase.from('profiles').update({ wallet_balance: available - pendingPayment.amount }).eq('id', user.id)
+    // On marque d'abord la place comme payée et on VÉRIFIE que ça a pris effet
+    // avant de toucher au wallet, pour ne jamais débiter sans résoudre la dette
+    // (Supabase peut bloquer une update silencieusement — 0 ligne, pas d'erreur).
+    const { data: playerUpd, error: playerErr } = await supabase.from('booking_players')
+      .update({ payment_status: 'paid', paid_at: new Date().toISOString() })
+      .eq('id', pendingPayment.playerId).select('id')
+    if (playerErr || !playerUpd || playerUpd.length === 0) {
+      console.error('payViaWallet: mise à jour booking_players bloquée', playerErr)
+      alert('Le paiement a été bloqué par un problème de droits d\'accès — aucun montant n\'a été débité.')
+      return
+    }
+
+    const { data: walletUpd, error: walletErr } = await supabase.from('profiles')
+      .update({ wallet_balance: available - pendingPayment.amount }).eq('id', user.id).select('id')
+    if (walletErr || !walletUpd || walletUpd.length === 0) {
+      await supabase.from('booking_players').update({ payment_status: 'pending', paid_at: null }).eq('id', pendingPayment.playerId)
+      console.error('payViaWallet: débit wallet bloqué', walletErr)
+      alert('Le débit du wallet a échoué — rien n\'a été modifié.')
+      return
+    }
+
     await supabase.from('wallet_transactions').insert({
       profile_id: user.id, amount: -pendingPayment.amount, type: 'debit',
       description: 'Part match ouvert', booking_id: pendingPayment.matchId,
     })
-    await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', pendingPayment.playerId)
 
     const match = matches.find(m => m.id === pendingPayment.matchId)
     await logBillableEvent(supabase, {

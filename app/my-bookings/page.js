@@ -246,12 +246,39 @@ function MyBookingsList() {
     const { data: prof } = await supabase.from('profiles').select('wallet_balance').eq('id', user.id).single()
     const available = prof?.wallet_balance || 0
     if (available >= pendingPayment.amount) {
-      await supabase.from('profiles').update({ wallet_balance: available - pendingPayment.amount }).eq('id', user.id)
+      // On marque d'abord la place comme payée et on VÉRIFIE que ça a pris effet
+      // avant de toucher au wallet (une update peut être bloquée silencieusement
+      // par les droits d'accès, sans erreur — déjà rencontré sur ce projet).
+      const { data: playerUpd, error: playerErr } = await supabase.from('booking_players')
+        .update({ payment_status: 'paid', paid_at: new Date().toISOString() })
+        .eq('id', pendingPayment.playerId).select('id')
+
+      if (playerErr || !playerUpd || playerUpd.length === 0) {
+        console.error('payShareViaWallet: mise à jour booking_players bloquée', playerErr)
+        alert('Le paiement a été bloqué par un problème de droits d\'accès — aucun montant n\'a été débité.')
+        setPayingShare(null)
+        setPendingPayment(null)
+        load()
+        return
+      }
+
+      const { data: walletUpd, error: walletErr } = await supabase.from('profiles')
+        .update({ wallet_balance: available - pendingPayment.amount }).eq('id', user.id).select('id')
+
+      if (walletErr || !walletUpd || walletUpd.length === 0) {
+        await supabase.from('booking_players').update({ payment_status: 'pending', paid_at: null }).eq('id', pendingPayment.playerId)
+        console.error('payShareViaWallet: débit wallet bloqué', walletErr)
+        alert('Le débit du wallet a échoué — rien n\'a été modifié.')
+        setPayingShare(null)
+        setPendingPayment(null)
+        load()
+        return
+      }
+
       await supabase.from('wallet_transactions').insert({
         profile_id: user.id, amount: -pendingPayment.amount, type: 'debit',
         description: 'Part réservation', booking_id: pendingPayment.bookingId,
       })
-      await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', pendingPayment.playerId)
 
       const booking = bookings.find(b => b.id === pendingPayment.bookingId)
       await logBillableEvent(supabase, {
@@ -297,11 +324,37 @@ function MyBookingsList() {
       return
     }
 
-    const { data: walletUpdated, error: walletErr } = await supabase.from('profiles').update({ wallet_balance: available - openBalance }).eq('id', userId).select('id')
-    if (walletErr) { console.error('settleBalance: débit wallet échoué', walletErr); alert('Erreur lors du débit : ' + walletErr.message); setSettling(null); return }
-    if (!walletUpdated || walletUpdated.length === 0) {
-      console.error('settleBalance: débit wallet bloqué silencieusement (0 ligne affectée, probable RLS)')
-      alert('Le débit du wallet a été bloqué par les droits d\'accès (RLS). Rien n\'a été modifié — voir la console pour les détails techniques.')
+    // 1. Marquer d'abord les joueurs impayés comme payés, et VÉRIFIER que ça a
+    // vraiment pris effet (0 ligne modifiée = bloqué par les droits d'accès,
+    // sans erreur levée — comportement Supabase déjà rencontré sur ce projet).
+    // On ne touche au wallet qu'une fois cette étape confirmée, pour ne jamais
+    // débiter sans que la dette soit effectivement soldée.
+    const unpaidAssigned = (booking.players || []).filter(p => p.payment_status !== 'paid')
+    const updatedPlayerIds = []
+    for (const p of unpaidAssigned) {
+      const { data: upd, error: playerErr } = await supabase.from('booking_players')
+        .update({ payment_status: 'paid', paid_at: new Date().toISOString() })
+        .eq('id', p.id).select('id')
+      if (playerErr || !upd || upd.length === 0) {
+        console.error('settleBalance: mise à jour booking_players bloquée pour', p.id, playerErr)
+        alert('Le règlement a été bloqué par un problème de droits d\'accès — aucun montant n\'a été débité. Contacte le support en précisant : booking_players ' + p.id)
+        setSettling(null)
+        return
+      }
+      updatedPlayerIds.push(p.id)
+    }
+
+    // 2. Débit du wallet, seulement maintenant que l'étape 1 est confirmée.
+    const { data: walletUpdated, error: walletErr } = await supabase.from('profiles')
+      .update({ wallet_balance: available - openBalance }).eq('id', userId).select('id')
+
+    if (walletErr || !walletUpdated || walletUpdated.length === 0) {
+      // Rollback : le débit n'a pas eu lieu, on annule le marquage "payé" fait à l'étape 1.
+      for (const id of updatedPlayerIds) {
+        await supabase.from('booking_players').update({ payment_status: 'pending', paid_at: null }).eq('id', id)
+      }
+      console.error('settleBalance: débit wallet bloqué', walletErr)
+      alert('Le débit du wallet a échoué — rien n\'a été modifié.')
       setSettling(null)
       return
     }
@@ -311,13 +364,6 @@ function MyBookingsList() {
       description: 'Règlement solde réservation ' + (booking.court?.name || ''), booking_id: booking.id,
     })
     if (txErr) console.error('settleBalance: insertion wallet_transactions échouée (non bloquant)', txErr)
-
-    // Marquer tous les joueurs assignés impayés comme payés (le owner a couvert pour eux)
-    const unpaidAssigned = (booking.players || []).filter(p => p.payment_status !== 'paid')
-    for (const p of unpaidAssigned) {
-      const { error: playerErr } = await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', p.id)
-      if (playerErr) console.error('settleBalance: mise à jour booking_players échouée pour', p.id, playerErr)
-    }
 
     // Si la résa était pending, elle est maintenant entièrement couverte -> confirmer
     if (booking.status === 'pending') {

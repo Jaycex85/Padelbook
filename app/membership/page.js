@@ -82,12 +82,34 @@ export default function MembershipPage() {
     const { data: prof } = await supabase.from('profiles').select('wallet_balance').eq('id', user.id).single()
     const available = prof?.wallet_balance || 0
     if (available >= pendingPayment.amount) {
-      await supabase.from('profiles').update({ wallet_balance: available - pendingPayment.amount }).eq('id', user.id)
+      // On marque d'abord la demande comme payée et on VÉRIFIE avant de débiter le wallet.
+      const { data: reqUpd, error: reqErr } = await supabase.from('membership_requests')
+        .update({ payment_status: 'paid' }).eq('id', pendingPayment.requestId).select('id')
+
+      if (reqErr || !reqUpd || reqUpd.length === 0) {
+        console.error('payViaWallet (membership): mise à jour bloquée', reqErr)
+        alert('Le paiement a été bloqué par un problème de droits d\'accès — aucun montant n\'a été débité.')
+        setPendingPayment(null)
+        load()
+        return
+      }
+
+      const { data: walletUpd, error: walletErr } = await supabase.from('profiles')
+        .update({ wallet_balance: available - pendingPayment.amount }).eq('id', user.id).select('id')
+
+      if (walletErr || !walletUpd || walletUpd.length === 0) {
+        await supabase.from('membership_requests').update({ payment_status: 'pending' }).eq('id', pendingPayment.requestId)
+        console.error('payViaWallet (membership): débit wallet bloqué', walletErr)
+        alert('Le débit du wallet a échoué — rien n\'a été modifié.')
+        setPendingPayment(null)
+        load()
+        return
+      }
+
       await supabase.from('wallet_transactions').insert({
         profile_id: user.id, amount: -pendingPayment.amount, type: 'debit',
         description: 'Adhésion / licence',
       })
-      await supabase.from('membership_requests').update({ payment_status: 'paid' }).eq('id', pendingPayment.requestId)
       await logBillableEvent(supabase, {
         profileId: user.id, category: 'membership', sport: pendingPayment.sport,
         amount: pendingPayment.amount, paymentMethod: 'wallet', description: 'Adhésion / licence',
