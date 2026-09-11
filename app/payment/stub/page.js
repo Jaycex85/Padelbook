@@ -10,6 +10,7 @@ function StubPaymentContent() {
   const router = useRouter()
   const ref = searchParams.get('ref')
   const bookingId = searchParams.get('booking')
+  const isSettle = searchParams.get('settle') === '1'
   const eventRegistrationId = searchParams.get('event_registration')
   const membershipRequestId = searchParams.get('membership_request')
   const isWalletTopup = searchParams.get('wallet_topup') === '1'
@@ -26,14 +27,23 @@ function StubPaymentContent() {
       const { data: payment } = await supabase.from('payments').select('*').eq('payconic_ref', ref).single()
       await supabase.from('payments').update({ status: 'paid' }).eq('payconic_ref', ref)
       await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', bookingId)
-      if (payment?.booking_player_id) {
+
+      if (isSettle) {
+        // Règlement global : tous les joueurs encore impayés de cette réservation sont couverts.
+        const { data: players } = await supabase.from('booking_players').select('id, payment_status').eq('booking_id', bookingId)
+        const unpaid = (players || []).filter(p => p.payment_status !== 'paid')
+        for (const p of unpaid) {
+          await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', p.id)
+        }
+      } else if (payment?.booking_player_id) {
         await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', payment.booking_player_id)
       }
+
       const { data: booking } = await supabase.from('bookings').select('court:courts(sport)').eq('id', bookingId).single()
       await logBillableEvent(supabase, {
         profileId: user?.id, category: 'booking', sport: booking?.court?.sport,
-        amount: payment?.amount, paymentMethod: 'card', description: 'Réservation',
-        bookingId, bookingPlayerId: payment?.booking_player_id,
+        amount: payment?.amount, paymentMethod: 'card', description: isSettle ? 'Règlement solde réservation' : 'Réservation',
+        bookingId, bookingPlayerId: isSettle ? null : payment?.booking_player_id,
       })
     }
 

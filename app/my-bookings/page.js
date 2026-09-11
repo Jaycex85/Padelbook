@@ -35,6 +35,7 @@ function MyBookingsList() {
   const [settling, setSettling] = useState(null)
   const [payingShare, setPayingShare] = useState(null)
   const [pendingPayment, setPendingPayment] = useState(null) // { bookingId, playerId, amount }
+  const [pendingSettle, setPendingSettle] = useState(null) // booking complet, pour "Régler maintenant"
   const [inviteTab, setInviteTab] = useState('member') // 'member' | 'guest'
   const [guestName, setGuestName] = useState('')
   const [guestEmail, setGuestEmail] = useState('')
@@ -309,13 +310,13 @@ function MyBookingsList() {
   }
 
   // ─── Règlement manuel du solde dû (depuis le wallet du owner) ───
-  async function settleBalance(booking) {
+  async function settleViaWallet(booking) {
     const openBalance = calcOpenBalance(booking, booking.players || [])
-    if (openBalance <= 0) return
+    if (openBalance <= 0) { setPendingSettle(null); return }
 
     setSettling(booking.id)
     const { data: ownerProfile, error: profErr } = await supabase.from('profiles').select('wallet_balance').eq('id', userId).single()
-    if (profErr) { console.error('settleBalance: lecture profil échouée', profErr); alert('Erreur : ' + profErr.message); setSettling(null); return }
+    if (profErr) { console.error('settleViaWallet: lecture profil échouée', profErr); alert('Erreur : ' + profErr.message); setSettling(null); return }
     const available = ownerProfile?.wallet_balance || 0
 
     if (available < openBalance) {
@@ -336,7 +337,7 @@ function MyBookingsList() {
         .update({ payment_status: 'paid', paid_at: new Date().toISOString() })
         .eq('id', p.id).select('id')
       if (playerErr || !upd || upd.length === 0) {
-        console.error('settleBalance: mise à jour booking_players bloquée pour', p.id, playerErr)
+        console.error('settleViaWallet: mise à jour booking_players bloquée pour', p.id, playerErr)
         alert('Le règlement a été bloqué par un problème de droits d\'accès — aucun montant n\'a été débité. Contacte le support en précisant : booking_players ' + p.id)
         setSettling(null)
         return
@@ -353,7 +354,7 @@ function MyBookingsList() {
       for (const id of updatedPlayerIds) {
         await supabase.from('booking_players').update({ payment_status: 'pending', paid_at: null }).eq('id', id)
       }
-      console.error('settleBalance: débit wallet bloqué', walletErr)
+      console.error('settleViaWallet: débit wallet bloqué', walletErr)
       alert('Le débit du wallet a échoué — rien n\'a été modifié.')
       setSettling(null)
       return
@@ -363,16 +364,39 @@ function MyBookingsList() {
       profile_id: userId, amount: -openBalance, type: 'debit',
       description: 'Règlement solde réservation ' + (booking.court?.name || ''), booking_id: booking.id,
     })
-    if (txErr) console.error('settleBalance: insertion wallet_transactions échouée (non bloquant)', txErr)
+    if (txErr) console.error('settleViaWallet: insertion wallet_transactions échouée (non bloquant)', txErr)
+
+    await logBillableEvent(supabase, {
+      profileId: userId, category: 'booking', sport: booking.court?.sport,
+      amount: openBalance, paymentMethod: 'wallet', description: 'Règlement solde réservation',
+      bookingId: booking.id,
+    })
 
     // Si la résa était pending, elle est maintenant entièrement couverte -> confirmer
     if (booking.status === 'pending') {
       const { error: bookingErr } = await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', booking.id)
-      if (bookingErr) console.error('settleBalance: confirmation booking échouée', bookingErr)
+      if (bookingErr) console.error('settleViaWallet: confirmation booking échouée', bookingErr)
     }
 
     setSettling(null)
+    setPendingSettle(null)
     load()
+  }
+
+  async function settleViaCard(booking) {
+    setSettling(booking.id)
+    const res = await fetch('/api/payments/initiate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ booking_id: booking.id, settle_open_balance: true }),
+    })
+    const payData = await res.json().catch(() => ({}))
+    setSettling(null)
+    if (payData.payment_url) {
+      goToPaymentUrl(router, payData.payment_url)
+    } else {
+      alert(payData.error || 'Impossible d\'initier le paiement pour le moment.')
+    }
   }
 
   const fmt = d => new Date(d).toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -471,7 +495,7 @@ function MyBookingsList() {
                       <div style={{ marginTop: '10px', background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '8px', padding: '8px 12px', fontSize: '12px', color: 'var(--amber)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap' }}>
                           <span>Solde non couvert : <strong>{openBalance.toFixed(2)} €</strong></span>
-                          <button onClick={() => settleBalance(b)} disabled={settling === b.id}
+                          <button onClick={() => setPendingSettle(b)} disabled={settling === b.id}
                             style={{ background: 'var(--amber)', color: '#1a1400', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
                             {settling === b.id ? '...' : 'Régler maintenant'}
                           </button>
@@ -672,6 +696,15 @@ function MyBookingsList() {
           onChooseWallet={payShareViaWallet}
           onChooseCard={payShareViaCard}
           onClose={() => setPendingPayment(null)}
+        />
+      )}
+
+      {pendingSettle && (
+        <PaymentMethodModal
+          amount={calcOpenBalance(pendingSettle, pendingSettle.players || [])}
+          onChooseWallet={() => settleViaWallet(pendingSettle)}
+          onChooseCard={() => settleViaCard(pendingSettle)}
+          onClose={() => setPendingSettle(null)}
         />
       )}
     </div>

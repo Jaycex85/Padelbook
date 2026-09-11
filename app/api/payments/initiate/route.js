@@ -1,15 +1,17 @@
 import { createServiceSupabase } from '../../../../lib/supabaseServer'
+import { calcOpenBalance } from '../../../../lib/bookingUtils'
 
 /**
  * Stub PayConic — à remplacer par l'intégration réelle
  * POST /api/payments/initiate
- * body: { booking_id, booking_player_id } OU { event_registration_id, amount }
- *       OU { wallet_topup: true, amount, profile_id } OU { membership_request_id, amount }
+ * body: { booking_id, booking_player_id } OU { booking_id, settle_open_balance: true }
+ *       OU { event_registration_id, amount } OU { wallet_topup: true, amount, profile_id }
+ *       OU { membership_request_id, amount }
  */
 export async function POST(req) {
   const supabase = await createServiceSupabase()
   const body = await req.json()
-  const { booking_id, booking_player_id, event_registration_id, wallet_topup, profile_id, membership_request_id } = body
+  const { booking_id, booking_player_id, settle_open_balance, event_registration_id, wallet_topup, profile_id, membership_request_id } = body
 
   if (!booking_id && !event_registration_id && !wallet_topup && !membership_request_id) {
     return new Response(JSON.stringify({ error: 'booking_id, event_registration_id, membership_request_id ou wallet_topup requis' }), { status: 400 })
@@ -29,10 +31,18 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: 'Réservation introuvable' }), { status: 404 })
     }
 
-    amount = booking.total_price
-    if (booking_player_id) {
-      const player = booking.players.find(p => p.id === booking_player_id)
-      if (player) amount = player.effective_price || player.base_price
+    if (settle_open_balance) {
+      // Règlement global du solde dû par le owner (couvre tous les joueurs impayés).
+      amount = calcOpenBalance(booking, booking.players || [])
+      if (amount <= 0) {
+        return new Response(JSON.stringify({ error: 'Aucun solde à régler' }), { status: 400 })
+      }
+    } else {
+      amount = booking.total_price
+      if (booking_player_id) {
+        const player = booking.players.find(p => p.id === booking_player_id)
+        if (player) amount = player.effective_price || player.base_price
+      }
     }
     paymentRow.booking_id = booking_id
     paymentRow.booking_player_id = booking_player_id || null
@@ -108,6 +118,7 @@ export async function POST(req) {
     // automatiquement sur une redirection classique.
     payment_url: '/payment/stub?ref=' + stubPayconicRef +
       (booking_id ? '&booking=' + booking_id : '') +
+      (settle_open_balance ? '&settle=1' : '') +
       (event_registration_id ? '&event_registration=' + event_registration_id : '') +
       (membership_request_id ? '&membership_request=' + membership_request_id : '') +
       (wallet_topup ? '&wallet_topup=1&amount=' + amount + '&profile=' + profile_id : ''),
