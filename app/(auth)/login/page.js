@@ -4,6 +4,7 @@ import { createClient } from '../../../lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Suspense } from 'react'
+import { sportColor } from '../../../lib/sportColors'
 
 function LoginForm() {
   const [email, setEmail] = useState('')
@@ -30,8 +31,13 @@ function LoginForm() {
       <div style={{ width: '100%', maxWidth: '380px' }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <img src="/logo.png" alt="Brussels Badminton & Padel Club" style={{ width: '80px', height: '80px', borderRadius: '16px', objectFit: 'cover', marginBottom: '12px' }} />
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '16px', fontWeight: 800, color: '#C084FC', letterSpacing: '1px' }}>BRUSSELS B&amp;P CLUB</div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 600, color: '#8B949E', letterSpacing: '4px' }}>PADEL CLUB</div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '17px', fontWeight: 800, lineHeight: 1.1 }}>
+            <span style={{ color: '#fff' }}>Brussels</span>{' '}
+            <span style={{ color: sportColor('badminton').text }}>Badminton</span>{' '}
+            <span style={{ color: '#fff' }}>&amp;</span>{' '}
+            <span style={{ color: sportColor('padel').text }}>Padel</span>
+          </div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 600, color: '#8B949E', letterSpacing: '4px' }}>CLUB</div>
         </div>
         <div style={{ background: '#161B22', border: '1px solid #30363D', borderRadius: '16px', padding: '28px' }}>
           <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '20px', fontWeight: 700, marginBottom: '22px', textAlign: 'center' }}>Connexion</h1>

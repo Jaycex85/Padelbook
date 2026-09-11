@@ -2,6 +2,7 @@
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useSport, SPORTS } from '../../lib/sportContext'
+import { sportColor } from '../../lib/sportColors'
 
 const PAGE_TITLES = {
   '/': 'Accueil',
@@ -107,8 +108,13 @@ export default function TopBar({ user, profile, onHamburger, sidebarOpen }) {
       <Link href="/" className="topbar-logo-mobile" style={{ display: 'none', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
         <img src="/logo.png" alt="Brussels Badminton & Padel Club" style={{ width: '30px', height: '30px', borderRadius: '6px', objectFit: 'cover' }} />
         <div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 800, color: 'var(--brand-light)', lineHeight: 1 }}>BRUSSELS B&amp;P</div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '9px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '1px' }}>PADEL CLUB</div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '11px', fontWeight: 800, lineHeight: 1, whiteSpace: 'nowrap' }}>
+            <span style={{ color: '#fff' }}>Brussels</span>{' '}
+            <span style={{ color: sportColor('badminton').text }}>Badminton</span>{' '}
+            <span style={{ color: '#fff' }}>&amp;</span>{' '}
+            <span style={{ color: sportColor('padel').text }}>Padel</span>
+          </div>
+          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '9px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '1px' }}>CLUB</div>
         </div>
       </Link>
 

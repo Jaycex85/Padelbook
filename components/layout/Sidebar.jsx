@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { sportColor } from '../../lib/sportColors'
 
 const playerLinks = [
   { href: '/', icon: '⊞', label: 'Accueil' },
@@ -46,7 +47,12 @@ export default function Sidebar({ profile, onClose }) {
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
           <img src="/logo.png" alt="Brussels Badminton & Padel Club" style={{ width: '36px', height: '36px', borderRadius: '8px', objectFit: 'cover' }} />
           <div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '13px', fontWeight: 800, color: 'var(--brand-light)', lineHeight: 1.1 }}>BRUSSELS B&amp;P</div>
+            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '12px', fontWeight: 800, lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+              <span style={{ color: '#fff' }}>Brussels</span>{' '}
+              <span style={{ color: sportColor('badminton').text }}>Badminton</span>{' '}
+              <span style={{ color: '#fff' }}>&amp;</span>{' '}
+              <span style={{ color: sportColor('padel').text }}>Padel</span>
+            </div>
             <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '10px', fontWeight: 600, color: 'var(--muted)', letterSpacing: '1px' }}>CLUB</div>
           </div>
         </Link>
