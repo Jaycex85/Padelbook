@@ -7,6 +7,8 @@ import PlayerStats from '../../components/PlayerStats'
 import WalletHistory from '../../components/WalletHistory'
 import { useRouter } from 'next/navigation'
 import { goToPaymentUrl } from '../../lib/paymentNav'
+import { useLocale } from '../../lib/i18n/LocaleContext'
+import LanguageSwitcher from '../../components/LanguageSwitcher'
 
 const MD_RANKS = ['MD50','MD100','MD200','MD300','MD400','MD500','MD700','MD1000']
 const WD_RANKS = ['WD50','WD100','WD200','WD300','WD400','WD500']
@@ -30,6 +32,7 @@ export default function ProfilePage() {
   const fileInputRef = useRef(null)
   const supabase = createClient()
   const router = useRouter()
+  const { t } = useLocale()
 
   useEffect(() => {
     async function load() {
@@ -116,7 +119,10 @@ export default function ProfilePage() {
 
   return (
     <div style={{ maxWidth: '480px' }}>
-      <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 700, marginBottom: '24px' }}>Mon profil</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 700 }}>{t('nav.profile')}</h1>
+        <LanguageSwitcher />
+      </div>
 
       {/* Avatar + infos */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px' }}>
