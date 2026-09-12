@@ -56,7 +56,19 @@ export default function MembershipPage() {
     return { key: r.status, request: r }
   }
 
+  // Prérequis : le statut compétiteur InterClubs (padel) exige une licence AFP en règle.
+  // Ne concerne pas InterEquipes.
+  function hasActiveAfp() {
+    const afpType = types.find(t => t.sport === 'padel' && t.key === 'license')
+    if (!afpType) return false
+    return statusFor(afpType.id).key === 'active'
+  }
+
   async function handleRequest(type) {
+    if (type.key === 'interclubs' && !hasActiveAfp()) {
+      alert('Une licence AFP en règle est requise avant de pouvoir demander le statut compétiteur InterClubs.')
+      return
+    }
     setRequesting(type.id)
     const { data: { user } } = await supabase.auth.getUser()
     const { data: newRequest } = await supabase.from('membership_requests').insert({
@@ -155,6 +167,7 @@ export default function MembershipPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {bySport[sport].map(type => {
                 const status = statusFor(type.id)
+                const needsAfp = type.key === 'interclubs' && !hasActiveAfp()
                 return (
                   <div key={type.id} style={{ background: 'var(--surface)', border: '1px solid ' + col.border, borderLeft: '3px solid ' + col.border, borderRadius: '12px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                     <div>
@@ -165,6 +178,11 @@ export default function MembershipPage() {
                           <> · valide jusqu'au {new Date(status.request.valid_until).toLocaleDateString('fr-BE')}</>
                         )}
                       </div>
+                      {needsAfp && (status.key === 'none' || status.key === 'rejected' || status.key === 'expired') && (
+                        <div style={{ fontSize: '11px', color: 'var(--amber)', marginTop: '4px' }}>
+                          Nécessite une licence AFP en règle
+                        </div>
+                      )}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -179,8 +197,9 @@ export default function MembershipPage() {
                       )}
 
                       {(status.key === 'none' || status.key === 'rejected' || status.key === 'expired') && (
-                        <button onClick={() => handleRequest(type)} disabled={requesting === type.id}
-                          style={{ background: col.dim, border: '1px solid ' + col.border, color: col.text, borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                        <button onClick={() => handleRequest(type)} disabled={requesting === type.id || needsAfp}
+                          title={needsAfp ? 'Licence AFP en règle requise' : undefined}
+                          style={{ background: needsAfp ? 'var(--surface2)' : col.dim, border: '1px solid ' + (needsAfp ? 'var(--border)' : col.border), color: needsAfp ? 'var(--muted)' : col.text, borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: 600, cursor: needsAfp ? 'not-allowed' : 'pointer' }}>
                           {requesting === type.id ? '...' : status.key === 'expired' ? 'Renouveler' : 'Demander'}
                         </button>
                       )}

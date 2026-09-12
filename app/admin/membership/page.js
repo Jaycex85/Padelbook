@@ -46,12 +46,27 @@ export default function AdminMembershipPage() {
   }
 
   function openValidate(request) {
+    if (request.membership_type?.key === 'interclubs' && !hasActiveAfp(request.profile_id)) {
+      alert('Ce joueur n\'a pas de licence AFP en règle — l\'InterClubs ne peut pas être validé tant que ce n\'est pas le cas.')
+      return
+    }
     setValidating(request)
     const today = new Date()
     const nextYear = new Date()
     nextYear.setFullYear(nextYear.getFullYear() + 1)
     setValidFrom(today.toISOString().split('T')[0])
     setValidUntil(nextYear.toISOString().split('T')[0])
+  }
+
+  // Prérequis : le statut compétiteur InterClubs (padel) exige une licence AFP en
+  // règle chez ce joueur. Ne concerne pas InterEquipes.
+  function hasActiveAfp(profileId) {
+    const today = new Date().toISOString().split('T')[0]
+    return requests.some(r =>
+      r.profile_id === profileId &&
+      r.membership_type?.sport === 'padel' && r.membership_type?.key === 'license' &&
+      r.status === 'active' && (!r.valid_until || r.valid_until >= today)
+    )
   }
 
   async function syncProfileMembershipStatus(profileId) {
@@ -136,6 +151,7 @@ export default function AdminMembershipPage() {
           {filtered.map(r => {
             const status = effectiveStatus(r)
             const col = sportColor(r.membership_type?.sport)
+            const missingAfp = r.membership_type?.key === 'interclubs' && !hasActiveAfp(r.profile_id)
             return (
               <div key={r.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderLeft: '3px solid ' + col.border, borderRadius: '14px', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                 <div style={{ minWidth: 0 }}>
@@ -145,6 +161,11 @@ export default function AdminMembershipPage() {
                     <span style={{ color: col.text, fontWeight: 600 }}>{r.membership_type?.sport === 'badminton' ? 'Badminton' : 'Padel'}</span>
                     {' · '}{r.membership_type?.label}{' · '}{(r.price ?? 0).toFixed(2)} €
                   </div>
+                  {missingAfp && status === 'awaiting_validation' && (
+                    <div style={{ fontSize: '11px', color: 'var(--red)', marginTop: '4px' }}>
+                      ⚠ Pas de licence AFP en règle — validation bloquée
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -161,7 +182,9 @@ export default function AdminMembershipPage() {
 
                   {status === 'awaiting_validation' && (
                     <>
-                      <button onClick={() => openValidate(r)} style={{ background: col.dim, border: '1px solid ' + col.border, color: col.text, borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+                      <button onClick={() => openValidate(r)} disabled={missingAfp}
+                        title={missingAfp ? 'Licence AFP en règle requise' : undefined}
+                        style={{ background: missingAfp ? 'var(--surface2)' : col.dim, border: '1px solid ' + (missingAfp ? 'var(--border)' : col.border), color: missingAfp ? 'var(--muted)' : col.text, borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: missingAfp ? 'not-allowed' : 'pointer', fontWeight: 600 }}>
                         Valider
                       </button>
                       <button onClick={() => rejectRequest(r)} style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer' }}>
