@@ -3,6 +3,7 @@ import { createServerSupabase } from '../lib/supabaseServer'
 import AppShell from '../components/layout/AppShell'
 import ServiceWorkerInit from '../components/ServiceWorkerInit'
 import { SportProvider } from '../lib/sportContext'
+import { LocaleProvider } from '../lib/i18n/LocaleContext'
 
 export const metadata = {
   title: 'Brussels Badminton & Padel Club',
@@ -32,11 +33,13 @@ export default async function RootLayout({ children }) {
     <html lang="fr">
       <body>
         <ServiceWorkerInit />
-        <SportProvider>
-          <AppShell user={user} profile={profile}>
-            {children}
-          </AppShell>
-        </SportProvider>
+        <LocaleProvider>
+          <SportProvider>
+            <AppShell user={user} profile={profile}>
+              {children}
+            </AppShell>
+          </SportProvider>
+        </LocaleProvider>
       </body>
     </html>
   )

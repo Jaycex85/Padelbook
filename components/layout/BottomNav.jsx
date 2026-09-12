@@ -1,19 +1,21 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useLocale } from '../../lib/i18n/LocaleContext'
 
 export default function BottomNav({ profile }) {
   const pathname = usePathname()
+  const { t } = useLocale()
   const isAdmin = profile?.role === 'admin'
 
   const links = [
-    { href: '/', icon: '⊞', label: 'Accueil' },
-    { href: '/booking', icon: '📅', label: 'Réserver' },
-    { href: '/open-matches', icon: '👥', label: 'Matchs' },
-    { href: '/my-bookings', icon: '🎾', label: 'Mes résa' },
+    { href: '/', icon: '⊞', label: t('nav.home') },
+    { href: '/booking', icon: '📅', label: t('nav.booking') },
+    { href: '/open-matches', icon: '👥', label: t('nav.matches') },
+    { href: '/my-bookings', icon: '🎾', label: t('nav.myBookingsShort') },
     isAdmin
-      ? { href: '/admin', icon: '◈', label: 'Admin' }
-      : { href: '/profile', icon: '👤', label: 'Profil' },
+      ? { href: '/admin', icon: '◈', label: t('nav.admin') }
+      : { href: '/profile', icon: '👤', label: t('nav.profile') },
   ]
 
   const isActive = (href) => href === '/' ? pathname === '/' : pathname.startsWith(href)

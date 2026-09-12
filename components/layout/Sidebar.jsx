@@ -2,16 +2,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { sportColor } from '../../lib/sportColors'
-
-const playerLinks = [
-  { href: '/', icon: '⊞', label: 'Accueil' },
-  { href: '/booking', icon: '📅', label: 'Réserver' },
-  { href: '/events', icon: '🏆', label: 'Club Events' },
-  { href: '/my-bookings', icon: '🎾', label: 'Mes réservations' },
-  { href: '/open-matches', icon: '👥', label: 'Matchs ouverts' },
-  { href: '/membership', icon: '🎖️', label: 'Adhésions et cotisations' },
-  { href: '/profile', icon: '👤', label: 'Mon profil' },
-]
+import { useLocale } from '../../lib/i18n/LocaleContext'
+import LanguageSwitcher from '../LanguageSwitcher'
 
 const adminLinks = [
   { href: '/admin', icon: '◈', label: 'Dashboard' },
@@ -31,7 +23,18 @@ const adminLinks = [
 
 export default function Sidebar({ profile, onClose }) {
   const pathname = usePathname()
+  const { t } = useLocale()
   const isAdmin = profile?.role === 'admin'
+
+  const playerLinks = [
+    { href: '/', icon: '⊞', label: t('nav.home') },
+    { href: '/booking', icon: '📅', label: t('nav.booking') },
+    { href: '/events', icon: '🏆', label: t('nav.clubEvents') },
+    { href: '/my-bookings', icon: '🎾', label: t('nav.myBookings') },
+    { href: '/open-matches', icon: '👥', label: t('nav.openMatches') },
+    { href: '/membership', icon: '🎖️', label: t('nav.membership') },
+    { href: '/profile', icon: '👤', label: t('nav.profile') },
+  ]
 
   return (
     <aside style={{
@@ -59,7 +62,7 @@ export default function Sidebar({ profile, onClose }) {
       </div>
 
       <nav style={{ flex: 1, padding: '12px 8px', overflowY: 'auto' }}>
-        {isAdmin && <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--muted)', padding: '0 10px', marginBottom: '6px' }}>Joueur</div>}
+        {isAdmin && <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--muted)', padding: '0 10px', marginBottom: '6px' }}>{t('nav.playerSection')}</div>}
         {playerLinks.map(link => {
           const active = link.href === '/' ? pathname === '/' : pathname.startsWith(link.href)
           return (
@@ -79,7 +82,7 @@ export default function Sidebar({ profile, onClose }) {
 
         {isAdmin && (
           <>
-            <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--muted)', padding: '0 10px', marginTop: '20px', marginBottom: '6px' }}>Administration</div>
+            <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--muted)', padding: '0 10px', marginTop: '20px', marginBottom: '6px' }}>{t('nav.adminSection')}</div>
             {adminLinks.map(link => {
               const active = pathname === link.href
               return (
@@ -100,6 +103,10 @@ export default function Sidebar({ profile, onClose }) {
         )}
       </nav>
 
+      <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
+        <LanguageSwitcher />
+      </div>
+
       {profile && (
         <Link href="/profile" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', borderTop: '1px solid var(--border)', textDecoration: 'none' }}>
           <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--brand-dim)', border: '1px solid var(--brand)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 600, color: 'var(--brand-light)', flexShrink: 0 }}>
@@ -109,7 +116,7 @@ export default function Sidebar({ profile, onClose }) {
             <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {profile.first_name ? (profile.first_name + ' ' + (profile.last_name || '')) : profile.email}
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{profile.role === 'admin' ? 'Admin' : profile.role === 'member' ? 'Joueur' : 'Joueur'}</div>
+            <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{profile.role === 'admin' ? t('nav.admin') : t('nav.player')}</div>
           </div>
         </Link>
       )}

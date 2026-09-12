@@ -3,13 +3,9 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { useSport, SPORTS } from '../../lib/sportContext'
 import { sportColor } from '../../lib/sportColors'
+import { useLocale } from '../../lib/i18n/LocaleContext'
 
-const PAGE_TITLES = {
-  '/': 'Accueil',
-  '/booking': 'Réserver',
-  '/my-bookings': 'Mes réservations',
-  '/open-matches': 'Matchs ouverts',
-  '/profile': 'Mon profil',
+const ADMIN_PAGE_TITLES = {
   '/admin': 'Dashboard',
   '/admin/calendar': 'Calendrier',
   '/admin/courts': 'Terrains',
@@ -48,7 +44,17 @@ function SportSwitcher() {
 
 export default function TopBar({ user, profile, onHamburger, sidebarOpen }) {
   const pathname = usePathname()
-  const title = PAGE_TITLES[pathname] || 'Brussels B&P Club'
+  const { t } = useLocale()
+  const PLAYER_PAGE_TITLES = {
+    '/': t('nav.home'),
+    '/booking': t('nav.booking'),
+    '/my-bookings': t('nav.myBookings'),
+    '/open-matches': t('nav.openMatches'),
+    '/profile': t('nav.profile'),
+    '/events': t('nav.clubEvents'),
+    '/membership': t('nav.membership'),
+  }
+  const title = PLAYER_PAGE_TITLES[pathname] || ADMIN_PAGE_TITLES[pathname] || 'Brussels B&P Club'
 
   return (
     <header style={{
