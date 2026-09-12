@@ -29,11 +29,27 @@ function StubPaymentContent() {
       await supabase.from('bookings').update({ status: 'confirmed' }).eq('id', bookingId)
 
       if (isSettle) {
-        // Règlement global : tous les joueurs encore impayés de cette réservation sont couverts.
+        // Règlement global : tous les joueurs encore impayés de cette réservation sont couverts,
+        // ET les places encore vides (sans ligne booking_players) sont créées comme "couvertes" —
+        // sinon le calcul du solde dû resterait bloqué sur "places vides à payer" indéfiniment.
+        const { data: bookingRow } = await supabase.from('bookings').select('max_players, price_per_player').eq('id', bookingId).single()
         const { data: players } = await supabase.from('booking_players').select('id, payment_status').eq('booking_id', bookingId)
         const unpaid = (players || []).filter(p => p.payment_status !== 'paid')
         for (const p of unpaid) {
           await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', p.id)
+        }
+        const emptySlots = Math.max(0, (bookingRow?.max_players || 4) - (players || []).length)
+        for (let i = 0; i < emptySlots; i++) {
+          await supabase.from('booking_players').insert({
+            booking_id: bookingId,
+            guest_name: 'Place couverte',
+            is_owner: false,
+            payment_status: 'paid',
+            paid_at: new Date().toISOString(),
+            base_price: bookingRow?.price_per_player,
+            discount_percent: 0,
+            effective_price: bookingRow?.price_per_player,
+          })
         }
       } else if (payment?.booking_player_id) {
         await supabase.from('booking_players').update({ payment_status: 'paid', paid_at: new Date().toISOString() }).eq('id', payment.booking_player_id)

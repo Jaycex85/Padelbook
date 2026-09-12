@@ -325,6 +325,34 @@ function MyBookingsList() {
       return
     }
 
+    // 0. Les places encore VIDES ne sont que comptées, elles n'ont pas de ligne
+    // booking_players en base — sans quoi le calcul du solde dû resterait
+    // éternellement "places vides à payer" même après paiement. On crée donc
+    // une place couverte (déjà payée) pour chacune, AVANT de toucher au wallet.
+    const emptySlots = Math.max(0, (booking.max_players || 4) - (booking.players || []).length)
+    const createdPlaceholderIds = []
+    for (let i = 0; i < emptySlots; i++) {
+      const { data: created, error: createErr } = await supabase.from('booking_players').insert({
+        booking_id: booking.id,
+        guest_name: 'Place couverte',
+        is_owner: false,
+        payment_status: 'paid',
+        paid_at: new Date().toISOString(),
+        base_price: booking.price_per_player,
+        discount_percent: 0,
+        effective_price: booking.price_per_player,
+      }).select('id').single()
+      if (createErr || !created) {
+        console.error('settleViaWallet: création place couverte bloquée', createErr)
+        // Rollback des places déjà créées dans cette tentative.
+        for (const id of createdPlaceholderIds) await supabase.from('booking_players').delete().eq('id', id)
+        alert('Le règlement a été bloqué par un problème de droits d\'accès — aucun montant n\'a été débité.')
+        setSettling(null)
+        return
+      }
+      createdPlaceholderIds.push(created.id)
+    }
+
     // 1. Marquer d'abord les joueurs impayés comme payés, et VÉRIFIER que ça a
     // vraiment pris effet (0 ligne modifiée = bloqué par les droits d'accès,
     // sans erreur levée — comportement Supabase déjà rencontré sur ce projet).
@@ -338,6 +366,7 @@ function MyBookingsList() {
         .eq('id', p.id).select('id')
       if (playerErr || !upd || upd.length === 0) {
         console.error('settleViaWallet: mise à jour booking_players bloquée pour', p.id, playerErr)
+        for (const id of createdPlaceholderIds) await supabase.from('booking_players').delete().eq('id', id)
         alert('Le règlement a été bloqué par un problème de droits d\'accès — aucun montant n\'a été débité. Contacte le support en précisant : booking_players ' + p.id)
         setSettling(null)
         return
@@ -345,15 +374,16 @@ function MyBookingsList() {
       updatedPlayerIds.push(p.id)
     }
 
-    // 2. Débit du wallet, seulement maintenant que l'étape 1 est confirmée.
+    // 2. Débit du wallet, seulement maintenant que les étapes précédentes sont confirmées.
     const { data: walletUpdated, error: walletErr } = await supabase.from('profiles')
       .update({ wallet_balance: available - openBalance }).eq('id', userId).select('id')
 
     if (walletErr || !walletUpdated || walletUpdated.length === 0) {
-      // Rollback : le débit n'a pas eu lieu, on annule le marquage "payé" fait à l'étape 1.
+      // Rollback : le débit n'a pas eu lieu, on annule tout ce qui précède.
       for (const id of updatedPlayerIds) {
         await supabase.from('booking_players').update({ payment_status: 'pending', paid_at: null }).eq('id', id)
       }
+      for (const id of createdPlaceholderIds) await supabase.from('booking_players').delete().eq('id', id)
       console.error('settleViaWallet: débit wallet bloqué', walletErr)
       alert('Le débit du wallet a échoué — rien n\'a été modifié.')
       setSettling(null)
