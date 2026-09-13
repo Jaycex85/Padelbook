@@ -7,6 +7,9 @@ import { useSport } from '../../lib/sportContext'
 import PaymentMethodModal from '../../components/PaymentMethodModal'
 import { goToPaymentUrl } from '../../lib/paymentNav'
 import { logBillableEvent } from '../../lib/billing'
+import { useLocale } from '../../lib/i18n/LocaleContext'
+
+const DATE_LOCALES = { fr: 'fr-BE', en: 'en-GB', nl: 'nl-BE' }
 
 export default function EventsPage() {
   const [events, setEvents] = useState([])
@@ -18,6 +21,8 @@ export default function EventsPage() {
   const supabase = createClient()
   const { activeSport } = useSport()
   const router = useRouter()
+  const { t, locale } = useLocale()
+  const dateLocale = DATE_LOCALES[locale] || 'fr-BE'
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -85,7 +90,7 @@ export default function EventsPage() {
 
       if (regErr || !regUpd || regUpd.length === 0) {
         console.error('payEventViaWallet: mise à jour bloquée', regErr)
-        alert('Le paiement a été bloqué par un problème de droits d\'accès — aucun montant n\'a été débité.')
+        alert(t('payment.blockedByRls'))
         setPendingPayment(null)
         load()
         return
@@ -97,7 +102,7 @@ export default function EventsPage() {
       if (walletErr || !walletUpd || walletUpd.length === 0) {
         await supabase.from('event_registrations').update({ payment_status: 'pending', status: 'pending' }).eq('id', pendingPayment.eventRegistrationId)
         console.error('payEventViaWallet: débit wallet bloqué', walletErr)
-        alert('Le débit du wallet a échoué — rien n\'a été modifié.')
+        alert(t('payment.debitFailed'))
         setPendingPayment(null)
         load()
         return
@@ -135,22 +140,22 @@ export default function EventsPage() {
     load()
   }
 
-  const fmt = d => new Date(d).toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
-  const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+  const fmt = d => new Date(d).toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short' })
+  const fmtTime = d => new Date(d).toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
+  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>{t('common.loading')}</div>
 
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Club Events</h1>
-        <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '4px' }}>Tournois et événements spéciaux du club</p>
+        <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>{t('clubEvents.title')}</h1>
+        <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '4px' }}>{t('clubEvents.subtitle')}</p>
       </div>
 
       {events.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '64px', color: 'var(--muted)' }}>
           <div style={{ fontSize: '40px', marginBottom: '12px' }}>🏆</div>
-          <p>Aucun événement prévu pour le moment.</p>
+          <p>{t('clubEvents.noEvents')}</p>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -165,7 +170,7 @@ export default function EventsPage() {
             return (
               <div key={ev.id} style={{ background: 'var(--surface)', border: '1px solid var(--brand)', borderRadius: '16px', padding: '20px', position: 'relative', overflow: 'hidden' }}>
                 <div style={{ position: 'absolute', top: 0, right: 0, background: 'var(--brand)', color: '#fff', fontSize: '10px', fontWeight: 700, padding: '4px 14px', borderRadius: '0 0 0 10px', letterSpacing: '0.5px' }}>
-                  EVENT
+                  {t('clubEvents.badge')}
                 </div>
 
                 <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '18px', fontWeight: 700, marginBottom: '6px', paddingRight: '70px' }}>
@@ -188,10 +193,10 @@ export default function EventsPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <span style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '99px', background: isFull ? 'rgba(248,113,113,0.1)' : 'var(--brand-dim)', color: isFull ? 'var(--red)' : 'var(--brand-light)' }}>
-                      {isFull ? 'Complet' : spotsLeft + ' place' + (spotsLeft > 1 ? 's' : '') + ' libre' + (spotsLeft > 1 ? 's' : '')}
+                      {isFull ? t('clubEvents.full') : spotsLeft + ' ' + (spotsLeft > 1 ? t('clubEvents.spotsLeft') : t('clubEvents.spotLeft'))}
                     </span>
                     <span style={{ fontSize: '12px', padding: '4px 12px', borderRadius: '99px', background: 'var(--surface2)', color: 'var(--muted)' }}>
-                      {regs.length}/{ev.max_players} inscrits
+                      {regs.length}/{ev.max_players} {t('clubEvents.registered')}
                     </span>
                   </div>
 
@@ -202,12 +207,12 @@ export default function EventsPage() {
                     {myReg ? (
                       <button onClick={() => handleCancel(myReg.id)}
                         style={{ background: 'none', border: '1px solid var(--border)', color: 'var(--red)', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}>
-                        Se désinscrire
+                        {t('clubEvents.unregister')}
                       </button>
                     ) : (
                       <button onClick={() => handleRegister(ev)} disabled={isFull || registering === ev.id}
                         style={{ background: isFull ? 'var(--surface2)' : 'var(--brand)', color: isFull ? 'var(--muted)' : '#fff', border: 'none', borderRadius: '8px', padding: '9px 20px', fontSize: '13px', fontWeight: 600, cursor: isFull ? 'not-allowed' : 'pointer', fontFamily: "'Syne',sans-serif" }}>
-                        {registering === ev.id ? '...' : isFull ? 'Complet' : "S'inscrire"}
+                        {registering === ev.id ? '...' : isFull ? t('clubEvents.full') : t('clubEvents.register')}
                       </button>
                     )}
                   </div>
@@ -215,7 +220,7 @@ export default function EventsPage() {
 
                 <button onClick={() => setOpenChatId(openChatId === ev.id ? null : ev.id)}
                   style={{ background: openChatId === ev.id ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (openChatId === ev.id ? 'var(--brand)' : 'var(--border)'), color: openChatId === ev.id ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', cursor: 'pointer' }}>
-                  💬 Discussion {openChatId === ev.id ? '▲' : '▼'}
+                  {t('clubEvents.discussion')} {openChatId === ev.id ? '▲' : '▼'}
                 </button>
 
                 {openChatId === ev.id && (
