@@ -5,15 +5,9 @@ import { generateSlots, evaluateAccessRules, calcEffectivePrice, calcSlotPrice, 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { useSport } from '../../lib/sportContext'
+import { useLocale } from '../../lib/i18n/LocaleContext'
 
-const PAYMENT_MODE_LABELS = { full: 'Paiement complet', split: 'Split par joueur', wallet: 'Wallet' }
-
-const PERIODS = [
-  { key: 'all', label: 'Tout', icon: '◷' },
-  { key: 'morning', label: 'Matin', icon: '🌅' },
-  { key: 'afternoon', label: 'Après-midi', icon: '☀️' },
-  { key: 'evening', label: 'Soirée', icon: '🌙' },
-]
+const DATE_LOCALES = { fr: 'fr-BE', en: 'en-GB', nl: 'nl-BE' }
 
 function isInPeriod(date, periodKey) {
   if (periodKey === 'all') return true
@@ -29,6 +23,16 @@ function BookingForm() {
   const searchParams = useSearchParams()
   const supabase = createClient()
   const { activeSport } = useSport()
+  const { t, locale } = useLocale()
+  const dateLocale = DATE_LOCALES[locale] || 'fr-BE'
+
+  const PAYMENT_MODE_LABELS = { full: t('booking.paymentModeFull'), split: t('booking.paymentModeSplit'), wallet: t('booking.paymentModeWallet') }
+  const PERIODS = [
+    { key: 'all', label: t('booking.periodAll'), icon: '◷' },
+    { key: 'morning', label: t('booking.periodMorning'), icon: '🌅' },
+    { key: 'afternoon', label: t('booking.periodAfternoon'), icon: '☀️' },
+    { key: 'evening', label: t('booking.periodEvening'), icon: '🌙' },
+  ]
 
   const [courts, setCourts] = useState([])
   const [selectedCourt, setSelectedCourt] = useState(null)
@@ -131,7 +135,7 @@ function BookingForm() {
     if (!selectedSlot || !selectedCourt) return
     if (!profile) { router.push('/login'); return }
     if (blockedByUnpaidBalance) {
-      setError('Vous avez un solde impayé sur une réservation existante. Réglez-le avant de réserver à nouveau.')
+      setError(t('booking.errorUnpaid'))
       return
     }
 
@@ -142,17 +146,17 @@ function BookingForm() {
     const timeStr = selectedSlot.start.toTimeString().substring(0, 5)
 
     const allowed = evaluateAccessRules(accessRules, userContext, selectedDate, timeStr)
-    if (!allowed) { setError("Ce créneau n'est pas accessible pour les joueurs non membres du club."); return }
+    if (!allowed) { setError(t('booking.errorAccessRule')); return }
 
     const windowCheck = checkBookingWindow(accessRules, userContext, selectedSlot.start)
     if (!windowCheck.allowed) {
-      setError('Ce créneau ouvre à la réservation dans ' + windowCheck.daysUntilOpen + ' jour(s) pour votre profil (fenêtre de ' + windowCheck.windowDays + ' jours).')
+      setError(t('booking.errorBookingWindow', { days: windowCheck.daysUntilOpen, window: windowCheck.windowDays }))
       return
     }
 
     const maxCheck = checkMaxConcurrentBookings(accessRules, userContext, activeOwnerCount)
     if (!maxCheck.allowed) {
-      setError('Vous avez déjà ' + maxCheck.current + '/' + maxCheck.max + ' réservation(s) active(s) en tant qu\'organisateur — limite atteinte pour votre profil.')
+      setError(t('booking.errorMaxConcurrent', { current: maxCheck.current, max: maxCheck.max }))
       return
     }
 
@@ -209,10 +213,10 @@ function BookingForm() {
     router.push('/my-bookings?new=' + newBooking.id)
   }
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
+  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>{t('common.loading')}</div>
 
-  const formatDate = str => new Date(str).toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
-  const formatTime = d => d.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+  const formatDate = str => new Date(str).toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short' })
+  const formatTime = d => d.toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })
 
   const availableModes = selectedCourt
     ? ((selectedCourt.payment_modes && selectedCourt.payment_modes.length > 0) ? selectedCourt.payment_modes : [selectedCourt.payment_mode || 'full'])
@@ -224,17 +228,17 @@ function BookingForm() {
 
   return (
     <div>
-      <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700, marginBottom: '24px' }}>Réserver un terrain</h1>
+      <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700, marginBottom: '24px' }}>{t('booking.title')}</h1>
 
       {blockedByUnpaidBalance && (
         <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '12px', padding: '14px 18px', marginBottom: '20px', fontSize: '14px', color: 'var(--red)' }}>
-          ⚠️ Vous avez un solde impayé ou un wallet négatif. Réglez-le depuis <a href="/profile" style={{color:'var(--red)', textDecoration:'underline'}}>votre profil</a> ou <a href="/my-bookings" style={{color:'var(--red)', textDecoration:'underline'}}>Mes réservations</a> avant de réserver à nouveau.
+          ⚠️ {t('booking.unpaidWarningPrefix')} <a href="/profile" style={{color:'var(--red)', textDecoration:'underline'}}>{t('booking.yourProfile')}</a> {t('common.or')} <a href="/my-bookings" style={{color:'var(--red)', textDecoration:'underline'}}>{t('booking.myBookings')}</a> {t('booking.unpaidWarningSuffix')}
         </div>
       )}
 
       {/* Terrains */}
       <section style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)', marginBottom: '10px', fontWeight: 500 }}>Terrain</h2>
+        <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)', marginBottom: '10px', fontWeight: 500 }}>{t('booking.court')}</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '8px' }}>
           {courts.map(c => (
             <button key={c.id} onClick={() => { setSelectedCourt(c); setSelectedSlot(null) }}
@@ -243,7 +247,7 @@ function BookingForm() {
                 {c.is_indoor ? 'Indoor' : 'Outdoor'}
               </div>
               <div style={{ fontSize: '14px', fontWeight: 500 }}>{c.name}</div>
-              <div style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>{(c.price_per_slot / 4).toFixed(2)} € / joueur</div>
+              <div style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '2px' }}>{(c.price_per_slot / 4).toFixed(2)} € {t('booking.perPlayer')}</div>
             </button>
           ))}
         </div>
@@ -251,13 +255,13 @@ function BookingForm() {
 
       {/* Dates */}
       <section style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)', marginBottom: '10px', fontWeight: 500 }}>Date</h2>
+        <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)', marginBottom: '10px', fontWeight: 500 }}>{t('booking.date')}</h2>
         <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
           {dates.map(d => (
             <button key={d} onClick={() => { setSelectedDate(d); setSelectedSlot(null) }}
               style={{ flexShrink: 0, background: selectedDate === d ? 'var(--brand-dim)' : 'var(--surface)', border: '1.5px solid ' + (selectedDate === d ? 'var(--brand)' : 'var(--border)'), borderRadius: '10px', padding: '10px 14px', textAlign: 'center', cursor: 'pointer', minWidth: '64px' }}>
               <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
-                {new Date(d + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'short' })}
+                {new Date(d + 'T12:00:00').toLocaleDateString(dateLocale, { weekday: 'short' })}
               </div>
               <div style={{ fontSize: '20px', fontFamily: "'Syne',sans-serif", fontWeight: 700, color: selectedDate === d ? 'var(--brand-light)' : 'var(--text)' }}>
                 {new Date(d + 'T12:00:00').getDate()}
@@ -270,7 +274,7 @@ function BookingForm() {
       {/* Créneaux horaires */}
       <section style={{ marginBottom: '24px' }}>
         <h2 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--muted)', marginBottom: '10px', fontWeight: 500 }}>
-          Horaires disponibles — {formatDate(selectedDate)}
+          {t('booking.availableSlots')} — {formatDate(selectedDate)}
         </h2>
 
         {/* Filtre période — n'affiche que les périodes réellement présentes dans les créneaux du terrain */}
@@ -291,9 +295,9 @@ function BookingForm() {
         )}
 
         {slots.length === 0 ? (
-          <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Aucun horaire disponible ce jour.</p>
+          <p style={{ color: 'var(--muted)', fontSize: '14px' }}>{t('booking.noSlotsToday')}</p>
         ) : filteredSlots.length === 0 ? (
-          <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Aucun horaire dans cette période.</p>
+          <p style={{ color: 'var(--muted)', fontSize: '14px' }}>{t('booking.noSlotsPeriod')}</p>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '8px' }}>
             {filteredSlots.map((slot, i) => {
@@ -321,7 +325,7 @@ function BookingForm() {
                     {formatTime(slot.start)}
                   </div>
                   <div style={{ fontSize: '10px', color: unavailable ? 'var(--brand-light)' : 'var(--muted)', marginTop: '3px', fontWeight: unavailable ? 600 : 400, letterSpacing: unavailable ? '0.3px' : 0 }}>
-                    {unavailable ? (isPastSlot ? 'Passé' : 'Complet') : (() => { const sp = calcSlotPrice(slot.start, priceSlots, selectedCourt?.price_per_slot || 0); return sp.isDynamic ? sp.price + ' €' : slot.duration + ' min' })()}
+                    {unavailable ? (isPastSlot ? t('booking.past') : t('booking.full')) : (() => { const sp = calcSlotPrice(slot.start, priceSlots, selectedCourt?.price_per_slot || 0); return sp.isDynamic ? sp.price + ' €' : slot.duration + ' ' + t('booking.min') })()}
                   </div>
                 </button>
               )
@@ -344,10 +348,10 @@ function BookingForm() {
             }}>
             <div>
               <div style={{ fontSize: '14px', fontWeight: 600, color: isPublic ? 'var(--brand-light)' : 'var(--text)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {isPublic ? '🌍 Match public' : '🔒 Match privé'}
+                {isPublic ? t('booking.publicMatch') : t('booking.privateMatch')}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
-                {isPublic ? 'Visible par tous, les joueurs peuvent rejoindre et payer leur part' : 'Seuls les joueurs que vous invitez peuvent participer'}
+                {isPublic ? t('booking.publicMatchDesc') : t('booking.privateMatchDesc')}
               </div>
             </div>
             <div style={{
@@ -368,15 +372,15 @@ function BookingForm() {
       {selectedSlot && selectedCourt && (
         <section>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px' }}>
-            <h3 style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700, marginBottom: '14px' }}>Récapitulatif</h3>
+            <h3 style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700, marginBottom: '14px' }}>{t('booking.summary')}</h3>
             {[
-              ['Terrain', selectedCourt.name],
-              ['Date', formatDate(selectedDate)],
-              ['Horaire', formatTime(selectedSlot.start) + ' → ' + formatTime(selectedSlot.end)],
-              ['Durée', selectedSlot.duration + ' min'],
-              ['Visibilité', isPublic ? 'Public' : 'Privé'],
+              [t('booking.court'), selectedCourt.name],
+              [t('booking.date'), formatDate(selectedDate)],
+              [t('booking.schedule'), formatTime(selectedSlot.start) + ' → ' + formatTime(selectedSlot.end)],
+              [t('booking.duration'), selectedSlot.duration + ' ' + t('booking.min')],
+              [t('booking.visibility'), isPublic ? t('booking.public') : t('booking.private')],
               ...(calcSlotPrice(selectedSlot.start, priceSlots, selectedCourt.price_per_slot).isDynamic
-                ? [['Tarif', calcSlotPrice(selectedSlot.start, priceSlots, selectedCourt.price_per_slot).label || 'Tarif dynamique']]
+                ? [[t('booking.rate'), calcSlotPrice(selectedSlot.start, priceSlots, selectedCourt.price_per_slot).label || t('booking.dynamicRate')]]
                 : []),
             ].map(([k, v]) => (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
@@ -385,17 +389,17 @@ function BookingForm() {
               </div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-              <span style={{ color: 'var(--muted)' }}>Prix total du terrain</span>
+              <span style={{ color: 'var(--muted)' }}>{t('booking.totalCourtPrice')}</span>
               <span>{selectedCourt.price_per_slot} €</span>
             </div>
             {profile?.discount_percent > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ color: 'var(--muted)' }}>Votre remise membre</span>
+                <span style={{ color: 'var(--muted)' }}>{t('booking.memberDiscount')}</span>
                 <span style={{ color: 'var(--amber)' }}>- {profile.discount_percent} %</span>
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 500, paddingTop: '12px', marginBottom: '14px' }}>
-              <span>Votre part (par joueur)</span>
+              <span>{t('booking.yourShare')}</span>
               <span style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand-light)' }}>
                 {myPrice.toFixed(2)} €
               </span>
@@ -405,7 +409,7 @@ function BookingForm() {
             {availableModes.length > 1 && (
               <div style={{ marginBottom: '14px' }}>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                  Mode de paiement
+                  {t('booking.paymentMode')}
                 </label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {availableModes.map(mode => (
@@ -434,7 +438,7 @@ function BookingForm() {
             {error && <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.3)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--red)', marginTop: '12px' }}>{error}</div>}
             <button onClick={handleBook} disabled={booking}
               style={{ width: '100%', background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', marginTop: '16px', fontFamily: "'Syne',sans-serif", opacity: booking ? 0.6 : 1 }}>
-              {booking ? 'Réservation...' : profile ? 'Confirmer la réservation' : 'Se connecter pour réserver'}
+              {booking ? t('booking.confirming') : profile ? t('booking.confirm') : t('booking.loginToBook')}
             </button>
           </div>
         </section>
@@ -445,8 +449,13 @@ function BookingForm() {
 
 export default function BookingPage() {
   return (
-    <Suspense fallback={<div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>}>
+    <Suspense fallback={<BookingLoadingFallback />}>
       <BookingForm />
     </Suspense>
   )
+}
+
+function BookingLoadingFallback() {
+  const { t } = useLocale()
+  return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>{t('common.loading')}</div>
 }
