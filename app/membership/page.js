@@ -7,15 +7,9 @@ import { goToPaymentUrl } from '../../lib/paymentNav'
 import { sportColor } from '../../lib/sportColors'
 import { logBillableEvent } from '../../lib/billing'
 import { useSport } from '../../lib/sportContext'
+import { useLocale } from '../../lib/i18n/LocaleContext'
 
-const STATUS_LABELS = {
-  none: 'Aucune demande',
-  awaiting_payment: 'En attente de paiement',
-  awaiting_validation: 'En attente de validation par le club',
-  active: 'Actif',
-  rejected: 'Demande refusée',
-  expired: 'Expiré',
-}
+const DATE_LOCALES = { fr: 'fr-BE', en: 'en-GB', nl: 'nl-BE' }
 
 export default function MembershipPage() {
   const [types, setTypes] = useState([])
@@ -26,18 +20,29 @@ export default function MembershipPage() {
   const supabase = createClient()
   const router = useRouter()
   const { activeSport } = useSport()
+  const { t, locale } = useLocale()
+  const dateLocale = DATE_LOCALES[locale] || 'fr-BE'
+
+  const STATUS_LABELS = {
+    none: t('membership.statusNone'),
+    awaiting_payment: t('membership.statusAwaitingPayment'),
+    awaiting_validation: t('membership.statusAwaitingValidation'),
+    active: t('membership.statusActive'),
+    rejected: t('membership.statusRejected'),
+    expired: t('membership.statusExpired'),
+  }
 
   async function load() {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { window.location.href = '/login'; return }
 
-    const [{ data: t }, { data: r }] = await Promise.all([
+    const [{ data: typesData }, { data: requestsData }] = await Promise.all([
       supabase.from('membership_types').select('*').eq('active', true).order('sport').order('sort_order'),
       supabase.from('membership_requests').select('*, membership_type:membership_types(*)').eq('profile_id', user.id),
     ])
-    setTypes(t || [])
-    setRequests(r || [])
+    setTypes(typesData || [])
+    setRequests(requestsData || [])
     setLoading(false)
   }
 
@@ -66,7 +71,7 @@ export default function MembershipPage() {
 
   async function handleRequest(type) {
     if (type.key === 'interclubs' && !hasActiveAfp()) {
-      alert('Une licence AFP en règle est requise avant de pouvoir demander le statut compétiteur InterClubs.')
+      alert(t('membership.needsAfpAlert'))
       return
     }
     setRequesting(type.id)
@@ -100,7 +105,7 @@ export default function MembershipPage() {
 
       if (reqErr || !reqUpd || reqUpd.length === 0) {
         console.error('payViaWallet (membership): mise à jour bloquée', reqErr)
-        alert('Le paiement a été bloqué par un problème de droits d\'accès — aucun montant n\'a été débité.')
+        alert(t('payment.blockedByRls'))
         setPendingPayment(null)
         load()
         return
@@ -112,7 +117,7 @@ export default function MembershipPage() {
       if (walletErr || !walletUpd || walletUpd.length === 0) {
         await supabase.from('membership_requests').update({ payment_status: 'pending' }).eq('id', pendingPayment.requestId)
         console.error('payViaWallet (membership): débit wallet bloqué', walletErr)
-        alert('Le débit du wallet a échoué — rien n\'a été modifié.')
+        alert(t('payment.debitFailed'))
         setPendingPayment(null)
         load()
         return
@@ -142,7 +147,7 @@ export default function MembershipPage() {
     if (payData.payment_url) goToPaymentUrl(router, payData.payment_url)
   }
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
+  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>{t('common.loading')}</div>
 
   const bySport = { padel: types.filter(t => t.sport === 'padel'), badminton: types.filter(t => t.sport === 'badminton') }
   const sportsToShow = activeSport ? [activeSport] : ['padel', 'badminton']
@@ -150,9 +155,9 @@ export default function MembershipPage() {
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 700 }}>Adhésions et cotisations</h1>
+        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 700 }}>{t('membership.title')}</h1>
         <p style={{ color: 'var(--muted)', fontSize: '14px', marginTop: '4px' }}>
-          Licences et statuts compétiteur pour le {activeSport === 'badminton' ? 'badminton' : 'padel'}. Chaque demande est validée par le club après paiement.
+          {t('membership.subtitle', { sport: activeSport === 'badminton' ? t('common.badminton') : t('common.padel') })}
         </p>
       </div>
 
@@ -162,7 +167,7 @@ export default function MembershipPage() {
         return (
           <div key={sport} style={{ marginBottom: '28px' }}>
             <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '16px', fontWeight: 700, marginBottom: '12px', color: col.text }}>
-              {sport === 'padel' ? 'Padel' : 'Badminton'}
+              {sport === 'padel' ? t('common.padel') : t('common.badminton')}
             </h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {bySport[sport].map(type => {
@@ -173,14 +178,14 @@ export default function MembershipPage() {
                     <div>
                       <div style={{ fontSize: '14px', fontWeight: 600 }}>{type.label}</div>
                       <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>
-                        {type.price > 0 ? type.price.toFixed(2) + ' €' : 'Gratuit'}
+                        {type.price > 0 ? type.price.toFixed(2) + ' €' : t('common.free')}
                         {status.request && status.key === 'active' && status.request.valid_until && (
-                          <> · valide jusqu'au {new Date(status.request.valid_until).toLocaleDateString('fr-BE')}</>
+                          <> · {t('membership.validUntil', { date: new Date(status.request.valid_until).toLocaleDateString(dateLocale) })}</>
                         )}
                       </div>
                       {needsAfp && (status.key === 'none' || status.key === 'rejected' || status.key === 'expired') && (
                         <div style={{ fontSize: '11px', color: 'var(--amber)', marginTop: '4px' }}>
-                          Nécessite une licence AFP en règle
+                          {t('membership.needsAfp')}
                         </div>
                       )}
                     </div>
@@ -198,15 +203,15 @@ export default function MembershipPage() {
 
                       {(status.key === 'none' || status.key === 'rejected' || status.key === 'expired') && (
                         <button onClick={() => handleRequest(type)} disabled={requesting === type.id || needsAfp}
-                          title={needsAfp ? 'Licence AFP en règle requise' : undefined}
+                          title={needsAfp ? t('membership.needsAfpTitle') : undefined}
                           style={{ background: needsAfp ? 'var(--surface2)' : col.dim, border: '1px solid ' + (needsAfp ? 'var(--border)' : col.border), color: needsAfp ? 'var(--muted)' : col.text, borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: 600, cursor: needsAfp ? 'not-allowed' : 'pointer' }}>
-                          {requesting === type.id ? '...' : status.key === 'expired' ? 'Renouveler' : 'Demander'}
+                          {requesting === type.id ? '...' : status.key === 'expired' ? t('membership.renew') : t('membership.request')}
                         </button>
                       )}
                       {status.key === 'awaiting_payment' && (
                         <button onClick={() => setPendingPayment({ requestId: status.request.id, amount: status.request.price, sport: type.sport })}
                           style={{ background: col.dim, border: '1px solid ' + col.border, color: col.text, borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-                          Payer
+                          {t('membership.pay')}
                         </button>
                       )}
                     </div>
