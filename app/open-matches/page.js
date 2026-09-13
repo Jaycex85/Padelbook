@@ -7,6 +7,9 @@ import { useSport } from '../../lib/sportContext'
 import PaymentMethodModal from '../../components/PaymentMethodModal'
 import { goToPaymentUrl } from '../../lib/paymentNav'
 import { logBillableEvent } from '../../lib/billing'
+import { useLocale } from '../../lib/i18n/LocaleContext'
+
+const DATE_LOCALES = { fr: 'fr-BE', en: 'en-GB', nl: 'nl-BE' }
 
 export default function OpenMatchesPage() {
   const [matches, setMatches] = useState([])
@@ -17,6 +20,8 @@ export default function OpenMatchesPage() {
   const supabase = createClient()
   const { activeSport } = useSport()
   const router = useRouter()
+  const { t, locale } = useLocale()
+  const dateLocale = DATE_LOCALES[locale] || 'fr-BE'
 
   async function load() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -42,9 +47,9 @@ export default function OpenMatchesPage() {
   async function handleJoin(match) {
     if (!profile) { window.location.href = '/login'; return }
     const alreadyIn = (match.players || []).some(p => p.player_id === profile.id)
-    if (alreadyIn) { alert('Vous êtes déjà inscrit à ce match.'); return }
+    if (alreadyIn) { alert(t('openMatches.alreadyJoined')); return }
     const spots = match.max_players - (match.players || []).length
-    if (spots <= 0) { alert('Ce match est complet.'); return }
+    if (spots <= 0) { alert(t('openMatches.matchFull')); return }
 
     setJoining(match.id)
     const discount = profile.discount_percent || 0
@@ -84,7 +89,7 @@ export default function OpenMatchesPage() {
       .eq('id', pendingPayment.playerId).select('id')
     if (playerErr || !playerUpd || playerUpd.length === 0) {
       console.error('payViaWallet: mise à jour booking_players bloquée', playerErr)
-      alert('Le paiement a été bloqué par un problème de droits d\'accès — aucun montant n\'a été débité.')
+      alert(t('payment.blockedByRls'))
       return
     }
 
@@ -93,7 +98,7 @@ export default function OpenMatchesPage() {
     if (walletErr || !walletUpd || walletUpd.length === 0) {
       await supabase.from('booking_players').update({ payment_status: 'pending', paid_at: null }).eq('id', pendingPayment.playerId)
       console.error('payViaWallet: débit wallet bloqué', walletErr)
-      alert('Le débit du wallet a échoué — rien n\'a été modifié.')
+      alert(t('payment.debitFailed'))
       return
     }
 
@@ -141,27 +146,27 @@ export default function OpenMatchesPage() {
     load()
   }
 
-  const fmt = d => new Date(d).toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' })
-  const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+  const fmt = d => new Date(d).toLocaleDateString(dateLocale, { weekday: 'short', day: 'numeric', month: 'short' })
+  const fmtTime = d => new Date(d).toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })
   const ownerName = m => m.owner ? (m.owner.first_name || m.owner.email) : '—'
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
+  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>{t('common.loading')}</div>
 
   return (
     <div>
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>Matchs ouverts</h1>
+        <h1 style={{ fontFamily: "'Syne',sans-serif", fontSize: '22px', fontWeight: 700 }}>{t('openMatches.title')}</h1>
         <p style={{ fontSize: '13px', color: 'var(--muted)', marginTop: '4px' }}>
-          Rejoignez un match existant et payez uniquement votre part.
+          {t('openMatches.subtitle')}
         </p>
       </div>
 
       {matches.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '64px', color: 'var(--muted)' }}>
           <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎾</div>
-          <p style={{ marginBottom: '16px' }}>Aucun match public disponible pour le moment.</p>
+          <p style={{ marginBottom: '16px' }}>{t('openMatches.noMatches')}</p>
           <a href="/booking" style={{ background: 'var(--brand)', color: '#0D1117', padding: '10px 20px', borderRadius: '8px', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
-            Créer un match
+            {t('openMatches.createMatch')}
           </a>
         </div>
       ) : (
@@ -197,25 +202,25 @@ export default function OpenMatchesPage() {
                         ))}
                       </div>
                       <span style={{ fontSize: '12px', color: isFull ? 'var(--red)' : 'var(--brand)' }}>
-                        {isFull ? 'Complet' : spotsLeft + ' place' + (spotsLeft > 1 ? 's' : '') + ' libre' + (spotsLeft > 1 ? 's' : '')}
+                        {isFull ? t('openMatches.full') : spotsLeft + ' ' + (spotsLeft > 1 ? t('openMatches.spotsLeft') : t('openMatches.spotLeft'))}
                       </span>
-                      <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Organisé par {ownerName(m)}</span>
+                      <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{t('openMatches.organizedBy', { name: ownerName(m) })}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                     <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand)' }}>
                       {myPrice} €
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--muted)' }}>votre part</div>
+                    <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{t('openMatches.yourShare')}</div>
                     {isAlreadyIn ? (
                       <button onClick={() => handleLeave(m)}
                         style={{ fontSize: '12px', color: 'var(--red)', padding: '6px 14px', border: '1px solid var(--red)', borderRadius: '8px', background: 'none', cursor: 'pointer' }}>
-                        Quitter ✓
+                        {t('openMatches.leave')}
                       </button>
                     ) : (
                       <button onClick={() => handleJoin(m)} disabled={isFull || joining === m.id}
                         style={{ background: isFull ? 'var(--surface2)' : 'var(--brand)', color: isFull ? 'var(--muted)' : '#0D1117', border: 'none', borderRadius: '8px', padding: '9px 18px', fontSize: '13px', fontWeight: 600, cursor: isFull ? 'not-allowed' : 'pointer', fontFamily: "'Syne',sans-serif", opacity: joining === m.id ? 0.6 : 1 }}>
-                        {joining === m.id ? '...' : isFull ? 'Complet' : 'Rejoindre'}
+                        {joining === m.id ? '...' : isFull ? t('openMatches.full') : t('openMatches.join')}
                       </button>
                     )}
                   </div>
