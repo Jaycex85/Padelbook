@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../lib/supabase'
+import { useLocale } from '../lib/i18n/LocaleContext'
 
 // Props :
 //   amount        : montant dû (€)
@@ -11,6 +12,7 @@ export default function PaymentMethodModal({ amount, onChooseCard, onChooseWalle
   const [walletBalance, setWalletBalance] = useState(null)
   const [processing, setProcessing] = useState(false)
   const supabase = createClient()
+  const { t } = useLocale()
 
   useEffect(() => {
     (async () => {
@@ -35,8 +37,8 @@ export default function PaymentMethodModal({ amount, onChooseCard, onChooseWalle
       style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(2px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
     >
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '22px', width: '100%', maxWidth: '340px' }}>
-        <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Comment payer votre part ?</div>
-        <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '18px' }}>Montant dû : <strong style={{ color: 'var(--brand-light)' }}>{amount.toFixed(2)} €</strong></div>
+        <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>{t('payment.modalTitle')}</div>
+        <div style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '18px' }}>{t('payment.amountDue')} : <strong style={{ color: 'var(--brand-light)' }}>{amount.toFixed(2)} €</strong></div>
 
         <button
           onClick={handleWallet}
@@ -48,11 +50,11 @@ export default function PaymentMethodModal({ amount, onChooseCard, onChooseWalle
             opacity: (processing || walletBalance === null) ? 0.7 : (walletSufficient ? 1 : 0.5),
           }}
         >
-          <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--brand-light)' }}>💳 Wallet PadelBook</span>
+          <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--brand-light)' }}>{t('payment.walletOption')}</span>
           <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
-            {walletBalance === null ? 'Chargement du solde...' : walletSufficient
-              ? `Solde disponible : ${walletBalance.toFixed(2)} €`
-              : `Solde insuffisant (${walletBalance.toFixed(2)} € disponible)`}
+            {walletBalance === null ? t('payment.walletLoading') : walletSufficient
+              ? t('payment.walletAvailable', { balance: walletBalance.toFixed(2) })
+              : t('payment.walletInsufficient', { balance: walletBalance.toFixed(2) })}
           </span>
         </button>
 
@@ -65,12 +67,12 @@ export default function PaymentMethodModal({ amount, onChooseCard, onChooseWalle
             padding: '12px 14px', marginBottom: '14px', cursor: processing ? 'not-allowed' : 'pointer',
           }}
         >
-          <span style={{ fontWeight: 600, fontSize: '14px' }}>💳 Carte bancaire</span>
-          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Paiement en ligne sécurisé</span>
+          <span style={{ fontWeight: 600, fontSize: '14px' }}>{t('payment.cardOption')}</span>
+          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{t('payment.cardSubtitle')}</span>
         </button>
 
         <button onClick={onClose} disabled={processing} style={{ width: '100%', background: 'none', border: 'none', color: 'var(--muted)', fontSize: '13px', cursor: 'pointer', padding: '6px' }}>
-          Annuler
+          {t('payment.cancel')}
         </button>
       </div>
     </div>

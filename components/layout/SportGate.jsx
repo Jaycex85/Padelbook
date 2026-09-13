@@ -1,5 +1,6 @@
 'use client'
 import { useSport, SPORTS } from '../../lib/sportContext'
+import { useLocale } from '../../lib/i18n/LocaleContext'
 
 // À utiliser dans une page qui a besoin d'un sport actif :
 //   const { activeSport } = useSport()
@@ -8,6 +9,7 @@ import { useSport, SPORTS } from '../../lib/sportContext'
 // besoin de connaître le sport pour s'afficher.
 export default function SportGate() {
   const { setActiveSport } = useSport()
+  const { t } = useLocale()
 
   return (
     <div style={{
@@ -18,7 +20,7 @@ export default function SportGate() {
       gap: '24px', padding: '24px',
     }}>
       <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '20px', fontWeight: 800, textAlign: 'center' }}>
-        Vous venez jouer à quoi aujourd'hui ?
+        {t('sportGate.question')}
       </div>
       <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
         <button
@@ -30,7 +32,7 @@ export default function SportGate() {
             cursor: 'pointer',
           }}
         >
-          Padel
+          {t('common.padel')}
         </button>
         <button
           onClick={() => setActiveSport(SPORTS.BADMINTON)}
@@ -41,11 +43,11 @@ export default function SportGate() {
             cursor: 'pointer',
           }}
         >
-          Badminton
+          {t('common.badminton')}
         </button>
       </div>
       <div style={{ fontSize: '12px', color: 'var(--muted)', textAlign: 'center' }}>
-        Vous pourrez changer à tout moment depuis le menu du haut.
+        {t('sportGate.canChangeLater')}
       </div>
     </div>
   )
