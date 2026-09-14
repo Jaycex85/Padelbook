@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { createClient } from '../lib/supabase'
+import { useLocale } from '../lib/i18n/LocaleContext'
 
 export default function MatchScore({ booking, userId, isAdmin, onUpdate }) {
   const [open, setOpen] = useState(false)
@@ -15,15 +16,16 @@ export default function MatchScore({ booking, userId, isAdmin, onUpdate }) {
     return existing && existing.length > 0 ? existing : [{ team1: '', team2: '', tiebreak: false }]
   })
   const supabase = createClient()
+  const { t } = useLocale()
 
   const players = booking.players || []
   const result = booking.match_results?.[0]
   const canEdit = isAdmin || players.some(p => p.player_id === userId)
 
   function memberName(p) {
-    if (p.guest_name) return p.guest_name + ' (invité)'
+    if (p.guest_name) return p.guest_name + ' (' + t('matchScore.guest') + ')'
     const prof = p.profile
-    return prof?.first_name ? prof.first_name + (prof.last_name ? ' ' + prof.last_name[0] + '.' : '') : (prof?.email?.split('@')[0] || 'Joueur')
+    return prof?.first_name ? prof.first_name + (prof.last_name ? ' ' + prof.last_name[0] + '.' : '') : (prof?.email?.split('@')[0] || t('matchScore.player'))
   }
 
   function updateSet(i, field, value) {
@@ -89,27 +91,27 @@ export default function MatchScore({ booking, userId, isAdmin, onUpdate }) {
           </div>
           {canEdit && (
             <button onClick={() => setOpen(true)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', fontSize: '11px', color: 'var(--muted)', cursor: 'pointer' }}>
-              Modifier
+              {t('matchScore.edit')}
             </button>
           )}
         </div>
       ) : !open ? (
         <button onClick={() => setOpen(true)} style={{ background: 'var(--brand-dim)', border: '1px solid var(--brand)', color: 'var(--brand-light)', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
-          🎾 Enregistrer le score
+          {t('matchScore.recordScore')}
         </button>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
-            <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '6px' }}>Équipes</div>
+            <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '6px' }}>{t('matchScore.teams')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {players.map(p => (
                 <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', fontSize: '13px' }}>
                   <span>{memberName(p)}</span>
                   <div style={{ display: 'flex', gap: '4px' }}>
-                    {[1, 2].map(t => (
-                      <button key={t} onClick={() => setTeams(prev => ({ ...prev, [p.id]: t }))}
-                        style={{ background: teams[p.id] === t ? 'var(--brand)' : 'var(--surface2)', color: teams[p.id] === t ? '#fff' : 'var(--muted)', border: 'none', borderRadius: '6px', padding: '4px 12px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
-                        Équipe {t}
+                    {[1, 2].map(teamNum => (
+                      <button key={teamNum} onClick={() => setTeams(prev => ({ ...prev, [p.id]: teamNum }))}
+                        style={{ background: teams[p.id] === teamNum ? 'var(--brand)' : 'var(--surface2)', color: teams[p.id] === teamNum ? '#fff' : 'var(--muted)', border: 'none', borderRadius: '6px', padding: '4px 12px', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                        {t('matchScore.team')} {teamNum}
                       </button>
                     ))}
                   </div>
@@ -119,11 +121,11 @@ export default function MatchScore({ booking, userId, isAdmin, onUpdate }) {
           </div>
 
           <div>
-            <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '6px' }}>Score par set</div>
+            <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '6px' }}>{t('matchScore.scorePerSet')}</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {sets.map((s, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ fontSize: '11px', color: 'var(--muted)', width: '34px' }}>Set {i + 1}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--muted)', width: '34px' }}>{t('matchScore.set')} {i + 1}</span>
                   <input type="number" min="0" max="20" value={s.team1} onChange={e => updateSet(i, 'team1', e.target.value)}
                     style={{ width: '44px', textAlign: 'center', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '6px', color: 'var(--text)', fontSize: '13px' }} />
                   <span style={{ color: 'var(--muted)' }}>-</span>
@@ -139,7 +141,7 @@ export default function MatchScore({ booking, userId, isAdmin, onUpdate }) {
               ))}
               {sets.length < 5 && (
                 <button onClick={addSet} style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed var(--border)', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', color: 'var(--muted)', cursor: 'pointer' }}>
-                  + Set
+                  {t('matchScore.addSet')}
                 </button>
               )}
             </div>
@@ -147,10 +149,10 @@ export default function MatchScore({ booking, userId, isAdmin, onUpdate }) {
 
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
             <button onClick={() => setOpen(false)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', color: 'var(--muted)', cursor: 'pointer' }}>
-              Annuler
+              {t('matchScore.cancel')}
             </button>
             <button onClick={handleSave} disabled={saving} style={{ background: 'var(--brand)', border: 'none', borderRadius: '8px', padding: '7px 16px', fontSize: '12px', fontWeight: 600, color: '#fff', cursor: 'pointer', opacity: saving ? 0.6 : 1 }}>
-              {saving ? 'Enregistrement...' : 'Valider le score'}
+              {saving ? t('matchScore.saving') : t('matchScore.validateScore')}
             </button>
           </div>
         </div>

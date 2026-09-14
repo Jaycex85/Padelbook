@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '../lib/supabase'
+import { useLocale } from '../lib/i18n/LocaleContext'
 
 const POLL_INTERVAL_MS = 7000
 const CHAT_CLOSES_AFTER_DAYS = 2
+const DATE_LOCALES = { fr: 'fr-BE', en: 'en-GB', nl: 'nl-BE' }
 
 /**
  * Chat réutilisable pour un booking (match) ou un club_event.
@@ -32,6 +34,8 @@ export default function Chat({ bookingId, eventId, endsAt, isRegistered, isPubli
   const [accessDenied, setAccessDenied] = useState(false)
   const scrollRef = useRef(null)
   const supabase = createClient()
+  const { t, locale } = useLocale()
+  const dateLocale = DATE_LOCALES[locale] || 'fr-BE'
 
   const hasAccess = isAdmin || isRegistered || isPublicAccess
   const canWrite = hasAccess && !!userId
@@ -104,17 +108,17 @@ export default function Chat({ bookingId, eventId, endsAt, isRegistered, isPubli
   }
 
   const displayName = p => {
-    if (!p) return 'Joueur'
+    if (!p) return t('chat.player')
     return p.first_name ? (p.first_name + (p.last_name ? ' ' + p.last_name[0] + '.' : '')) : p.email?.split('@')[0]
   }
 
-  const fmtTime = d => new Date(d).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
+  const fmtTime = d => new Date(d).toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })
 
   // Pas d'accès du tout (ni inscrit, ni public) => le composant ne s'affiche pas
   if (!hasAccess) {
     return (
       <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--muted)' }}>
-        🔒 Ce chat est réservé aux joueurs inscrits.
+        {t('chat.playersOnly')}
       </div>
     )
   }
@@ -122,7 +126,7 @@ export default function Chat({ bookingId, eventId, endsAt, isRegistered, isPubli
   if (isClosed) {
     return (
       <div style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', textAlign: 'center', fontSize: '13px', color: 'var(--muted)' }}>
-        💬 Ce chat est archivé (clôturé 48h après l'événement).
+        {t('chat.archived')}
       </div>
     )
   }
@@ -130,20 +134,20 @@ export default function Chat({ bookingId, eventId, endsAt, isRegistered, isPubli
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: '13px', fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'space-between' }}>
-        <span>💬 Discussion</span>
+        <span>{t('chat.discussion')}</span>
         {!isRegistered && isPublicAccess && (
           <span style={{ fontSize: '10px', fontWeight: 500, color: 'var(--brand-light)', background: 'var(--brand-dim)', padding: '2px 8px', borderRadius: '99px' }}>
-            Vous n'êtes pas inscrit
+            {t('chat.notRegistered')}
           </span>
         )}
       </div>
 
       <div ref={scrollRef} style={{ maxHeight: '280px', minHeight: '120px', overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '13px', padding: '12px' }}>Chargement...</div>
+          <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '13px', padding: '12px' }}>{t('common.loading')}</div>
         ) : messages.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: '13px', padding: '12px' }}>
-            {isRegistered ? 'Aucun message. Lancez la discussion !' : 'Aucun message. Posez votre question !'}
+            {isRegistered ? t('chat.noMessagesRegistered') : t('chat.noMessagesGuest')}
           </div>
         ) : (
           messages.map(m => {
@@ -153,7 +157,7 @@ export default function Chat({ bookingId, eventId, endsAt, isRegistered, isPubli
             return (
               <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                 <div style={{ fontSize: '11px', color: isAdminMsg ? 'var(--brand-light)' : 'var(--muted)', marginBottom: '2px', fontWeight: isAdminMsg ? 600 : 400 }}>
-                  {isMe ? 'Vous' : displayName(p)}{isAdminMsg ? ' · Admin' : ''}
+                  {isMe ? t('chat.you') : displayName(p)}{isAdminMsg ? ' · ' + t('chat.admin') : ''}
                 </div>
                 <div style={{
                   background: isMe ? 'var(--brand)' : 'var(--surface2)',
@@ -181,7 +185,7 @@ export default function Chat({ bookingId, eventId, endsAt, isRegistered, isPubli
             value={text}
             onChange={e => setText(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSend()}
-            placeholder={isRegistered ? 'Votre message...' : 'Poser une question avant de rejoindre...'}
+            placeholder={isRegistered ? t('chat.placeholderRegistered') : t('chat.placeholderGuest')}
             style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '20px', padding: '9px 14px', color: 'var(--text)', fontSize: '13px', fontFamily: "'Inter',sans-serif" }}
           />
           <button onClick={handleSend} disabled={sending || !text.trim()}
@@ -191,7 +195,7 @@ export default function Chat({ bookingId, eventId, endsAt, isRegistered, isPubli
         </div>
       ) : (
         <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', fontSize: '12px', color: 'var(--muted)', textAlign: 'center' }}>
-          Connectez-vous pour écrire.
+          {t('chat.loginToWrite')}
         </div>
       )}
     </div>
