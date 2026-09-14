@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../lib/supabase'
+import { useLocale } from '../lib/i18n/LocaleContext'
+
+const DATE_LOCALES = { fr: 'fr-BE', en: 'en-GB', nl: 'nl-BE' }
 
 export default function PlayerStats({ userId }) {
   const [loading, setLoading] = useState(true)
@@ -8,6 +11,8 @@ export default function PlayerStats({ userId }) {
   const [showAll, setShowAll] = useState(false)
   const [expandedMatch, setExpandedMatch] = useState(null)
   const supabase = createClient()
+  const { t, locale } = useLocale()
+  const dateLocale = DATE_LOCALES[locale] || 'fr-BE'
 
   useEffect(() => {
     if (!userId) return
@@ -60,7 +65,7 @@ export default function PlayerStats({ userId }) {
 
       function playerName(p) {
         if (p.guest_name) return p.guest_name
-        return p.profile?.first_name ? p.profile.first_name + (p.profile.last_name ? ' ' + p.profile.last_name[0] + '.' : '') : 'Joueur'
+        return p.profile?.first_name ? p.profile.first_name + (p.profile.last_name ? ' ' + p.profile.last_name[0] + '.' : '') : t('playerStats.player')
       }
 
       const matches = bpRows
@@ -110,37 +115,37 @@ export default function PlayerStats({ userId }) {
   if (stats.played === 0) {
     return (
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px', marginBottom: '20px' }}>
-        <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>🎾 Statistiques</div>
-        <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Aucun match enregistré pour l'instant.</div>
+        <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}>{t('playerStats.title')}</div>
+        <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{t('playerStats.noMatches')}</div>
       </div>
     )
   }
 
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px', marginBottom: '20px' }}>
-      <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '14px' }}>🎾 Statistiques</div>
+      <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '14px' }}>{t('playerStats.title')}</div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '10px', marginBottom: '16px' }}>
         <div style={{ background: 'var(--surface2)', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
           <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700 }}>{stats.played}</div>
-          <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Matchs</div>
+          <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{t('playerStats.matches')}</div>
         </div>
         <div style={{ background: 'var(--surface2)', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
           <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand-light)' }}>{stats.wins}</div>
-          <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Victoires</div>
+          <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{t('playerStats.wins')}</div>
         </div>
         <div style={{ background: 'var(--surface2)', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
           <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--red)' }}>{stats.losses}</div>
-          <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Défaites</div>
+          <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{t('playerStats.losses')}</div>
         </div>
         <div style={{ background: 'var(--surface2)', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
           <div style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700 }}>{stats.winRate}%</div>
-          <div style={{ fontSize: '11px', color: 'var(--muted)' }}>Taux victoire</div>
+          <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{t('playerStats.winRate')}</div>
         </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-        <div style={{ fontSize: '11px', color: 'var(--muted)', width: '50px' }}>Sets</div>
+        <div style={{ fontSize: '11px', color: 'var(--muted)', width: '50px' }}>{t('playerStats.sets')}</div>
         <div style={{ flex: 1, height: '8px', borderRadius: '99px', overflow: 'hidden', display: 'flex', background: 'var(--surface2)' }}>
           <div style={{ width: (stats.setsWon / Math.max(1, stats.setsWon + stats.setsLost) * 100) + '%', background: 'var(--brand)' }} />
         </div>
@@ -149,7 +154,7 @@ export default function PlayerStats({ userId }) {
 
       {stats.recent.length > 0 && (
         <div>
-          <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>Derniers matchs</div>
+          <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>{t('playerStats.recentMatches')}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {(showAll ? stats.recent : stats.recent.slice(0, 3)).map((m, i) => {
               const won = m.team === m.winning_team
@@ -158,7 +163,7 @@ export default function PlayerStats({ userId }) {
                 <div key={i}>
                   <div onClick={() => setExpandedMatch(isExpanded ? null : i)}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', padding: '8px 10px', background: 'var(--surface2)', borderRadius: isExpanded ? '8px 8px 0 0' : '8px', cursor: 'pointer' }}>
-                    <span style={{ color: won ? 'var(--brand-light)' : 'var(--red)', fontWeight: 700, flexShrink: 0, width: '14px' }}>{won ? 'V' : 'D'}</span>
+                    <span style={{ color: won ? 'var(--brand-light)' : 'var(--red)', fontWeight: 700, flexShrink: 0, width: '14px' }}>{won ? t('playerStats.win') : t('playerStats.loss')}</span>
                     <span style={{ flex: 1, textAlign: 'center', color: 'var(--text)' }}>
                       {m.sets.map((s, j) => (
                         <span key={j} style={{ marginRight: '6px' }}>
@@ -168,7 +173,7 @@ export default function PlayerStats({ userId }) {
                       ))}
                     </span>
                     <span style={{ color: 'var(--muted)', fontSize: '11px', flexShrink: 0 }}>
-                      {new Date(m.startsAt).toLocaleDateString('fr-BE', { day: 'numeric', month: 'short', timeZone: 'Europe/Brussels' })}
+                      {new Date(m.startsAt).toLocaleDateString(dateLocale, { day: 'numeric', month: 'short', timeZone: 'Europe/Brussels' })}
                     </span>
                     <span style={{ color: 'var(--muted)', fontSize: '10px', marginLeft: '6px' }}>{isExpanded ? '▲' : '▼'}</span>
                   </div>
@@ -176,24 +181,24 @@ export default function PlayerStats({ userId }) {
                   {isExpanded && (
                     <div style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 8px 8px', padding: '10px 12px', fontSize: '12px' }}>
                       <div style={{ color: 'var(--muted)', marginBottom: '8px' }}>
-                        🏟️ {m.courtName || 'Terrain'} · {new Date(m.startsAt).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' })}
+                        🏟️ {m.courtName || t('playerStats.court')} · {new Date(m.startsAt).toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Brussels' })}
                       </div>
                       {m.teammates.length > 0 && (
                         <div style={{ marginBottom: '4px' }}>
-                          <span style={{ color: 'var(--brand-light)', fontWeight: 600 }}>Avec : </span>
+                          <span style={{ color: 'var(--brand-light)', fontWeight: 600 }}>{t('playerStats.with')} : </span>
                           <span style={{ color: 'var(--text)' }}>{m.teammates.join(', ')}</span>
                         </div>
                       )}
                       {m.opponents.length > 0 && (
                         <div style={{ marginBottom: '8px' }}>
-                          <span style={{ color: 'var(--muted)', fontWeight: 600 }}>Contre : </span>
+                          <span style={{ color: 'var(--muted)', fontWeight: 600 }}>{t('playerStats.against')} : </span>
                           <span style={{ color: 'var(--text)' }}>{m.opponents.join(', ')}</span>
                         </div>
                       )}
                       <div style={{ display: 'flex', gap: '12px' }}>
                         {m.sets.map((s, j) => (
                           <div key={j} style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '10px', color: 'var(--muted)', marginBottom: '2px' }}>Set {j + 1}{s.tiebreak ? ' (TB)' : ''}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--muted)', marginBottom: '2px' }}>{t('playerStats.set')} {j + 1}{s.tiebreak ? ' (TB)' : ''}</div>
                             <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, color: 'var(--text)' }}>
                               <span style={{ color: (m.team === 1 ? s.team1 : s.team2) > (m.team === 1 ? s.team2 : s.team1) ? 'var(--brand-light)' : 'var(--red)' }}>
                                 {m.team === 1 ? s.team1 : s.team2}
@@ -214,7 +219,7 @@ export default function PlayerStats({ userId }) {
           {stats.recent.length > 3 && (
             <button onClick={() => { setShowAll(!showAll); setExpandedMatch(null) }}
               style={{ marginTop: '8px', width: '100%', background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px', fontSize: '12px', color: 'var(--muted)', cursor: 'pointer' }}>
-              {showAll ? 'Réduire' : 'Voir tout l\'historique (' + stats.recent.length + ' matchs)'}
+              {showAll ? t('playerStats.collapse') : t('playerStats.viewAll', { count: stats.recent.length })}
             </button>
           )}
         </div>
