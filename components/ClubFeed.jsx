@@ -2,6 +2,9 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '../lib/supabase'
 import { useSport } from '../lib/sportContext'
+import { useLocale } from '../lib/i18n/LocaleContext'
+
+const DATE_LOCALES = { fr: 'fr-BE', en: 'en-GB', nl: 'nl-BE' }
 
 export default function ClubFeed({ isAdmin, userId }) {
   const [posts, setPosts] = useState([])
@@ -20,6 +23,8 @@ export default function ClubFeed({ isAdmin, userId }) {
   const [sendingComment, setSendingComment] = useState(null)
   const supabase = createClient()
   const { activeSport } = useSport()
+  const { t, locale } = useLocale()
+  const dateLocale = DATE_LOCALES[locale] || 'fr-BE'
 
   async function load() {
     setLoading(true)
@@ -80,7 +85,7 @@ export default function ClubFeed({ isAdmin, userId }) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
       console.error('club-posts create failed:', res.status, err)
-      alert('Erreur lors de la publication : ' + (err.error || res.status))
+      alert(t('clubFeed.publishError', { error: err.error || res.status }))
       setPosting(false)
       return
     }
@@ -115,7 +120,7 @@ export default function ClubFeed({ isAdmin, userId }) {
   }
 
   async function handleDeletePost(postId) {
-    if (!confirm('Supprimer ce poste et ses commentaires ?')) return
+    if (!confirm(t('clubFeed.deletePostConfirm'))) return
     await supabase.from('club_posts').delete().eq('id', postId)
     load()
   }
@@ -142,7 +147,7 @@ export default function ClubFeed({ isAdmin, userId }) {
 
   const displayName = id => {
     const p = profiles[id]
-    if (!p) return 'Membre'
+    if (!p) return t('nav.player')
     return p.first_name ? (p.first_name + (p.last_name ? ' ' + p.last_name[0] + '.' : '')) : p.email?.split('@')[0]
   }
   const isAuthorAdmin = id => profiles[id]?.role === 'admin'
@@ -150,9 +155,9 @@ export default function ClubFeed({ isAdmin, userId }) {
     const date = new Date(d)
     const now = new Date()
     const diffH = (now - date) / 3600000
-    if (diffH < 1) return 'à l\'instant'
+    if (diffH < 1) return t('clubFeed.justNow')
     if (diffH < 24) return Math.floor(diffH) + 'h'
-    return date.toLocaleDateString('fr-BE', { day: 'numeric', month: 'short' })
+    return date.toLocaleDateString(dateLocale, { day: 'numeric', month: 'short' })
   }
 
   if (loading) return null
@@ -160,14 +165,14 @@ export default function ClubFeed({ isAdmin, userId }) {
 
   return (
     <section style={{ marginBottom: '28px' }}>
-      <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📣 Annonces du club</h2>
+      <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>{t('clubFeed.announcements')}</h2>
 
       {isAdmin && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '14px', marginBottom: '14px' }}>
           <textarea
             value={newPostText}
             onChange={e => setNewPostText(e.target.value)}
-            placeholder={isPollMode ? "Question du sondage..." : "Publier une annonce pour les membres..."}
+            placeholder={isPollMode ? t('clubFeed.pollPlaceholder') : t('clubFeed.postPlaceholder')}
             rows={2}
             style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 12px', color: 'var(--text)', fontSize: '14px', fontFamily: "'Inter',sans-serif", resize: 'vertical', marginBottom: '8px' }}
           />
@@ -179,7 +184,7 @@ export default function ClubFeed({ isAdmin, userId }) {
                   <input
                     value={opt}
                     onChange={e => updatePollOption(i, e.target.value)}
-                    placeholder={'Option ' + (i + 1)}
+                    placeholder={t('clubFeed.optionN', { n: i + 1 })}
                     style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px', color: 'var(--text)', fontSize: '13px', fontFamily: "'Inter',sans-serif" }}
                   />
                   {pollOptions.length > 2 && (
@@ -188,7 +193,7 @@ export default function ClubFeed({ isAdmin, userId }) {
                 </div>
               ))}
               <button onClick={addPollOption} style={{ alignSelf: 'flex-start', background: 'none', border: '1px dashed var(--border)', borderRadius: '8px', padding: '6px 12px', color: 'var(--muted)', fontSize: '12px', cursor: 'pointer' }}>
-                + Ajouter une option
+                {t('clubFeed.addOption')}
               </button>
             </div>
           )}
@@ -196,19 +201,19 @@ export default function ClubFeed({ isAdmin, userId }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--muted)', cursor: 'pointer' }}>
               <input type="checkbox" checked={isPollMode} onChange={e => setIsPollMode(e.target.checked)} />
-              📊 Sondage (choix multiple)
+              {t('clubFeed.pollCheckbox')}
             </label>
             <button onClick={handlePublish} disabled={posting || !newPostText.trim() || (isPollMode && pollOptions.filter(o => o.trim()).length < 2)}
               style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: (posting || !newPostText.trim() || (isPollMode && pollOptions.filter(o => o.trim()).length < 2)) ? 0.5 : 1 }}>
-              {posting ? 'Publication...' : 'Publier'}
+              {posting ? t('clubFeed.publishing') : t('clubFeed.publish')}
             </button>
           </div>
 
           <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
             {[
-              { key: 'all', label: 'Tous' },
-              { key: 'padel', label: 'Padel' },
-              { key: 'badminton', label: 'Badminton' },
+              { key: 'all', label: t('clubFeed.all') },
+              { key: 'padel', label: t('common.padel') },
+              { key: 'badminton', label: t('common.badminton') },
             ].map(opt => (
               <button
                 key={opt.key}
@@ -228,7 +233,7 @@ export default function ClubFeed({ isAdmin, userId }) {
       )}
 
       {posts.length === 0 ? (
-        isAdmin && <p style={{ fontSize: '13px', color: 'var(--muted)' }}>Aucune annonce pour l'instant.</p>
+        isAdmin && <p style={{ fontSize: '13px', color: 'var(--muted)' }}>{t('clubFeed.noAnnouncements')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {posts.map(post => {
@@ -244,15 +249,15 @@ export default function ClubFeed({ isAdmin, userId }) {
                     <div>
                       <div style={{ fontSize: '13px', fontWeight: 600 }}>Brussels B&P Club</div>
                       <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
-                        {fmtDate(post.created_at)}{post.pinned ? ' · 📌 Épinglé' : ''}
-                        {post.sport && <> · <span style={{ color: post.sport === 'badminton' ? '#BEF264' : '#C084FC' }}>{post.sport === 'badminton' ? 'Badminton' : 'Padel'}</span></>}
+                        {fmtDate(post.created_at)}{post.pinned ? ' · ' + t('clubFeed.pinned') : ''}
+                        {post.sport && <> · <span style={{ color: post.sport === 'badminton' ? '#BEF264' : '#C084FC' }}>{post.sport === 'badminton' ? t('common.badminton') : t('common.padel')}</span></>}
                       </div>
                     </div>
                   </div>
                   {isAdmin && (
                     <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                      <button onClick={() => togglePin(post)} title="Épingler" style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 7px', cursor: 'pointer', fontSize: '11px' }}>📌</button>
-                      <button onClick={() => handleDeletePost(post.id)} title="Supprimer" style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 7px', cursor: 'pointer', fontSize: '11px', color: 'var(--red)' }}>🗑</button>
+                      <button onClick={() => togglePin(post)} title={t('clubFeed.pinAction')} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 7px', cursor: 'pointer', fontSize: '11px' }}>📌</button>
+                      <button onClick={() => handleDeletePost(post.id)} title={t('clubFeed.deleteAction')} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 7px', cursor: 'pointer', fontSize: '11px', color: 'var(--red)' }}>🗑</button>
                     </div>
                   )}
                 </div>
@@ -284,7 +289,7 @@ export default function ClubFeed({ isAdmin, userId }) {
                               <div style={{ padding: '4px 12px 0' }}>
                                 <button onClick={() => setExpandedOptions(prev => ({ ...prev, [opt.id]: !prev[opt.id] }))}
                                   style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '11px', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>
-                                  {expandedOptions[opt.id] ? 'Masquer' : 'Voir qui a voté'} ({optVoters.length})
+                                  {expandedOptions[opt.id] ? t('clubFeed.hideVotes') : t('clubFeed.showVotes')} ({optVoters.length})
                                 </button>
                                 {expandedOptions[opt.id] && (
                                   <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '3px' }}>
@@ -298,14 +303,14 @@ export default function ClubFeed({ isAdmin, userId }) {
                       })
                     })()}
                     <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
-                      {new Set((post.club_poll_options || []).flatMap(o => votes[o.id] || [])).size} participant{new Set((post.club_poll_options || []).flatMap(o => votes[o.id] || [])).size !== 1 ? 's' : ''} · choix multiple possible
+                      {new Set((post.club_poll_options || []).flatMap(o => votes[o.id] || [])).size} {new Set((post.club_poll_options || []).flatMap(o => votes[o.id] || [])).size !== 1 ? t('clubFeed.participants') : t('clubFeed.participant')} · {t('clubFeed.multipleChoice')}
                     </div>
                   </div>
                 )}
 
                 <button onClick={() => setExpandedComments(showComments ? null : post.id)}
                   style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '12px', cursor: 'pointer', padding: 0 }}>
-                  💬 {comments.length} commentaire{comments.length !== 1 ? 's' : ''} {showComments ? '▲' : '▼'}
+                  💬 {comments.length} {comments.length !== 1 ? t('clubFeed.comments') : t('clubFeed.comment')} {showComments ? '▲' : '▼'}
                 </button>
 
                 {showComments && (
@@ -316,7 +321,7 @@ export default function ClubFeed({ isAdmin, userId }) {
                           <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
                             <div style={{ background: 'var(--surface2)', borderRadius: '10px', padding: '7px 11px', fontSize: '13px', flex: 1 }}>
                               <span style={{ fontWeight: 600, color: isAuthorAdmin(c.author_id) ? 'var(--brand-light)' : 'var(--text)', marginRight: '6px' }}>
-                                {displayName(c.author_id)}{isAuthorAdmin(c.author_id) ? ' · Admin' : ''}
+                                {displayName(c.author_id)}{isAuthorAdmin(c.author_id) ? ' · ' + t('clubFeed.admin') : ''}
                               </span>
                               {c.content}
                             </div>
@@ -334,12 +339,12 @@ export default function ClubFeed({ isAdmin, userId }) {
                           value={commentDrafts[post.id] || ''}
                           onChange={e => setCommentDrafts(d => ({ ...d, [post.id]: e.target.value }))}
                           onKeyDown={e => e.key === 'Enter' && handleComment(post.id)}
-                          placeholder="Votre commentaire..."
+                          placeholder={t('clubFeed.commentPlaceholder')}
                           style={{ flex: 1, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '20px', padding: '7px 12px', color: 'var(--text)', fontSize: '12px', fontFamily: "'Inter',sans-serif" }}
                         />
                         <button onClick={() => handleComment(post.id)} disabled={sendingComment === post.id || !(commentDrafts[post.id] || '').trim()}
                           style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '20px', padding: '7px 14px', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
-                          Envoyer
+                          {t('clubFeed.send')}
                         </button>
                       </div>
                     )}

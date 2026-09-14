@@ -1,16 +1,18 @@
 'use client'
 import Link from 'next/link'
 import { useSport } from '../lib/sportContext'
+import { useLocale } from '../lib/i18n/LocaleContext'
 
 export default function CourtsGrid({ courts }) {
   const { activeSport } = useSport()
+  const { t } = useLocale()
   const filtered = activeSport ? courts.filter(c => c.sport === activeSport) : courts
 
   if (filtered.length === 0) return null
 
   return (
     <section>
-      <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>Terrains disponibles</h2>
+      <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>{t('home.availableCourts')}</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
         {filtered.map(c => (
           <Link key={c.id} href={'/booking?court=' + c.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', textDecoration: 'none', display: 'block' }}>
