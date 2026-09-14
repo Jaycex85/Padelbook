@@ -1,6 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '../lib/supabase'
+import { useLocale } from '../lib/i18n/LocaleContext'
+
+const DATE_LOCALES = { fr: 'fr-BE', en: 'en-GB', nl: 'nl-BE' }
 
 function formatMoney(value) {
   const n = value || 0
@@ -12,6 +15,8 @@ export default function WalletHistory({ userId }) {
   const [loading, setLoading] = useState(false)
   const [txs, setTxs] = useState([])
   const supabase = createClient()
+  const { t, locale } = useLocale()
+  const dateLocale = DATE_LOCALES[locale] || 'fr-BE'
 
   async function load() {
     setLoading(true)
@@ -31,15 +36,15 @@ export default function WalletHistory({ userId }) {
     <div style={{ marginBottom: '20px' }}>
       <button onClick={() => setOpen(!open)}
         style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', fontSize: '12px', color: 'var(--muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-        🧾 Historique du wallet {open ? '▲' : '▼'}
+        {t('walletHistory.title')} {open ? '▲' : '▼'}
       </button>
 
       {open && (
         <div style={{ marginTop: '10px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '14px' }}>
           {loading ? (
-            <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Chargement...</div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{t('common.loading')}</div>
           ) : txs.length === 0 ? (
-            <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Aucune transaction pour l'instant.</div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)' }}>{t('walletHistory.noTransactions')}</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '360px', overflowY: 'auto' }}>
               {txs.map(tx => {
@@ -47,9 +52,9 @@ export default function WalletHistory({ userId }) {
                 return (
                   <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', fontSize: '12px', padding: '9px 10px', background: 'var(--surface2)', borderRadius: '8px' }}>
                     <div style={{ minWidth: 0 }}>
-                      <div style={{ color: 'var(--text)' }}>{tx.description || (positive ? 'Recharge' : 'Débit')}</div>
+                      <div style={{ color: 'var(--text)' }}>{tx.description || (positive ? t('walletHistory.topup') : t('walletHistory.debit'))}</div>
                       <div style={{ color: 'var(--muted)', fontSize: '11px', marginTop: '2px' }}>
-                        {new Date(tx.created_at).toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit', year: 'numeric' })} à {new Date(tx.created_at).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(tx.created_at).toLocaleDateString(dateLocale, { day: '2-digit', month: '2-digit', year: 'numeric' })} {t('walletHistory.at')} {new Date(tx.created_at).toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                     <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: '13px', color: positive ? 'var(--brand-light)' : 'var(--red)', flexShrink: 0 }}>

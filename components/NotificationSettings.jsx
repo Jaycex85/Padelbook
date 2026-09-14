@@ -1,14 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { registerPushSubscription, savePushSubscription, unregisterPushSubscription, isPushSubscribed } from '../lib/pushUtils'
-
-const PREF_LABELS = {
-  booking_confirmed: { label: 'Confirmation de réservation', desc: 'Quand une réservation est confirmée' },
-  booking_reminder:  { label: 'Rappel J-1', desc: "La veille de chaque réservation" },
-  chat_message:      { label: 'Nouveau message', desc: "Quand quelqu'un écrit dans le chat d'un match/event" },
-  club_announcement: { label: 'Annonces du club', desc: "Quand l'admin publie une annonce" },
-  spot_available:    { label: 'Terrain disponible', desc: "Quand un créneau réservé se libère (annulation, événement ou bloc supprimé) et que vous pouvez le réserver" },
-}
+import { useLocale } from '../lib/i18n/LocaleContext'
 
 export default function NotificationSettings() {
   const [supported, setSupported] = useState(true)
@@ -17,6 +10,15 @@ export default function NotificationSettings() {
   const [loading, setLoading] = useState(true)
   const [toggling, setToggling] = useState(false)
   const [iosNotInstalled, setIosNotInstalled] = useState(false)
+  const { t } = useLocale()
+
+  const PREF_LABELS = {
+    booking_confirmed: { label: t('notifications.bookingConfirmedLabel'), desc: t('notifications.bookingConfirmedDesc') },
+    booking_reminder:  { label: t('notifications.bookingReminderLabel'), desc: t('notifications.bookingReminderDesc') },
+    chat_message:      { label: t('notifications.chatMessageLabel'), desc: t('notifications.chatMessageDesc') },
+    club_announcement: { label: t('notifications.clubAnnouncementLabel'), desc: t('notifications.clubAnnouncementDesc') },
+    spot_available:    { label: t('notifications.spotAvailableLabel'), desc: t('notifications.spotAvailableDesc') },
+  }
 
   useEffect(() => {
     // Détection iOS Safari hors PWA installée : Apple n'autorise le Web Push
@@ -76,9 +78,9 @@ export default function NotificationSettings() {
   if (iosNotInstalled) {
     return (
       <div style={{ background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '12px', padding: '14px 16px', fontSize: '13px', color: 'var(--amber)', lineHeight: 1.5 }}>
-        📱 Sur iPhone/iPad, les notifications ne fonctionnent que si l'appli est installée sur l'écran d'accueil.
+        {t('notifications.iosNotInstalled')}
         <br /><br />
-        Pour l'installer : appuie sur l'icône <strong>Partager</strong> ⬆️ dans Safari, puis <strong>"Sur l'écran d'accueil"</strong>. Ouvre ensuite l'appli depuis cette icône pour activer les notifications.
+        {t('notifications.iosInstallHelp', { share: '⬆️ ' + t('notifications.share') })}
       </div>
     )
   }
@@ -86,7 +88,7 @@ export default function NotificationSettings() {
   if (!supported) {
     return (
       <div style={{ background: 'rgba(252,211,77,0.06)', border: '1px solid rgba(252,211,77,0.2)', borderRadius: '12px', padding: '14px 16px', fontSize: '13px', color: 'var(--amber)' }}>
-        ⚠️ Votre navigateur ne supporte pas les notifications push.
+        {t('notifications.notSupported')}
       </div>
     )
   }
@@ -95,14 +97,14 @@ export default function NotificationSettings() {
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '18px', marginBottom: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: subscribed ? '16px' : 0, gap: '12px' }}>
         <div>
-          <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '2px' }}>🔔 Notifications push</div>
+          <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '2px' }}>{t('notifications.title')}</div>
           <div style={{ fontSize: '12px', color: 'var(--muted)' }}>
-            {subscribed ? 'Activées sur cet appareil' : 'Désactivées sur cet appareil'}
+            {subscribed ? t('notifications.enabledOnDevice') : t('notifications.disabledOnDevice')}
           </div>
         </div>
         <button onClick={handleToggleSubscription} disabled={toggling || loading}
           style={{ background: subscribed ? 'rgba(248,113,113,0.1)' : 'var(--brand-dim)', border: '1px solid ' + (subscribed ? 'var(--red)' : 'var(--brand)'), color: subscribed ? 'var(--red)' : 'var(--brand-light)', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', flexShrink: 0, opacity: (toggling || loading) ? 0.6 : 1 }}>
-          {toggling ? '...' : subscribed ? 'Désactiver' : 'Activer'}
+          {toggling ? '...' : subscribed ? t('notifications.disable') : t('notifications.enable')}
         </button>
       </div>
 

@@ -3,11 +3,13 @@ import { useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '../../../lib/supabase'
 import { logBillableEvent } from '../../../lib/billing'
+import { useLocale } from '../../../lib/i18n/LocaleContext'
 import { Suspense } from 'react'
 
 function StubPaymentContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { t } = useLocale()
   const ref = searchParams.get('ref')
   const bookingId = searchParams.get('booking')
   const isSettle = searchParams.get('settle') === '1'
@@ -112,27 +114,27 @@ function StubPaymentContent() {
         {done ? (
           <>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand-light)', marginBottom: '8px' }}>Paiement confirmé !</h2>
-            <p style={{ color: 'var(--muted)', fontSize: '14px' }}>Redirection...</p>
+            <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, color: 'var(--brand-light)', marginBottom: '8px' }}>{t('paymentStub.confirmed')}</h2>
+            <p style={{ color: 'var(--muted)', fontSize: '14px' }}>{t('paymentStub.redirecting')}</p>
           </>
         ) : (
           <>
             <div style={{ background: 'var(--brand-dim)', border: '1px solid var(--brand)', borderRadius: '8px', padding: '8px 14px', display: 'inline-block', marginBottom: '20px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--brand-light)', fontWeight: 500 }}>⚠️ Mode STUB — PayConic non connecté</span>
+              <span style={{ fontSize: '12px', color: 'var(--brand-light)', fontWeight: 500 }}>{t('paymentStub.stubMode')}</span>
             </div>
             <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>
-              {isWalletTopup ? 'Recharge du wallet' : 'Simulation de paiement'}
+              {isWalletTopup ? t('paymentStub.topupTitle') : t('paymentStub.simulationTitle')}
             </h2>
             <p style={{ color: 'var(--muted)', fontSize: '14px', marginBottom: '24px' }}>
-              {isWalletTopup && <>Montant : <strong style={{ color: 'var(--brand-light)' }}>{topupAmount.toFixed(2)} €</strong><br /></>}
-              Référence : <code style={{ fontFamily: 'monospace', color: 'var(--brand-light)' }}>{ref}</code>
+              {isWalletTopup && <>{t('paymentStub.amount')} : <strong style={{ color: 'var(--brand-light)' }}>{topupAmount.toFixed(2)} €</strong><br /></>}
+              {t('paymentStub.reference')} : <code style={{ fontFamily: 'monospace', color: 'var(--brand-light)' }}>{ref}</code>
             </p>
             <button onClick={confirmPayment} disabled={processing}
               style={{ width: '100%', background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '13px', fontSize: '15px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: processing ? 0.6 : 1 }}>
-              {processing ? 'Traitement...' : 'Simuler le paiement ✓'}
+              {processing ? t('paymentStub.processing') : t('paymentStub.simulate')}
             </button>
             <button onClick={() => router.back()} style={{ width: '100%', background: 'none', border: '1px solid var(--border)', color: 'var(--muted)', borderRadius: '8px', padding: '11px', fontSize: '14px', cursor: 'pointer', marginTop: '8px' }}>
-              Annuler
+              {t('paymentStub.cancel')}
             </button>
           </>
         )}
@@ -143,8 +145,13 @@ function StubPaymentContent() {
 
 export default function StubPaymentPage() {
   return (
-    <Suspense fallback={<div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>}>
+    <Suspense fallback={<StubLoadingFallback />}>
       <StubPaymentContent />
     </Suspense>
   )
+}
+
+function StubLoadingFallback() {
+  const { t } = useLocale()
+  return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>{t('common.loading')}</div>
 }
