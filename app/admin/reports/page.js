@@ -313,7 +313,7 @@ export default function AdminReportsPage() {
     return { week: Math.ceil((((d - yearStart) / 86400000) + 1) / 7), year: d.getUTCFullYear() }
   }
 
-  function computeHeatmap(bookings, weekOffset) {
+  function computeHeatmap(bookings, weekOffset, numCourts) {
     const { monday, sunday } = getWeekBounds(weekOffset)
     const weekBookings = (bookings || []).filter(b => {
       const s = new Date(b.starts_at)
@@ -351,6 +351,13 @@ export default function AdminReportsPage() {
     const peakH = Math.floor(peakSlot.s / 60)
     const peakM = peakSlot.s % 60
 
+    // Taux d'occupation moyen sur la semaine : chaque cellule de la grille
+    // représente un créneau de 30 min occupé sur UN terrain. La capacité
+    // totale de la semaine est donc nbTerrains × nbCréneaux.
+    const totalBookedSlots = heatmapGrid.reduce((acc, day) => acc + day.reduce((a, v) => a + v, 0), 0)
+    const totalCapacitySlots = numCourts > 0 ? numCourts * 7 * HEATMAP_SLOTS.length : 0
+    const avgOccupancy = totalCapacitySlots > 0 ? Math.round((totalBookedSlots / totalCapacitySlots) * 100) : 0
+
     function fmtMin(mins) {
       const h = Math.floor(mins / 60), m = mins % 60
       return m > 0 ? h + 'h' + String(m).padStart(2,'0') : h + 'h'
@@ -362,6 +369,8 @@ export default function AdminReportsPage() {
       weekdayHours: fmtMin(weekdayMinutes),
       weekendHours: fmtMin(weekendMinutes),
       peakHour: peakH + 'h' + (peakM > 0 ? String(peakM).padStart(2,'0') : ''),
+      numCourts,
+      avgOccupancy,
       monday,
       ...getWeekNumber(monday),
     }
@@ -369,14 +378,19 @@ export default function AdminReportsPage() {
 
   function HeatmapChart({ heatmap }) {
     const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
-    const maxVal = Math.max(...heatmap.grid.flat(), 1)
+    const numCourts = heatmap.numCourts || 0
     const cellSize = 14
     const cellGap = 1
     const labelW = 36
 
+    // Intensité = taux d'occupation réel de la cellule (terrains occupés / terrains disponibles),
+    // et non plus un simple count relatif au max observé.
+    function occupancyPct(v) {
+      return numCourts > 0 ? Math.min(100, Math.round((v / numCourts) * 100)) : 0
+    }
     function cellColor(v) {
       if (v === 0) return 'rgba(255,255,255,0.04)'
-      const intensity = v / maxVal
+      const intensity = numCourts > 0 ? Math.min(1, v / numCourts) : 0
       const alpha = 0.15 + intensity * 0.85
       return 'rgba(124, 58, 237, ' + alpha + ')'
     }
@@ -404,19 +418,29 @@ export default function AdminReportsPage() {
                 const s = heatmap.slots[si]
                 const h = Math.floor(s / 60)
                 const m = s % 60
+                const pct = occupancyPct(v)
                 return (
                   <rect key={si}
                     x={labelW + si * (cellSize + cellGap)}
                     y={di * (cellSize + cellGap)}
                     width={cellSize} height={cellSize} rx="2"
                     fill={cellColor(v)}>
-                    <title>{day} {h}h{m > 0 ? String(m).padStart(2,'0') : ''} — {v} réservation{v !== 1 ? 's' : ''}</title>
+                    <title>{day} {h}h{m > 0 ? String(m).padStart(2,'0') : ''} — {pct}% d'occupation ({v}/{numCourts} terrain{numCourts !== 1 ? 's' : ''})</title>
                   </rect>
                 )
               })}
             </g>
           ))}
         </svg>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '10px', fontSize: '10px', color: 'var(--muted)' }}>
+          <span>0%</span>
+          <div style={{ display: 'flex', height: '8px', borderRadius: '4px', overflow: 'hidden' }}>
+            {[0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1].map(a => (
+              <div key={a} style={{ width: '16px', height: '100%', background: 'rgba(124, 58, 237, ' + a + ')' }} />
+            ))}
+          </div>
+          <span>100% d'occupation</span>
+        </div>
       </div>
     )
   }
@@ -538,11 +562,11 @@ export default function AdminReportsPage() {
 
           {/* Heatmap horaire */}
           {(() => {
-            const hm = computeHeatmap(data.allBookings, heatmapWeekOffset)
+            const hm = computeHeatmap(data.allBookings, heatmapWeekOffset, data.courtStats.length)
             return (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '16px', padding: '20px', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
-                  <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700 }}>Affluence — jour & heure</h2>
+                  <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: '15px', fontWeight: 700 }}>Taux d'occupation — jour & heure</h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button onClick={() => setHeatmapWeekOffset(o => o - 1)}
                       style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', color: 'var(--text)', fontSize: '14px' }}>‹</button>
@@ -555,6 +579,7 @@ export default function AdminReportsPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: 'var(--muted)', marginBottom: '12px', flexWrap: 'wrap' }}>
+                  <span>📊 Occupation moyenne : <strong style={{ color: 'var(--text)' }}>{hm.avgOccupancy}%</strong></span>
                   <span>🕐 Créneau de pointe : <strong style={{ color: 'var(--text)' }}>{hm.peakHour}</strong></span>
                   <span>Semaine : <strong style={{ color: 'var(--text)' }}>{hm.weekdayHours}</strong></span>
                   <span>Week-end : <strong style={{ color: 'var(--text)' }}>{hm.weekendHours}</strong></span>
