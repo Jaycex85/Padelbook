@@ -78,7 +78,7 @@ export default function ProfilePage() {
     if (payData.payment_url) {
       goToPaymentUrl(router, payData.payment_url)
     } else {
-      alert(payData.error || 'Impossible d\'initier la recharge pour le moment.')
+      alert(payData.error || t('profile.cannotTopup'))
     }
   }
 
@@ -87,8 +87,8 @@ export default function ProfilePage() {
     if (!file) return
     setAvatarError(null)
 
-    if (!file.type.startsWith('image/')) { setAvatarError('Le fichier doit être une image.'); return }
-    if (file.size > 3 * 1024 * 1024) { setAvatarError('Image trop lourde (max 3 Mo).'); return }
+    if (!file.type.startsWith('image/')) { setAvatarError(t('profile.imageOnly')); return }
+    if (file.size > 3 * 1024 * 1024) { setAvatarError(t('profile.imageTooLarge')); return }
 
     setUploadingAvatar(true)
     const ext = file.name.split('.').pop()
@@ -111,7 +111,7 @@ export default function ProfilePage() {
     router.refresh()
   }
 
-  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>Chargement...</div>
+  if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>{t('common.loading')}</div>
 
   const fieldStyle = { width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: '8px', padding: '10px 14px', color: 'var(--text)', fontSize: '14px', fontFamily: "'Inter', sans-serif" }
   const labelStyle = { display: 'block', fontSize: '11px', fontWeight: 500, color: 'var(--muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.3px' }
@@ -163,11 +163,11 @@ export default function ProfilePage() {
           <div style={{ fontSize: '15px', fontWeight: 500 }}>{profile?.email}</div>
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'var(--brand-dim)', color: 'var(--brand-light)', fontWeight: 500 }}>
-              {profile?.role === 'admin' ? 'Admin' : 'Joueur'}
+              {profile?.role === 'admin' ? t('profile.admin') : t('profile.player')}
             </span>
             {profile?.discount_percent > 0 && (
               <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '99px', background: 'rgba(252,211,77,0.1)', color: 'var(--amber)', fontWeight: 500 }}>
-                Remise {profile.discount_percent}%
+                {t('profile.discount', { percent: profile.discount_percent })}
               </span>
             )}
             {profile?.afp_ranking && (
@@ -188,19 +188,19 @@ export default function ProfilePage() {
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>Solde wallet</div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '4px' }}>{t('profile.wallet')}</div>
             <div style={{ fontFamily: "'Syne', sans-serif", fontSize: '24px', fontWeight: 700, color: (profile?.wallet_balance || 0) < 0 ? 'var(--red)' : 'var(--brand-light)' }}>
               {formatMoney(profile?.wallet_balance)} €
             </div>
             {(profile?.wallet_balance || 0) < 0 && (
               <p style={{ fontSize: '11px', color: 'var(--red)', marginTop: '4px' }}>
-                Solde négatif — rechargez avant de pouvoir réserver à nouveau.
+                {t('profile.negativeWallet')}
               </p>
             )}
           </div>
           <button onClick={() => setShowTopup(v => !v)}
             style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '9px 16px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif" }}>
-            Recharger
+            {t('profile.topup')}
           </button>
         </div>
 
@@ -218,7 +218,7 @@ export default function ProfilePage() {
             </div>
             <button onClick={handleTopup} disabled={topupLoading || !topupAmount || topupAmount <= 0}
               style={{ width: '100%', background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '11px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne',sans-serif", opacity: (topupLoading || !topupAmount || topupAmount <= 0) ? 0.5 : 1 }}>
-              {topupLoading ? 'Redirection...' : 'Recharger ' + (topupAmount || 0) + ' € par carte'}
+              {topupLoading ? t('profile.redirecting') : t('profile.topupByCard', { amount: topupAmount || 0 })}
             </button>
           </div>
         )}
@@ -232,8 +232,8 @@ export default function ProfilePage() {
       <Link href="/membership" style={{ display: 'block', textDecoration: 'none', marginBottom: '20px' }}>
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Adhésions et cotisations</div>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>Licences AFP, badminton, statuts compétiteur InterClubs/InterEquipes</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>{t('profile.membershipTitle')}</div>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '2px' }}>{t('profile.membershipDesc')}</div>
           </div>
           <div style={{ fontSize: '20px', color: 'var(--muted)' }}>→</div>
         </div>
@@ -241,49 +241,49 @@ export default function ProfilePage() {
 
       {/* Formulaire infos perso */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '14px', padding: '20px', marginBottom: '16px' }}>
-        <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>Informations personnelles</h2>
+        <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '15px', fontWeight: 700, marginBottom: '16px' }}>{t('profile.personalInfo')}</h2>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
           <div>
-            <label style={labelStyle}>Prénom</label>
+            <label style={labelStyle}>{t('profile.firstName')}</label>
             <input style={fieldStyle} value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} placeholder="Johan" />
           </div>
           <div>
-            <label style={labelStyle}>Nom</label>
+            <label style={labelStyle}>{t('profile.lastName')}</label>
             <input style={fieldStyle} value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} placeholder="Dupont" />
           </div>
         </div>
 
         <div style={{ marginBottom: '14px' }}>
-          <label style={labelStyle}>Téléphone</label>
+          <label style={labelStyle}>{t('profile.phone')}</label>
           <input style={fieldStyle} value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="+32 4xx xxx xxx" />
         </div>
 
         <div style={{ marginBottom: '14px' }}>
-          <label style={labelStyle}>Genre</label>
+          <label style={labelStyle}>{t('profile.gender')}</label>
           <select style={fieldStyle} value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value, afp_ranking: '' })}>
-            <option value="">Non précisé</option>
-            <option value="male">Homme</option>
-            <option value="female">Femme</option>
+            <option value="">{t('profile.genderUnset')}</option>
+            <option value="male">{t('profile.genderMale')}</option>
+            <option value="female">{t('profile.genderFemale')}</option>
           </select>
         </div>
 
         <div style={{ marginBottom: '20px' }}>
-          <label style={labelStyle}>Classement AFP</label>
+          <label style={labelStyle}>{t('profile.afpRanking')}</label>
           <select style={fieldStyle} value={form.afp_ranking} onChange={e => setForm({ ...form, afp_ranking: e.target.value })} disabled={!form.gender}>
-            <option value="">{form.gender ? 'Non classé' : 'Sélectionnez un genre d\'abord'}</option>
+            <option value="">{form.gender ? t('profile.unranked') : t('profile.selectGenderFirst')}</option>
             {rankOptions.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
         </div>
 
         {saved && (
           <div style={{ background: 'var(--brand-dim)', border: '1px solid var(--brand)', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: 'var(--brand-light)', marginBottom: '14px' }}>
-            ✓ Profil enregistré
+            {t('profile.savedConfirm')}
           </div>
         )}
         <button onClick={handleSave} disabled={saving}
           style={{ background: 'var(--brand)', color: '#fff', border: 'none', borderRadius: '8px', padding: '11px 24px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'Syne', sans-serif", opacity: saving ? 0.6 : 1 }}>
-          {saving ? 'Enregistrement...' : 'Sauvegarder'}
+          {saving ? t('profile.saving') : t('profile.save')}
         </button>
       </div>
 
@@ -291,7 +291,7 @@ export default function ProfilePage() {
 
       <button onClick={handleLogout}
         style={{ width: '100%', background: 'none', border: '1px solid rgba(248,113,113,0.3)', color: 'var(--red)', borderRadius: '8px', padding: '11px', fontSize: '14px', cursor: 'pointer' }}>
-        Se déconnecter
+        {t('profile.logout')}
       </button>
     </div>
   )
