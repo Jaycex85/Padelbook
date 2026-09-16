@@ -576,7 +576,7 @@ export default function AdminEventsPage() {
                   const col = sportColor(opt.key)
                   const active = form.sport === opt.key
                   return (
-                    <button key={opt.label} onClick={() => setForm({ ...form, sport: opt.key })}
+                    <button key={opt.label} onClick={() => setForm({ ...form, sport: opt.key, court_ids: form.court_ids.filter(id => { const c = courts.find(cc => cc.id === id); return !opt.key || c?.sport === opt.key }) })}
                       style={{ background: active ? col.dim : 'var(--surface2)', border: '1px solid ' + (active ? col.border : 'var(--border)'), color: active ? col.text : 'var(--muted)', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
                       {opt.label}
                     </button>
@@ -588,7 +588,7 @@ export default function AdminEventsPage() {
             <div style={{ marginBottom: '14px' }}>
               <label style={labelStyle}>Terrains concernés</label>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {courts.map(c => {
+                {courts.filter(c => !form.sport || c.sport === form.sport).map(c => {
                   const col = sportColor(c.sport)
                   const active = form.court_ids.includes(c.id)
                   return (
