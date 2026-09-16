@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { createClient } from '../../lib/supabase'
 import NotificationSettings from '../../components/NotificationSettings'
+import PersonalizationSettings from '../../components/PersonalizationSettings'
 import PlayerStats from '../../components/PlayerStats'
 import WalletHistory from '../../components/WalletHistory'
 import { useRouter } from 'next/navigation'
@@ -286,6 +287,8 @@ export default function ProfilePage() {
           {saving ? t('profile.saving') : t('profile.save')}
         </button>
       </div>
+
+      <PersonalizationSettings />
 
       <NotificationSettings />
 

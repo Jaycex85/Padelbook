@@ -4,6 +4,7 @@ import AppShell from '../components/layout/AppShell'
 import ServiceWorkerInit from '../components/ServiceWorkerInit'
 import { SportProvider } from '../lib/sportContext'
 import { LocaleProvider } from '../lib/i18n/LocaleContext'
+import { PreferencesProvider } from '../lib/preferencesContext'
 
 export const metadata = {
   title: 'Brussels Badminton & Padel Club',
@@ -34,11 +35,13 @@ export default async function RootLayout({ children }) {
       <body>
         <ServiceWorkerInit />
         <LocaleProvider>
-          <SportProvider>
-            <AppShell user={user} profile={profile}>
-              {children}
-            </AppShell>
-          </SportProvider>
+          <PreferencesProvider>
+            <SportProvider>
+              <AppShell user={user} profile={profile}>
+                {children}
+              </AppShell>
+            </SportProvider>
+          </PreferencesProvider>
         </LocaleProvider>
       </body>
     </html>

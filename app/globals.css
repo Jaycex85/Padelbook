@@ -34,6 +34,24 @@
   --brand-dim2: rgba(163,230,53,0.06);
 }
 
+/* Mode contraste élevé (accessibilité) — piloté par PreferencesContext via
+   [data-contrast="high"] sur <html>. Renforce le texte, les bordures et les
+   fonds pour une meilleure lisibilité, sans changer la teinte de marque. */
+[data-contrast="high"] {
+  --bg: #000000;
+  --surface: #0A0A0A;
+  --surface2: #141414;
+  --border: #6E7681;
+  --text: #FFFFFF;
+  --muted: #C9D1D9;
+}
+[data-contrast="high"][data-sport="badminton"] {
+  --brand-light: #EAFFB0;
+}
+[data-contrast="high"]:not([data-sport="badminton"]) {
+  --brand-light: #E2C4FF;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
