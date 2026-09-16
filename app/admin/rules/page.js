@@ -264,7 +264,7 @@ export default function AdminRulesPage() {
               <label style={labelStyle}>Terrain (optionnel — tous par défaut)</label>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 <button onClick={() => setForm({...form, all_courts: true})} style={{ background: form.all_courts ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (form.all_courts ? 'var(--brand)' : 'var(--border)'), color: form.all_courts ? 'var(--brand-light)' : 'var(--muted)', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>Tous</button>
-                {courts.map(c => {
+                {courts.filter(c => sportFilter === 'all' || c.sport === sportFilter).map(c => {
                   const col = sportColor(c.sport)
                   const active = !form.all_courts && form.court_id === c.id
                   return (

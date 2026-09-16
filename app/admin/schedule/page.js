@@ -429,7 +429,7 @@ export default function AdminSchedulePage() {
                       style={{background: blockForm.all_courts ? 'var(--brand-dim)' : 'var(--surface2)', border: '1px solid ' + (blockForm.all_courts ? 'var(--brand)' : 'var(--border)'), color: blockForm.all_courts ? 'var(--brand-light)' : 'var(--muted)', borderRadius:'6px', padding:'6px 12px', fontSize:'12px', cursor:'pointer'}}>
                       Tous les terrains
                     </button>
-                    {courts.map(c => {
+                    {courts.filter(c => sportFilter === 'all' || c.sport === sportFilter).map(c => {
                       const col = sportColor(c.sport)
                       const active = !blockForm.all_courts && blockForm.court_id === c.id
                       return (
@@ -507,7 +507,7 @@ export default function AdminSchedulePage() {
                   </div>
                   {!recurringForm.all_courts && (
                     <div style={{display:'flex', gap:'6px', flexWrap:'wrap'}}>
-                      {courts.map(c => {
+                      {courts.filter(c => sportFilter === 'all' || c.sport === sportFilter).map(c => {
                         const col = sportColor(c.sport)
                         const active = recurringForm.court_ids.includes(c.id)
                         return (
