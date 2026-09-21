@@ -18,6 +18,13 @@ alter table payments add column if not exists sport sport_type;
 create index if not exists payments_provider_payment_id_idx on payments(provider_payment_id);
 create index if not exists payments_category_idx on payments(category);
 
+-- La table payments a été créée à l'origine pour les réservations
+-- uniquement (booking_id obligatoire). Avec Mollie centralisant TOUS les
+-- paiements (adhésions, events, recharges wallet — qui n'ont pas de
+-- réservation), il faut rendre ces colonnes optionnelles.
+alter table payments alter column booking_id drop not null;
+alter table payments alter column booking_player_id drop not null;
+
 -- Permet à un joueur de suivre l'état de SON paiement depuis /payment/return
 -- (lecture seule ; les écritures passent uniquement par le webhook, en
 -- service role, qui contourne RLS).
