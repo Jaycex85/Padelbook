@@ -144,7 +144,7 @@ export default function MembershipPage() {
       body: JSON.stringify({ membership_request_id: pendingPayment.requestId, amount: pendingPayment.amount }),
     })
     const payData = await res.json().catch(() => ({}))
-    if (payData.payment_url) goToPaymentUrl(router, payData.payment_url)
+    if (payData.payment_url) goToPaymentUrl(router, payData.payment_url, activeSport)
   }
 
   if (loading) return <div style={{ textAlign: 'center', padding: '48px', color: 'var(--muted)' }}>{t('common.loading')}</div>

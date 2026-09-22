@@ -126,7 +126,7 @@ export default function OpenMatchesPage() {
     })
     const payData = await res.json().catch(() => ({}))
     if (payData.payment_url) {
-      goToPaymentUrl(router, payData.payment_url)
+      goToPaymentUrl(router, payData.payment_url, activeSport)
     }
   }
 

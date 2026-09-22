@@ -8,6 +8,7 @@ import PlayerStats from '../../components/PlayerStats'
 import WalletHistory from '../../components/WalletHistory'
 import { useRouter } from 'next/navigation'
 import { goToPaymentUrl } from '../../lib/paymentNav'
+import { useSport } from '../../lib/sportContext'
 import { useLocale } from '../../lib/i18n/LocaleContext'
 import LanguageSwitcher from '../../components/LanguageSwitcher'
 
@@ -34,6 +35,7 @@ export default function ProfilePage() {
   const supabase = createClient()
   const router = useRouter()
   const { t } = useLocale()
+  const { activeSport } = useSport()
 
   useEffect(() => {
     async function load() {
@@ -77,7 +79,7 @@ export default function ProfilePage() {
     const payData = await res.json().catch(() => ({}))
     setTopupLoading(false)
     if (payData.payment_url) {
-      goToPaymentUrl(router, payData.payment_url)
+      goToPaymentUrl(router, payData.payment_url, activeSport)
     } else {
       alert(payData.error || t('profile.cannotTopup'))
     }

@@ -131,7 +131,7 @@ export default function EventsPage() {
     })
     const payData = await res.json().catch(() => ({}))
     setPendingPayment(null)
-    if (payData.payment_url) goToPaymentUrl(router, payData.payment_url)
+    if (payData.payment_url) goToPaymentUrl(router, payData.payment_url, activeSport)
     else load()
   }
 

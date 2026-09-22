@@ -316,7 +316,7 @@ function MyBookingsList() {
     const payData = await res.json().catch(() => ({}))
     setPayingShare(null)
     if (payData.payment_url) {
-      goToPaymentUrl(router, payData.payment_url)
+      goToPaymentUrl(router, payData.payment_url, activeSport)
     } else {
       alert(t('payment.cannotInitiate'))
     }
@@ -436,7 +436,7 @@ function MyBookingsList() {
     const payData = await res.json().catch(() => ({}))
     setSettling(null)
     if (payData.payment_url) {
-      goToPaymentUrl(router, payData.payment_url)
+      goToPaymentUrl(router, payData.payment_url, activeSport)
     } else {
       alert(payData.error || t('payment.cannotInitiate'))
     }
